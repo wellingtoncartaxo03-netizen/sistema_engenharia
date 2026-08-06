@@ -1,0 +1,2306 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — DITRAN Dashboard</title>
+    
+    <!-- Scripts Externos & Fontes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+
+    <style>
+        :root {
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+            --amc-red-glow: rgba(241, 90, 34, 0.4);
+            --amc-blue-glow: rgba(48, 133, 214, 0.4);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Estilo de Vidro (Glassmorphism) --- */
+        .glass {
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ds-card {
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1.5rem 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Sidebar Lateral --- */
+        aside {
+            width: 320px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 16px;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: calc(100vh - 240px);
+        }
+
+        .menu-item {
+            margin-bottom: 6px;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.25s;
+        }
+
+        .menu-link:hover, .menu-link.active {
+            color: #fff;
+            background: rgba(248, 183, 0, 0.08);
+            border-left: 3px solid var(--amc-primary);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            margin-left: 320px;
+            flex-grow: 1;
+            padding: 2.5rem 3rem;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            width: calc(100% - 320px);
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 70% 20%, rgba(248, 183, 0, 0.05) 0%, transparent 60%);
+            z-index: -1;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin: 0;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+
+        /* --- KPI Cards --- */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .kpi-info h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amc-text-muted);
+            margin: 0 0 6px 0;
+        }
+
+        .kpi-info p {
+            font-family: 'Oswald', sans-serif;
+            font-size: 28px;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        /* --- Filters & Search --- */
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            gap: 1.5rem;
+        }
+
+        .search-container {
+            position: relative;
+            flex-grow: 1;
+            max-width: 400px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--amc-text-muted);
+            font-size: 14px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 40px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(10, 10, 12, 0.6);
+            color: #fff;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 10px rgba(248, 183, 0, 0.15);
+        }
+
+        .filter-input {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .filter-input:focus {
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 0 2px rgba(248, 183, 0, 0.15);
+        }
+
+        .filter-input::placeholder {
+            color: var(--amc-text-muted);
+        }
+
+        select.filter-input option {
+            background: #111;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chip {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(10, 10, 12, 0.5);
+            color: var(--amc-text-muted);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .chip:hover, .chip.active {
+            color: #000;
+            background: var(--amc-primary);
+            border-color: var(--amc-primary);
+        }
+
+        /* --- Data Table --- */
+        .table-container {
+            border-radius: 1.5rem;
+            overflow-x: auto;
+            flex-grow: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: rgba(10, 10, 12, 0.9);
+            color: var(--amc-text-muted);
+            font-weight: 600;
+            text-align: left;
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-geral {
+            background: rgba(48, 133, 214, 0.15);
+            color: #3085d6;
+            border: 1px solid rgba(48, 133, 214, 0.25);
+        }
+
+        .badge-nce {
+            background: rgba(167, 139, 250, 0.15);
+            color: #c084fc;
+            border: 1px solid rgba(167, 139, 250, 0.25);
+        }
+
+        .badge-sucesso {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .badge-alerta {
+            background: rgba(234, 179, 8, 0.15);
+            color: #eab308;
+            border: 1px solid rgba(234, 179, 8, 0.25);
+        }
+
+        /* --- Auth Panel --- */
+        .auth-panel {
+            padding: 1rem;
+            border-radius: 1rem;
+            margin-top: auto;
+        }
+
+        .auth-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--amc-primary);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .clickable-row {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        /* --- Estilo de Abas do Modal --- */
+        .tabs-nav {
+            display: flex;
+            gap: 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            margin-bottom: 1.5rem;
+            padding-bottom: 4px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--amc-text-muted);
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .tab-btn.active {
+            color: var(--amc-primary);
+            background: rgba(248,183,0,0.08);
+            border-bottom: 2px solid var(--amc-primary);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        /* --- Cards de Previsualização dos Núcleos --- */
+        .nuc-preview-box {
+            background: rgba(255,255,255,0.01);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .nuc-preview-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 12px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .nuc-npa { color: #38bdf8; }
+        .nuc-npo { color: #fb7185; }
+        .nuc-npe { color: #a78bfa; }
+        .nuc-ngc { color: #22d3ee; }
+        .nuc-nce { color: #c084fc; }
+        .nuc-nco { color: #fbbf24; }
+
+        .nuc-field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .nuc-field-full {
+            grid-column: span 2;
+        }
+
+        .nuc-label {
+            display: block;
+            font-size: 10px;
+            color: var(--amc-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+
+        .nuc-value {
+            font-size: 12px;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .doc-view-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .doc-link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.85);
+            font-size: 11px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .doc-link-btn:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.12);
+            color: #fff;
+        }
+
+        /* --- Modal Custom --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            width: 800px;
+            max-width: 90%;
+            height: 85vh;
+            border-radius: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--amc-text-muted);
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .modal-footer {
+            padding: 1.25rem 2rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background: rgba(10, 10, 12, 0.95);
+            border-radius: 0 0 1.5rem 1.5rem;
+        }
+
+        /* --- Form Elements --- */
+        .form-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amc-primary);
+            margin: 0 0 12px 0;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--amc-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-input {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            color: #fff;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        select option, option {
+            background-color: #0A0A0C !important;
+            color: #ffffff !important;
+        }
+
+        .form-input:focus {
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 8px rgba(248, 183, 0, 0.15);
+        }
+
+        /* --- Buttons --- */
+        .btn-amc {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-primary-amc {
+            background: var(--amc-primary);
+            color: #000;
+        }
+
+        .btn-primary-amc:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(248, 183, 0, 0.2);
+        }
+
+        .btn-outline-amc {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.85);
+        }
+
+        .btn-outline-amc:hover {
+            background: rgba(255,255,255,0.03);
+            color: #fff;
+        }
+
+        .btn-cancel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--amc-text-muted);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+
+        .btn-save {
+            background: var(--amc-primary);
+            border: none;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(248,183,0,0.25);
+        }
+
+        /* --- Toast Notification --- */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(10,10,12,0.95);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-success { border-left: 4px solid #10b981; }
+        .toast-error { border-left: 4px solid #ef4444; }
+        .toast-info { border-left: 4px solid #3b82f6; }
+
+        .info-panel {
+            background: rgba(248, 183, 0, 0.03);
+            border: 1px solid rgba(248, 183, 0, 0.1);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .info-label {
+            color: var(--amc-text-muted);
+            margin-right: 6px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Sub-accordions do NPO na Visualização Geral */
+        .npo-sub-accordion {
+            margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(10, 10, 12, 0.2);
+        }
+        .npo-sub-header {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.02);
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--amc-text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .npo-sub-header:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: #fff;
+        }
+        .npo-sub-content {
+            padding: 12px;
+            display: none;
+        }
+        /* --- AGGREGATION --- */
+        .aggr-banner { display: flex; align-items: flex-start; gap: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 12px 16px; margin-bottom: 1rem; font-size: 13px; color: #fbbf24; }
+        .aggr-banner i { font-size: 16px; margin-top:1px; flex-shrink:0; }
+        .aggr-banner strong { color: #fde68a; display: block; margin-bottom: 3px; }
+        .badge-aggr { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b; font-size: 10px; font-weight: 900; margin-left: 5px; flex-shrink: 0; vertical-align: middle; }
+        #aggr-modal { position: fixed; inset: 0; z-index: 1200; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s; }
+        #aggr-modal.show { opacity: 1; pointer-events: auto; }
+        #aggr-modal .aggr-inner { background: #0d0d10; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; width: 900px; max-width: 96vw; max-height: 85vh; overflow-y: auto; padding: 2rem; }
+        #aggr-modal h4 { color: #f59e0b; font-family: 'Oswald', sans-serif; font-size: 1.2rem; margin: 0 0 4px; }
+        #aggr-modal .aggr-sub { color: var(--amc-text-muted); font-size: 12px; margin: 0 0 1.5rem; }
+        .aggr-filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; margin-bottom: 1.5rem; }
+        .aggr-filter-row .aggr-search-btn { padding: 10px 20px; background: #f59e0b; color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px; }
+        #aggr-results-table { width: 100%; border-collapse: collapse; }
+        #aggr-results-table th { text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--amc-text-muted); border-bottom: 1px solid rgba(255,255,255,.07); }
+        #aggr-results-table td { padding: 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); }
+        .aggr-action-btn { padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; border: 1px solid rgba(245,158,11,.5); background: rgba(245,158,11,.1); color: #f59e0b; }
+        .aggr-action-btn:hover { background: rgba(245,158,11,.25); }
+        .aggr-empty { text-align: center; padding: 2rem; color: var(--amc-text-muted); font-size: 13px; }
+        #btn-verify-local { padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 8px; border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.08); color: #f59e0b; display: inline-flex; align-items: center; gap: 6px; }
+    </style>
+</head>
+<body>
+
+    <!-- Background Glows -->
+    <div class="hero-bg"></div>
+
+    <!-- Sidebar Lateral -->
+    <aside class="glass">
+        <div>
+            <!-- Logo AMC -->
+            <div class="logo-container">
+                <i class="fa fa-car-side fa-xl" style="color:var(--amc-primary, #F8B700);"></i>
+                <span class="logo-text">AMC — Engenharia</span>
+            </div>
+            <ul class="menu-list">
+                <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link "><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+                <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+                <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link "><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+                <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link "><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+                <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+                <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link "><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+                <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link "><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+                <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link "><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+                <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link "><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+                <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link "><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+                <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link active"><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+            </ul>
+        </div>
+
+        <!-- Painel de Login e Simulação de Perfis -->
+        <div class="auth-panel glass-dark">
+            <div class="auth-title">
+                <i class="fa fa-user-shield"></i>
+                <span>Gabinete Diretoria</span>
+            </div>
+            
+            <div id="auth-logged">
+                <p id="logged-email" style="font-size: 11px; margin: 0 0 8px 0; color: #fff; word-break: break-all; font-weight: 500;"></p>
+                <button class="btn-amc btn-outline-amc" style="padding: 6px 12px; font-size: 10px; color: var(--amc-secondary); width: 100%; border: 1px solid var(--amc-secondary); background: transparent; cursor: pointer; border-radius: 8px;" onclick="realizarLogout()">Desconectar</button>
+            </div>
+        </div>
+    </aside>
+    <!-- Aggr Search Modal -->
+    <div id="aggr-modal"><div class="aggr-inner">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+            <div><h4><i class="fa fa-magnifying-glass-location"></i> Verificar Processos no Local</h4><p class="aggr-sub" id="aggr-modal-sub"></p></div>
+            <button class="modal-close" onclick="closeAggrModal()">&#x2715;</button>
+        </div>
+        <div class="aggr-filter-row">
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Bairro</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-bairro" checked onchange="toggleAggrFilter('bairro')" style="accent-color: var(--amc-primary); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-bairro" class="form-input" placeholder="Ex: Aldeota">
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Regional</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-regional" checked onchange="toggleAggrFilter('regional')" style="accent-color: var(--amc-primary); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-regional" class="form-input" placeholder="Ex: Regional II">
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Endereço / Rua</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-endereco" checked onchange="toggleAggrFilter('endereco')" style="accent-color: var(--amc-primary); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-endereco" class="form-input" placeholder="Ex: Av. Santos Dumont">
+            </div>
+            <button class="aggr-search-btn" onclick="searchSimilarDemandas()"><i class="fa fa-search"></i> Pesquisar</button>
+        </div>
+        <div id="aggr-results-area"><div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Use os filtros acima para buscar processos relacionados.</div></div>
+        <input type="hidden" id="aggr-current-demanda-id"><input type="hidden" id="aggr-current-protocolo">
+    </div></div>
+
+    <!-- Área de Conteúdo Central -->
+    <main>
+        <div class="dashboard-header">
+            <h1 class="header-title">DITRAN</h1>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button class="btn-amc" id="btn-ditran-relatorio" onclick="openReportModalDITRAN()" style="height: 38px; border-radius: 12px; background: rgba(248, 183, 0, 0.15); border: 1px solid rgba(248, 183, 0, 0.3); color: #f8b700; display: inline-flex; align-items: center; gap: 8px; font-family: inherit; font-weight: 600; cursor: pointer;">
+                    <i class="fa fa-file-invoice"></i> Relatório
+                </button>
+                <div class="header-status glass-dark" id="role-badge">
+                    <i class="fa fa-info-circle"></i>
+                    <span>Carregando perfil...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+            <div class="ds-card glass kpi-card">
+                <div class="kpi-info">
+                    <h3>Total de Processos</h3>
+                    <p id="kpi-processos">0</p>
+                </div>
+                <div class="kpi-icon" style="background: rgba(48, 133, 214, 0.1); color: var(--amc-accent);">
+                    <i class="fa fa-folder-open"></i>
+                </div>
+            </div>
+            <div class="ds-card glass kpi-card">
+                <div class="kpi-info">
+                    <h3>Processos Prioritários</h3>
+                    <p id="kpi-prioritarios">0</p>
+                </div>
+                <div class="kpi-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    <i class="fa fa-triangle-exclamation"></i>
+                </div>
+            </div>
+            <div class="ds-card glass kpi-card">
+                <div class="kpi-info">
+                    <h3>Prioritários Agendados</h3>
+                    <p id="kpi-prioritarios-agendados">0</p>
+                </div>
+                <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                    <i class="fa fa-calendar-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra de Filtros Unificada -->
+        <div class="filter-bar" style="display: flex; gap: 12px; margin-bottom: 1.5rem; align-items: center;">
+            <select id="filter-priority" class="filter-input" onchange="filterData()" style="min-width: 180px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
+                <option value="all">Todos os Processos</option>
+                <option value="priority">Apenas Prioritários</option>
+                <option value="non-priority">Não Prioritários</option>
+            </select>
+            <select id="filter-order" class="filter-input" onchange="filterData()" style="min-width: 150px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
+                <option value="newest">Mais Recentes</option>
+                <option value="oldest">Mais Antigos</option>
+            </select>
+            <input type="text" id="search-input" class="filter-input" placeholder="Buscar por protocolo, rua ou bairro..." oninput="filterData()" style="flex: 1; min-width: 200px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
+            <select id="filter-status" class="filter-input" onchange="filterData()" style="min-width: 240px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
+                <option value="">Todos os status de execução</option>
+                <option value="Aguardando Programação">Aguardando Programação</option>
+                <option value="Programado">Programado</option>
+                <option value="Equipe em Campo">Equipe em Campo</option>
+                <option value="Concluído">Concluído</option>
+                <option value="Cancelado">Cancelado</option>
+            </select>
+            <button class="btn-amc btn-outline-amc" id="btn-toggle-filters" onclick="toggleAdvancedFilters()" title="Filtros Avançados" style="height: 38px; width: 38px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0;">
+                <i class="fa fa-sliders"></i>
+            </button>
+        </div>
+
+            <!-- Painel Retrátil de Filtros Avançados -->
+            <div id="advanced-filters-panel" class="glass-dark" style="display: none; padding: 1.25rem; border-radius: 14px; margin-top: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 10px; margin-bottom: 4px; display: block; color: var(--amc-text-muted);">Data Inicial</label>
+                        <input type="date" id="filter-date-start" class="form-input" onchange="filterData()" style="width: 100%; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 10px; margin-bottom: 4px; display: block; color: var(--amc-text-muted);">Data Final</label>
+                        <input type="date" id="filter-date-end" class="form-input" onchange="filterData()" style="width: 100%; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 10px; margin-bottom: 4px; display: block; color: var(--amc-text-muted);">Interessado / Solicitante</label>
+                        <input type="text" id="filter-solicitante" class="form-input" placeholder="Nome do solicitante..." oninput="filterData()" style="width: 100%; box-sizing: border-box;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 10px; margin-bottom: 4px; display: block; color: var(--amc-text-muted);">Nome da Prioridade</label>
+                        <select id="filter-priority-name" class="form-input" onchange="filterData()" style="width: 100%; box-sizing: border-box; height: 38px;">
+                            <option value="">Todas as Prioridades</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="ds-card glass table-container" style="padding:0;">
+            <table id="ditran-table">
+                <thead>
+                    <tr>
+                        <th>Processo</th>
+                        <th>Projeto</th>
+                        <th>Endereço</th>
+                        <th>Bairro (Regional)</th>
+                        <th>Valor Estimado</th>
+                        <th>Solicitante</th>
+                        <th>Obs. do Projeto</th>
+                        <th>Obs. de Execução</th>
+                        <th>Status</th>
+                        <th>Status NCE</th>
+                        <th>Data Programada</th>
+                    </tr>
+                </thead>
+                <tbody id="ditran-table-body">
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 2rem; color: var(--amc-text-muted);">
+                            <i class="fa fa-spinner fa-spin" style="margin-right: 8px;"></i> Carregando dados consolidada da Ditran...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Modal DITRAN -->
+        <div id="ditran-modal" class="modal-overlay">
+            <div class="modal-content glass">
+                <div class="modal-header">
+                    <div>
+                        <h3 style="font-family:'Oswald',sans-serif; font-size:1.4rem; margin:4px 0 2px; color:var(--amc-primary);" id="modal-title">Parecer de Diretoria</h3>
+                        <p id="modal-subtitle" style="font-size:12px; color:var(--amc-text-muted); margin:0;"></p>
+                    </div>
+                    <button class="modal-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="ditran-record-id">
+                    <div id="ditran-aggr-banner" class="aggr-banner" style="display:none;">
+                        <i class="fa fa-link"></i>
+                        <div><strong id="ditran-aggr-banner-title">Processo Agregado</strong><div id="ditran-aggr-banner-text" style="color:rgba(253,230,138,.75);font-size:12px;"></div></div>
+                    </div>
+
+                    <!-- Painel de Informações da Demanda Pai -->
+                    <div class="info-panel" id="info-panel" style="display:none;">
+                        <h4 style="margin:0 0 10px 0; font-size:11px; text-transform:uppercase; color:var(--amc-primary);">Demanda Geral</h4>
+                        <div class="info-grid">
+                            <div>
+                                <span class="info-label">Protocolo:</span>
+                                <span id="info-protocolo" style="color:#fff; font-weight:600;"></span>
+                            </div>
+                            <div>
+                                <span class="info-label">Tipo de Solicitação:</span>
+                                <span id="info-tipo" style="color:#fff; font-weight:500;"></span>
+                            </div>
+                            <div style="grid-column:span 2;">
+                                <span class="info-label">Endereço:</span>
+                                <span id="info-endereco" style="color:#fff; font-weight:500;"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Abas de Navegação -->
+                    <div class="tabs-nav">
+                        <button type="button" class="tab-btn active" id="btn-tab-visualizacao" onclick="switchTab('tab-visualizacao')"><i class="fa fa-eye"></i> Visualização Geral</button>
+                        <button type="button" class="tab-btn" id="btn-tab-despacho" onclick="switchTab('tab-despacho')"><i class="fa fa-traffic-light"></i> Despacho Diretoria</button>
+                    </div>
+
+                    <!-- ABA VISUALIZAÇÃO GERAL (TELA ÚNICA CONSOLIDADA) -->
+                    <div id="tab-visualizacao" class="tab-content active">
+                        <div id="preview-consolidado-content">
+                            <!-- Injetado dinamicamente via JS contendo NPA, NPO, NPE, NGC, NCE, NCO e Anexos -->
+                        </div>
+                        <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                            <button type="button" class="btn-amc btn-primary-amc" onclick="switchTab('tab-despacho')">
+                                <i class="fa fa-edit"></i> Proceder para Despacho da Diretoria
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ABA DESPACHO DIRETORIA -->
+                    <div id="tab-despacho" class="tab-content">
+                        <div class="form-section">
+                            <p class="form-section-title"><i class="fa fa-file-signature"></i> Deliberação do Ditran</p>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ditran-status-geral" class="form-label">Deliberação / Decisão</label>
+                                    <select id="ditran-status-geral" class="form-input">
+                                        <option value="Aprovado">Aprovado</option>
+                                        <option value="Aguardando Aprovação">Aguardando Aprovação</option>
+                                        <option value="Recusado">Recusado (Arquivado)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ditran-autorizado-parcialmente" class="form-label">Tipo de Execução Autorizada</label>
+                                    <select id="ditran-autorizado-parcialmente" class="form-input">
+                                        <option value="false">Total (Execução completa de projeto)</option>
+                                        <option value="true">Parcial (Autorizado apenas parte do projetado)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row" style="align-items: flex-end;">
+                                <div class="form-group">
+                                    <label class="form-label">Prioridade da Diretoria</label>
+                                    <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
+                                        <input type="checkbox" id="ditran-prioridade-diretoria" onchange="togglePriorityNameField(this.checked)" style="width: 18px; height: 18px; accent-color: var(--amc-primary); cursor: pointer;">
+                                        <span style="font-size: 13px; color: #fff;">Marcar como Prioridade Institucional</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group" id="prioridade-nome-group" style="display: none; flex-grow: 1;">
+                                    <label class="form-label">Nome da Prioridade</label>
+                                    <div style="display: flex; gap: 8px; width: 100%;">
+                                        <select id="ditran-prioridade-nome" class="form-input" style="flex-grow: 1; height: 38px;">
+                                            <option value="">Selecione uma prioridade...</option>
+                                        </select>
+                                        <input type="text" id="ditran-prioridade-nome-novo" class="form-input" placeholder="Nova prioridade..." style="display: none; flex-grow: 1; height: 38px;">
+                                        <button type="button" class="btn-amc btn-outline-amc" id="btn-add-priority-name" onclick="toggleAddNewPriorityInput()" style="padding: 0 14px; height: 38px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-flex; align-items: center; justify-content: center; font-family: inherit;">
+                                            <i class="fa fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1.25rem;">
+                                <label for="ditran-despacho-texto" class="form-label">Despacho / Parecer Ditran</label>
+                                <textarea id="ditran-despacho-texto" class="form-input" rows="4" placeholder="Digite o parecer oficial do Ditran e as orientações para o NCE e NCO..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-cancel" onclick="closeModal()">Fechar</button>
+                    <button class="btn-save" onclick="saveDitranDespacho()"><i class="fa fa-floppy-disk"></i> Salvar Despacho</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast">
+            <i class="fa fa-2x" id="toast-icon"></i>
+            <div>
+                <div style="font-weight:700; margin-bottom:4px;" id="toast-title">Sucesso</div>
+                <div style="font-size:13px; color:var(--amc-text-muted);" id="toast-message"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let rawData = [];
+        let filteredData = [];
+        let currentFilter = 'all';
+        let currentUser = null;
+        let currentSelectedProject = null;
+        let priorityCatalog = [];
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            // Inicializar Supabase
+            if (window.supabase) {
+                const { data: { session } } = await window.supabase.auth.getSession();
+                if (session) {
+                    currentUser = session.user;
+                    const profile = sessionStorage.getItem('usuario_logado');
+                    if (profile) {
+                        const user = JSON.parse(profile);
+                        document.getElementById('logged-email').innerText = user.nome_completo || user.cpf;
+                        document.getElementById('role-badge').innerHTML = `<i class="fa fa-user-shield"></i> <span>Operador: ${user.nivel_acesso.toUpperCase()}</span>`;
+                    }
+                    await loadPriorityCatalog();
+                    await loadConsolidatedData();
+                } else {
+                    window.location.href = 'login.html';
+                }
+            }
+        });
+
+        // 1. Carregar catálogo de prioridades
+        async function loadPriorityCatalog() {
+            try {
+                const { data, error } = await supabase
+                    .from('cat_prioridades')
+                    .select('*')
+                    .order('nome', { ascending: true });
+
+                if (error) throw error;
+                priorityCatalog = data || [];
+
+                // Preencher o select do filtro avançado
+                const filterSelect = document.getElementById('filter-priority-name');
+                if (filterSelect) {
+                    filterSelect.innerHTML = '<option value="">Todas as Prioridades</option>';
+                    priorityCatalog.forEach(p => {
+                        filterSelect.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+                    });
+                }
+
+                // Preencher o select do modal
+                const modalSelect = document.getElementById('ditran-prioridade-nome');
+                if (modalSelect) {
+                    modalSelect.innerHTML = '<option value="">Selecione uma prioridade...</option>';
+                    priorityCatalog.forEach(p => {
+                        modalSelect.innerHTML += `<option value="${p.nome}">${p.nome}</option>`;
+                    });
+                }
+            } catch (err) {
+                console.error("Erro ao carregar catalogo de prioridades:", err);
+            }
+        }
+
+        async function loadConsolidatedData() {
+            try {
+                const { data, error } = await supabase
+                    .from('demandas_pai')
+                    .select(`
+                        *,
+                        ruas_fortaleza:id_rua (nome),
+                        cat_bairros (
+                            nome_bairro,
+                            cat_regionais (nome_regional)
+                        ),
+                        analise_npa!analise_npa_id_demanda_pai_fkey(*),
+                        projetos_npo!projetos_npo_id_demanda_pai_fkey(*),
+                        projetos_npe!projetos_npe_id_demanda_pai_fkey(*),
+                        projetos_ngc!projetos_ngc_id_demanda_pai_fkey(*),
+                        execucao_nce!execucao_nce_id_demanda_pai_fkey(*),
+                        execucao_nco!execucao_nco_id_demanda_pai_fkey(*)
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                rawData = data.map(d => {
+                    const npe = d.projetos_npe ? (Array.isArray(d.projetos_npe) ? d.projetos_npe[0] : d.projetos_npe) : null;
+                    const nce = d.execucao_nce ? (Array.isArray(d.execucao_nce) ? d.execucao_nce[0] : d.execucao_nce) : null;
+                    const detalhes = npe?.detalhes_projeto || {};
+
+                    return {
+                        id: d.id,
+                        protocolo_oficial: d.protocolo_oficial || '',
+                        solicitante_oficial: d.solicitante_oficial || '',
+                        custo_estimado: parseFloat(d.custo_estimado) || 0,
+                        status_geral: d.status_geral || 'Aguardando Aprovação',
+                        nome_rua: d.ruas_fortaleza?.nome || 'Logradouro não informado',
+                        nome_bairro: d.cat_bairros?.nome_bairro || 'Sem Bairro',
+                        nome_regional: d.cat_bairros?.cat_regionais?.nome_regional || '—',
+                        numero_projeto: npe?.projeto_npe_numero || detalhes.numero_projeto || '—',
+                        trecho: detalhes.trecho || '',
+                        observacao_projeto: npe?.medidas_mitigadoras || detalhes.observacao_projeto || '—',
+                        observacao_execucao: nce?.observacoes_campo || '—',
+                        status_nce: nce?.status_nce || '—',
+                        data_programada_execucao: nce?.data_programada_execucao ? new Date(nce.data_programada_execucao).toLocaleDateString('pt-BR') : '—',
+                        prioridade_diretoria: d.prioridade_diretoria || false,
+                        prioridade_nome: d.prioridade_nome || '',
+                        id_demanda_principal: d.id_demanda_principal,
+                        created_at: d.created_at,
+                        raw: d // Mantém o objeto de dados completo
+                    };
+                });
+
+                filterData();
+
+            } catch (err) {
+                console.error("Erro ao carregar dados DITRAN:", err);
+                const tbody = document.getElementById('ditran-table-body');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 2rem; color: #ef4444;">
+                            <i class="fa fa-exclamation-triangle" style="margin-right: 8px;"></i> Falha ao obter dados do banco: ${err.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // --- Função de Relatório ---
+        function openReportModal() {
+            showToast('Relatório', 'A funcionalidade de geração de relatórios do DITRAN será implementada em breve.', 'info');
+        }
+
+        // 2. Toggle Filtros Avançados
+        function toggleAdvancedFilters() {
+            const panel = document.getElementById('advanced-filters-panel');
+            const btn = document.getElementById('btn-toggle-filters');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                btn.style.borderColor = 'var(--amc-primary)';
+                btn.style.background = 'rgba(248, 183, 0, 0.05)';
+            } else {
+                panel.style.display = 'none';
+                btn.style.borderColor = '';
+                btn.style.background = '';
+            }
+        }
+
+        function filterData() {
+            const search = document.getElementById('search-input').value.toLowerCase().trim();
+            const priorityFilter = document.getElementById('filter-priority').value;
+            const orderFilter = document.getElementById('filter-order').value;
+            const statusFilter = document.getElementById('filter-status').value;
+            
+            const dateStart = document.getElementById('filter-date-start').value;
+            const dateEnd = document.getElementById('filter-date-end').value;
+            const solicitante = document.getElementById('filter-solicitante').value.toLowerCase().trim();
+            const priorityName = document.getElementById('filter-priority-name').value;
+
+            filteredData = rawData.filter(d => {
+                // 1. Busca textual geral
+                const matchSearch = d.protocolo_oficial.toLowerCase().includes(search) || 
+                                    d.nome_rua.toLowerCase().includes(search) || 
+                                    d.nome_bairro.toLowerCase().includes(search) || 
+                                    d.solicitante_oficial.toLowerCase().includes(search);
+
+                // 2. Filtro de Prioridade (Todos vs Prioritários vs Não Prioritários)
+                let matchPriority = true;
+                if (priorityFilter === 'priority') {
+                    matchPriority = d.prioridade_diretoria === true;
+                } else if (priorityFilter === 'non-priority') {
+                    matchPriority = d.prioridade_diretoria !== true;
+                }
+
+                // 3. Filtro de Status NCE
+                let matchStatus = true;
+                if (statusFilter) {
+                    matchStatus = d.status_nce === statusFilter;
+                }
+
+                // 4. Período de Data
+                let matchDate = true;
+                if (d.created_at) {
+                    const dDate = new Date(d.created_at);
+                    if (dateStart) {
+                        const start = new Date(dateStart + 'T00:00:00');
+                        if (dDate < start) matchDate = false;
+                    }
+                    if (dateEnd) {
+                        const end = new Date(dateEnd + 'T23:59:59');
+                        if (dDate > end) matchDate = false;
+                    }
+                }
+
+                // 5. Interessado / Solicitante específico
+                let matchSolicitante = true;
+                if (solicitante) {
+                    matchSolicitante = d.solicitante_oficial.toLowerCase().includes(solicitante);
+                }
+
+                // 6. Nome da prioridade específico
+                let matchPriorityName = true;
+                if (priorityName) {
+                    matchPriorityName = d.prioridade_nome === priorityName;
+                }
+
+                return matchSearch && matchPriority && matchStatus && matchDate && matchSolicitante && matchPriorityName;
+            });
+
+            // Ordenação Cronológica (Mais Recentes vs Mais Antigos)
+            filteredData.sort((a, b) => {
+                const dateA = a.created_at ? new Date(a.created_at) : 0;
+                const dateB = b.created_at ? new Date(b.created_at) : 0;
+                return orderFilter === 'newest' ? dateB - dateA : dateA - dateB;
+            });
+
+            renderKPIs();
+            renderTable();
+        }
+
+        function renderKPIs() {
+            // Total de Processos
+            document.getElementById('kpi-processos').innerText = rawData.length;
+            
+            // Total de Processos Prioritários
+            const prioritarios = rawData.filter(d => d.prioridade_diretoria === true);
+            document.getElementById('kpi-prioritarios').innerText = prioritarios.length;
+
+            // Prioritários Agendados
+            const agendados = prioritarios.filter(d => {
+                const nce = d.raw.execucao_nce ? (Array.isArray(d.raw.execucao_nce) ? d.raw.execucao_nce[0] : d.raw.execucao_nce) : null;
+                const nco = d.raw.execucao_nco ? (Array.isArray(d.raw.execucao_nco) ? d.raw.execucao_nco[0] : d.raw.execucao_nco) : null;
+                return (nce && nce.data_programada_execucao) || (nco && nco.data_inicio_obra);
+            });
+            document.getElementById('kpi-prioritarios-agendados').innerText = agendados.length;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('ditran-table-body');
+            
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 2rem; color: var(--amc-text-muted);">
+                            Nenhum processo localizado para os filtros selecionados.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            filteredData.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.className = 'clickable-row';
+                tr.onclick = () => openDitranModal(d.id);
+
+                const custoFormatado = new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }).format(d.custo_estimado);
+
+                // Define as classes de badge baseados nos status
+                let badgeGeralClass = 'badge-status badge-geral';
+                if (d.status_geral === 'Aprovado') badgeGeralClass = 'badge-status badge-sucesso';
+                else if (d.status_geral === 'Aguardando Aprovação') badgeGeralClass = 'badge-status badge-alerta';
+                else if (d.status_geral === 'Recusado') badgeGeralClass = 'badge-status badge-generic';
+
+                let badgeNceClass = 'badge-status badge-nce';
+                if (d.status_nce === 'Concluído') badgeNceClass = 'badge-status badge-sucesso';
+                else if (d.status_nce === 'Em Execução') badgeNceClass = 'badge-status badge-alerta';
+
+                // Adiciona um ícone/badge de prioridade ao lado do protocolo
+                const prioridadeBadge = d.prioridade_diretoria 
+                    ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444; margin-right: 6px;" title="Prioritário: ${d.prioridade_nome || 'Sem Nome'}"></i>` 
+                    : '';
+
+                const enderecoCompleto = d.trecho ? `${d.nome_rua} <br><small style="color:var(--amc-text-muted)">Trecho: ${d.trecho}</small>` : d.nome_rua;
+
+                tr.innerHTML = `
+                    <td style="font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">${prioridadeBadge}${d.protocolo_oficial}${d.id_demanda_principal ? `<span class="badge-aggr" title="Processo Agregado">A</span>` : ''}</td>
+                    <td style="font-weight: 600; color: var(--amc-primary);">${d.numero_projeto}</td>
+                    <td>${enderecoCompleto}</td>
+                    <td>${d.nome_bairro} <br><small style="color:var(--amc-text-muted)">${d.nome_regional}</small></td>
+                    <td style="font-weight: 600; color: #10b981;">${custoFormatado}</td>
+                    <td>${d.solicitante_oficial}</td>
+                    <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${d.observacao_projeto}">${d.observacao_projeto}</td>
+                    <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${d.observacao_execucao}">${d.observacao_execucao}</td>
+                    <td><span class="${badgeGeralClass}">${d.status_geral}</span></td>
+                    <td><span class="${badgeNceClass}">${d.status_nce}</span></td>
+                    <td style="font-weight: 500;">${d.data_programada_execucao}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ─── Abas do Modal ───
+        function toggleNpoSubSection(elementId, btn) {
+            const el = document.getElementById(elementId);
+            const arrow = btn.querySelector('.arrow-icon');
+            if (el.style.display === 'block') {
+                el.style.display = 'none';
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            } else {
+                el.style.display = 'block';
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function renderNpoCollapsibleDetails(npo) {
+            if (!npo || !npo.detalhes_projeto) return '';
+            const det = npo.detalhes_projeto;
+            
+            let html = '';
+            const hasVal = (val) => val !== undefined && val !== null && val !== '' && val !== 0 && val !== '0' && val !== 0.0;
+            
+            const renderGrid = (obj, mapping) => {
+                let gridHtml = '';
+                for (const [key, label] of Object.entries(mapping)) {
+                    const val = obj[key];
+                    if (hasVal(val)) {
+                        gridHtml += `<div><span class="nuc-label" style="font-size:10px; color:var(--amc-text-muted); text-transform:uppercase;">${label}</span><span class="nuc-value" style="font-weight:600; color:#fff; font-size:13px;">${val}</span></div>`;
+                    }
+                }
+                return gridHtml;
+            };
+
+            // 1. Projeto Geométrico
+            const geom = det.geometrico || {};
+            const geomMapping = {
+                recapeamento: 'Recapeamento',
+                numero_projeto: 'Nº do Projeto Geométrico',
+                data_recapeamento: 'Data do Recapeamento',
+                travessia_elevada: 'Travessia Elevada (un)',
+                plato: 'Platô (un)',
+                lombada_fisica: 'Lombada Física (un)',
+                retirada_lombada: 'Retirada de Lombada (un)'
+            };
+            const geomGrid = renderGrid(geom, geomMapping);
+            if (geomGrid) {
+                html += `
+                    <div class="npo-sub-accordion">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-geom', this)">
+                            <span><i class="fa fa-ruler-combined" style="margin-right:6px; color:var(--amc-npo);"></i> Projeto Geométrico</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-geom" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${geomGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 2. Cruzamento & Semáforo
+            const cruz = det.cruzamento || {};
+            const cruzMapping = {
+                quant_sinalizacao_hz_vt: 'Sinalização Hz/Vt',
+                horizontal: 'Sinalização Horizontal (m²)',
+                vertical: 'Sinalização Vertical (un)',
+                horizontal_tachao: 'Sinalização Hz c/ Tachão',
+                horiz_vert_tachao: 'Sinalização Hz/Vt c/ Tachão',
+                implantar_semaforo: 'Implantar Semáforo (un)',
+                renovar_semaforo: 'Renovar Semáforo (un)',
+                desativar_semaforo: 'Desativar Semáforo (un)'
+            };
+            const cruzGrid = renderGrid(cruz, cruzMapping);
+            if (cruzGrid) {
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-cruz', this)">
+                            <span><i class="fa fa-traffic-light" style="margin-right:6px; color:var(--amc-npo);"></i> Cruzamento / Semáforo</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-cruz" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${cruzGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 3. Melhorias Urbanas
+            const sin = det.sinalizacao || {};
+            const sinMapping = {
+                sentido_unico_inversao: 'Sentido Único / Inversão',
+                sentido_duplo: 'Sentido Duplo',
+                inversao_preferencial: 'Inversão de Preferencial',
+                travessia_pedestre: 'Travessia de Pedestre (un)',
+                travessia_colorida: 'Travessia Colorida (un)',
+                faixa_x: 'Faixa em X (un)',
+                faixa_longa: 'Faixa de Pedestre Longa (un)',
+                projeto_escola: 'Projeto Escola',
+                esquina_segura: 'Esquina Segura (un)',
+                esquina_segura_renovacao: 'Esquina Segura Renovação (un)',
+                calcada_verde: 'Calçada Verde',
+                calcada_viva: 'Calçada Viva',
+                travessia_elevada_renovar: 'Travessia Elevada a Renovar (un)',
+                lombada_fisica_renovar: 'Lombada Física a Renovar (un)',
+                video: 'Pesquisa de Vídeo (un)',
+                fiscalizacao_eletronica: 'Fiscalização Eletrônica',
+                yellow_box: 'Área de Conflito (Yellow Box) (un)',
+                semaforo_colorido: 'Semáforo c/ Fundo Colorido (un)',
+                mot_box: 'Motobox (un)',
+                estacionamento_bicicleta: 'Estacionamento de Bicicleta',
+                paraciclo: 'Paraciclo',
+                ciclo: 'Ciclofaixa/Ciclovia',
+                motofaixa_faixa_azul: 'Motofaixa / Faixa Azul',
+                faixa_exclusiva: 'Faixa Exclusiva de Ônibus',
+                area_transito_calmo: 'Área de Trânsito Calmo',
+                transito_compartilhado: 'Trânsito Compartilhado',
+                rotatoria: 'Rotatória',
+                praca_viva: 'Praça Viva',
+                vlt: 'Cruzamento c/ VLT',
+                equipamento: 'Polo Gerador / Equipamento'
+            };
+            const sinGrid = renderGrid(sin, sinMapping);
+            if (sinGrid) {
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-sin', this)">
+                            <span><i class="fa fa-map-marked-alt" style="margin-right:6px; color:var(--amc-npo);"></i> Sinalização e Melhorias Urbanas</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-sin" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${sinGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 4. Vagas de Zona Azul e Especiais
+            const vza = det.vagas_zona_azul || {};
+            const vzaImp = vza.implantar || {};
+            const vzaRem = vza.remover || {};
+            const vzaApa = vza.apagar || {};
+            
+            const vd = det.vagas_diversas || {};
+            const vdImp = vd.implantar || {};
+            const vdRen = vd.renovar || {};
+            const vdApa = vd.apagar || {};
+            
+            const zAzulLabels = { za: 'Zona Azul', def: 'PCD', ido: 'Idoso', cd: 'Carga/Descarga' };
+            let zAzulRows = '';
+            for (const [key, label] of Object.entries(zAzulLabels)) {
+                const imp = vzaImp[key] || 0;
+                const rem = vzaRem[key] || 0;
+                const apa = vzaApa[key] || 0;
+                if (imp > 0 || rem > 0 || apa > 0) {
+                    zAzulRows += `
+                        <tr>
+                            <td style="padding:6px; font-size:12px; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.04);">${label}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${imp ? 'var(--amc-green)' : 'var(--amc-text-muted)'};">${imp || '—'}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${rem ? '#ff8b8b' : 'var(--amc-text-muted)'};">${rem || '—'}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${apa ? '#ff6b6b' : 'var(--amc-text-muted)'};">${apa || '—'}</td>
+                        </tr>
+                    `;
+                }
+            }
+            
+            const vdKeys = [
+                { key: "taxi", label: "Táxi" },
+                { key: "moto_taxi", label: "Moto Táxi" },
+                { key: "moto_app", label: "Moto Aluguel" },
+                { key: "moto", label: "Moto" },
+                { key: "deficiente", label: "Deficiente" },
+                { key: "idoso", label: "Idoso" },
+                { key: "carga_descarga", label: "Carga/Descarga" },
+                { key: "embarque_desembarque", label: "Emb/Desemb" },
+                { key: "embarque_desembarque_app", label: "Emb/Desemb App" },
+                { key: "viatura_policial", label: "Viatura" },
+                { key: "ambulancia", label: "Ambulância" },
+                { key: "veiculo_compartilhado", label: "Compartilhado" },
+                { key: "veiculo_particular", label: "Particular" },
+                { key: "onibus", label: "Ônibus" },
+                { key: "micro_onibus_turismo", label: "Micro Ônibus" },
+                { key: "transporte_escolar", label: "Escolar" },
+                { key: "veiculo_articulado_aluguel", label: "Veíc. Articulado" },
+                { key: "reboque_semi_reboque", label: "Reboque" },
+                { key: "caminhao", label: "Caminhão" },
+                { key: "carros_frete", label: "Carro Frete" },
+                { key: "estacao_coleta", label: "Estação Coleta" }
+            ];
+            
+            let vdRows = '';
+            vdKeys.forEach(item => {
+                const imp = vdImp[item.key] || 0;
+                const ren = vdRen[item.key] || 0;
+                const apa = vdApa[item.key] || 0;
+                if (imp > 0 || ren > 0 || apa > 0) {
+                    vdRows += `
+                        <tr>
+                            <td style="padding:6px; font-size:12px; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.04);">${item.label}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${imp ? 'var(--amc-green)' : 'var(--amc-text-muted)'};">${imp || '—'}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${ren ? 'var(--amc-primary)' : 'var(--amc-text-muted)'};">${ren || '—'}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${apa ? '#ff6b6b' : 'var(--amc-text-muted)'};">${apa || '—'}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (zAzulRows || vdRows) {
+                let tablesHtml = '';
+                if (zAzulRows) {
+                    tablesHtml += `
+                        <div style="font-size:10px; text-transform:uppercase; color:var(--amc-npo); font-weight:700; margin-bottom:6px;">Zona Azul</div>
+                        <table style="width:100%; border-collapse:collapse; margin-bottom:12px; border:1px solid rgba(255,255,255,0.06); font-size:12px; color:#fff;">
+                            <thead>
+                                <tr style="background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.06);">
+                                    <th style="padding:6px; font-size:10px; text-align:left; color:var(--amc-text-muted);">Tipo</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Impl.</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Remov.</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Apag.</th>
+                                </tr>
+                            </thead>
+                            <tbody>${zAzulRows}</tbody>
+                        </table>
+                    `;
+                }
+                if (vdRows) {
+                    tablesHtml += `
+                        <div style="font-size:10px; text-transform:uppercase; color:var(--amc-npo); font-weight:700; margin-bottom:6px;">Vagas Especiais (Diversas)</div>
+                        <table style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.06); font-size:12px; color:#fff;">
+                            <thead>
+                                <tr style="background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.06);">
+                                    <th style="padding:6px; font-size:10px; text-align:left; color:var(--amc-text-muted);">Tipo</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Impl.</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Renov.</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Apag.</th>
+                                </tr>
+                            </thead>
+                            <tbody>${vdRows}</tbody>
+                        </table>
+                    `;
+                }
+                
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-vagas', this)">
+                            <span><i class="fa fa-parking" style="margin-right:6px; color:var(--amc-npo);"></i> Vagas Especiais & Zona Azul</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-vagas" class="npo-sub-content">${tablesHtml}</div>
+                    </div>
+                `;
+            }
+
+            // 5. Quantitativos a Implantar
+            const qi = det.quantitativo_implantar || {};
+            const qiMapping = {
+                hz_mecanica: 'Sinalização Hz Mecânica (m²)',
+                hz_mecanica_term: 'Hz Mecânica Termoplástico (m²)',
+                hz_manual_term: 'Hz Manual Termoplástico (m²)',
+                hz_plastico_frio: 'Hz Plástico a Frio (m²)',
+                hz_manual: 'Hz Manual (m²)',
+                sonorizador: 'Sonorizador (un)',
+                placa: 'Placa (un)',
+                passagem_iluminada: 'Passagem Iluminada (un)',
+                pelicula: 'Película (m²)',
+                coluna: 'Coluna (un)',
+                coluna_cilindrica: 'Coluna Cilind/Cônica (un)',
+                gradil: 'Gradil (m)',
+                balizador: 'Balizador (un)',
+                zebras: 'Zebras (un)',
+                tacha_mono: 'Tacha Mono (un)',
+                tacha_bi: 'Tacha Bi (un)',
+                gelito: 'Gelito/Gelo Baiano (un)'
+            };
+            const qiGrid = renderGrid(qi, qiMapping);
+            if (qiGrid) {
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-qi', this)">
+                            <span><i class="fa fa-plus-circle" style="margin-right:6px; color:var(--amc-npo);"></i> Quantitativos a Implantar</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-qi" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${qiGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 6. Quantitativos a Retirar
+            const qr = det.quantitativo_retirar || {};
+            const qrMapping = {
+                balizador: 'Balizador (un)',
+                gelito: 'Gelito (un)',
+                tacha: 'Tacha (un)',
+                tachao: 'Tachão (un)',
+                coluna: 'Coluna (un)',
+                placa: 'Placa (un)',
+                sinalizacao_hz: 'Sinalização Horizontal (m²)',
+                extensao: 'Extensão / Ciclo (m)'
+            };
+            const qrGrid = renderGrid(qr, qrMapping);
+            if (qrGrid) {
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-qr', this)">
+                            <span><i class="fa fa-minus-circle" style="margin-right:6px; color:var(--amc-npo);"></i> Quantitativos a Retirar</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-qr" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${qrGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(pane => pane.classList.remove('active'));
+            const targetBtn = document.getElementById(`btn-${tabId}`);
+            if (targetBtn) targetBtn.classList.add('active');
+            const targetPane = document.getElementById(tabId);
+            if (targetPane) targetPane.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('ditran-modal').classList.remove('show');
+        }
+
+        // Aggregation
+        function toggleAggrFilter(field) {
+            const checkbox = document.getElementById(`aggr-use-${field}`);
+            const input = document.getElementById(`aggr-filter-${field}`);
+            if (checkbox && input) {
+                input.disabled = !checkbox.checked;
+            }
+        }
+
+        function openAggrModal(demandaId, protocolo, bairro, endereco, regional) {
+            document.getElementById('aggr-current-demanda-id').value = demandaId || '';
+            document.getElementById('aggr-current-protocolo').value = protocolo || '';
+            document.getElementById('aggr-modal-sub').textContent = `Processo atual: ${protocolo || '—'} · Pesquise outros processos que já contemplem este local.`;
+            
+            ['bairro', 'regional', 'endereco'].forEach(f => {
+                const cb = document.getElementById(`aggr-use-${f}`);
+                const inp = document.getElementById(`aggr-filter-${f}`);
+                if (cb) cb.checked = true;
+                if (inp) inp.disabled = false;
+            });
+
+            document.getElementById('aggr-filter-bairro').value = bairro || '';
+            document.getElementById('aggr-filter-regional').value = regional || '';
+            document.getElementById('aggr-filter-endereco').value = endereco || '';
+            document.getElementById('aggr-results-area').innerHTML = '<div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Ajuste os filtros e clique em Pesquisar.</div>';
+            document.getElementById('aggr-modal').classList.add('show');
+        }
+        function closeAggrModal() { document.getElementById('aggr-modal').classList.remove('show'); }
+        function escapeHtml(t) { if (!t) return ''; const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}; return t.replace(/[&<>"']/g,c=>m[c]); }
+        async function searchSimilarDemandas() {
+            const cId = document.getElementById('aggr-current-demanda-id').value;
+            const useBairro = document.getElementById('aggr-use-bairro').checked;
+            const useEndereco = document.getElementById('aggr-use-endereco').checked;
+            const useRegional = document.getElementById('aggr-use-regional').checked;
+
+            const bairro = document.getElementById('aggr-filter-bairro').value.trim();
+            const endereco = document.getElementById('aggr-filter-endereco').value.trim();
+            const regional = document.getElementById('aggr-filter-regional').value.trim();
+            document.getElementById('aggr-results-area').innerHTML = '<div class="aggr-empty"><i class="fa fa-spinner fa-spin" style="margin-right:6px;"></i>Buscando...</div>';
+            let q = supabase.from('demandas_pai').select(`id,protocolo_oficial,tipo_solicitacao,solicitante_oficial,endereco,nucleos_atribuidos,id_demanda_principal,cat_bairros(nome_bairro,cat_regionais(nome_regional)),ruas_fortaleza:id_rua(nome),projetos_npo!projetos_npo_id_demanda_pai_fkey(status_npo),execucao_nce!execucao_nce_id_demanda_pai_fkey(status_nce),execucao_nco!execucao_nco_id_demanda_pai_fkey(status_nco),projetos_npe!projetos_npe_id_demanda_pai_fkey(status_npe),analise_npa!analise_npa_id_demanda_pai_fkey(status_npa),projetos_ngc!projetos_ngc_id_demanda_pai_fkey(status_ngc)`);
+            if (useBairro && bairro) q = q.ilike('cat_bairros.nome_bairro', `%${bairro}%`);
+            if (useEndereco && endereco) q = q.or(`endereco.ilike.%${endereco}%,ruas_fortaleza.nome.ilike.%${endereco}%`);
+            const { data, error } = await q.order('created_at', { ascending: false }).limit(50);
+            if(error){document.getElementById('aggr-results-area').innerHTML=`<div class="aggr-empty" style="color:#f87171;">Erro:${escapeHtml(error.message)}</div>`;return;}
+            
+            let results = (data || []).filter(r => r.id !== cId);
+            if (useRegional && regional) {
+                results = results.filter(r => {
+                    const rReg = r.cat_bairros?.cat_regionais?.nome_regional || '';
+                    return rReg.toLowerCase().includes(regional.toLowerCase());
+                });
+            }
+            if(!results.length){document.getElementById('aggr-results-area').innerHTML='<div class="aggr-empty"><i class="fa fa-check-circle" style="color:#4ade80;margin-right:6px;"></i>Nenhum processo similar encontrado.</div>';return;}
+            let html=`<table id="aggr-results-table"><thead><tr><th>Processo</th><th>Endereço</th><th>Bairro</th><th>Solicitante</th><th>Núcleo/Status</th><th>Ação</th></tr></thead><tbody>`;
+            results.forEach(r=>{
+                const bn=r.cat_bairros?r.cat_bairros.nome_bairro:'—';
+                const en=r.endereco||(r.ruas_fortaleza?r.ruas_fortaleza.nome:'')||'—';
+                let sh='';
+                if(r.projetos_npo&&r.projetos_npo[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(248,183,0,.12);color:#f8b700;border-radius:4px;">NPO:${r.projetos_npo[0].status_npo}</span>`;
+                if(r.execucao_nce&&r.execucao_nce[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(167,139,250,.12);color:#a78bfa;border-radius:4px;">NCE:${r.execucao_nce[0].status_nce}</span>`;
+                if(r.execucao_nco&&r.execucao_nco[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(99,102,241,.12);color:#818cf8;border-radius:4px;">NCO:${r.execucao_nco[0].status_nco}</span>`;
+                if(r.projetos_npe&&r.projetos_npe[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(16,185,129,.12);color:#10b981;border-radius:4px;margin:1px;">NPE:${r.projetos_npe[0].status_npe}</span>`;
+                if(r.analise_npa&&r.analise_npa[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(59,130,246,.12);color:#3b82f6;border-radius:4px;margin:1px;">NPA:${r.analise_npa[0].status_npa}</span>`;
+                if(r.projetos_ngc&&r.projetos_ngc[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(236,72,153,.12);color:#ec4899;border-radius:4px;margin:1px;">NGC:${r.projetos_ngc[0].status_ngc}</span>`;
+                if(!sh)sh=`<span style="font-size:10px;color:var(--amc-text-muted);">${(r.nucleos_atribuidos||[]).join(', ')||'—'}</span>`;
+                const ab=r.id_demanda_principal?`<span class="badge-aggr" title="Já agregado">A</span>`:'';
+                html+=`<tr><td style="font-family:'Oswald',sans-serif;color:var(--amc-ditran);">${escapeHtml(r.protocolo_oficial)}${ab}</td><td>${escapeHtml(en)}</td><td>${escapeHtml(bn)}</td><td>${escapeHtml(r.solicitante_oficial||'—')}</td><td><div style="display:flex;flex-wrap:wrap;gap:2px;">${sh}</div></td><td><button class="aggr-action-btn" onclick="confirmAggr('${cId}','${r.id}','${escapeHtml(r.protocolo_oficial)}')"><i class="fa fa-link"></i> Agregar</button></td></tr>`;
+            });
+            html+='</tbody></table>'; document.getElementById('aggr-results-area').innerHTML=html;
+        }
+        async function confirmAggr(idAtual,idPrincipal,protPrincipal){const protAtual=document.getElementById('aggr-current-protocolo').value;if(!confirm(`Confirma a agregação?\nO processo "${protAtual}" será vinculado ao processo "${protPrincipal}".\nO status não será alterado automaticamente.`))return;const{error}=await supabase.from('demandas_pai').update({id_demanda_principal:idPrincipal}).eq('id',idAtual);if(error){showToast('Erro','Falha ao agregar: '+error.message,'error');return;}showToast('Sucesso',`${protAtual} agregado a ${protPrincipal}!`,'success');closeAggrModal();await loadConsolidatedData();}
+
+        function showToast(title, message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            document.getElementById('toast-title').textContent = title;
+            document.getElementById('toast-message').textContent = message;
+
+            toast.className = 'toast show toast-' + type;
+            icon.className = 'fa ' + (type === 'success' ? 'fa-check-circle text-emerald-400' : type === 'error' ? 'fa-circle-exclamation text-rose-500' : 'fa-circle-info text-blue-400');
+
+            setTimeout(() => { toast.classList.remove('show'); }, 4000);
+        }
+
+        // Exibe/oculta a linha do seletor de prioridades no modal
+        function togglePriorityNameField(isChecked) {
+            const group = document.getElementById('prioridade-nome-group');
+            if (isChecked) {
+                group.style.display = 'block';
+            } else {
+                group.style.display = 'none';
+                // Reseta os valores
+                document.getElementById('ditran-prioridade-nome').value = '';
+                document.getElementById('ditran-prioridade-nome-novo').style.display = 'none';
+                document.getElementById('ditran-prioridade-nome').style.display = 'block';
+                document.getElementById('btn-add-priority-name').innerHTML = '<i class="fa fa-plus"></i>';
+            }
+        }
+
+        // Alterna entre o select e o input de texto para nova prioridade
+        async function toggleAddNewPriorityInput() {
+            const select = document.getElementById('ditran-prioridade-nome');
+            const input = document.getElementById('ditran-prioridade-nome-novo');
+            const btn = document.getElementById('btn-add-priority-name');
+
+            if (input.style.display === 'none') {
+                // Modo de inclusão
+                select.style.display = 'none';
+                input.style.display = 'block';
+                input.value = '';
+                input.focus();
+                btn.innerHTML = '<i class="fa fa-check"></i>';
+                btn.title = 'Confirmar nova prioridade';
+            } else {
+                // Modo de salvar
+                const novoNome = input.value.trim();
+                if (!novoNome) {
+                    // Cancela e volta se estiver vazio
+                    select.style.display = 'block';
+                    input.style.display = 'none';
+                    btn.innerHTML = '<i class="fa fa-plus"></i>';
+                    btn.title = 'Adicionar prioridade';
+                    return;
+                }
+
+                try {
+                    // Salvar no catálogo via Supabase
+                    const { error } = await supabase
+                        .from('cat_prioridades')
+                        .insert([{ nome: novoNome }]);
+
+                    if (error && error.code !== '23505') { // ignora erro de duplicidade se já existir
+                        throw error;
+                    }
+
+                    showToast('Sucesso', `Prioridade "${novoNome}" cadastrada com sucesso!`, 'success');
+                    
+                    // Recarrega o catálogo
+                    await loadPriorityCatalog();
+
+                    // Seleciona a prioridade criada
+                    select.value = novoNome;
+                    
+                    // Volta a visualização padrão
+                    select.style.display = 'block';
+                    input.style.display = 'none';
+                    btn.innerHTML = '<i class="fa fa-plus"></i>';
+                    btn.title = 'Adicionar prioridade';
+
+                } catch (err) {
+                    console.error("Erro ao cadastrar prioridade:", err);
+                    showToast('Erro', 'Falha ao cadastrar prioridade: ' + err.message, 'error');
+                }
+            }
+        }
+
+        async function openDitranModal(projectId) {
+            const p = rawData.find(x => x.id === projectId);
+            if (!p) return;
+
+            currentSelectedProject = p;
+            const d = p.raw;
+
+            document.getElementById('ditran-record-id').value = d.id;
+            document.getElementById('ditran-status-geral').value = d.status_geral || 'Aguardando Aprovação';
+            document.getElementById('ditran-autorizado-parcialmente').value = String(d.autorizado_parcialmente ?? false);
+            document.getElementById('ditran-despacho-texto').value = d.despacho_diretoria || '';
+
+            // Configurar campos de prioridade
+            const isPrioritario = d.prioridade_diretoria === true;
+            document.getElementById('ditran-prioridade-diretoria').checked = isPrioritario;
+            togglePriorityNameField(isPrioritario);
+            document.getElementById('ditran-prioridade-nome').value = d.prioridade_nome || '';
+
+            // Painel de informações
+            document.getElementById('modal-title').textContent = `Parecer da Diretoria — ${d.protocolo_oficial}`;
+            document.getElementById('modal-subtitle').textContent = d.tipo_solicitacao || '';
+            document.getElementById('info-protocolo').textContent = d.protocolo_oficial;
+            document.getElementById('info-tipo').textContent = d.tipo_solicitacao || '—';
+            
+            const rua = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+            const bairro = d.cat_bairros ? d.cat_bairros.nome_bairro : '';
+            document.getElementById('info-endereco').textContent = d.endereco || (rua ? `${rua}, ${bairro}` : bairro) || '—';
+            document.getElementById('info-panel').style.display = 'block';
+
+            // Banner de Agregação
+            const aggrBditran = document.getElementById('ditran-aggr-banner');
+            if (aggrBditran) aggrBditran.style.display = 'none';
+            if (d.id_demanda_principal) {
+                supabase.from('demandas_pai').select('protocolo_oficial').eq('id', d.id_demanda_principal).single().then(({ data: pd }) => { if (pd && aggrBditran) { document.getElementById('ditran-aggr-banner-title').textContent = 'Este processo está agregado ao seguinte processo:'; document.getElementById('ditran-aggr-banner-text').innerHTML = `<strong style="color:#fde68a;">${pd.protocolo_oficial}</strong><br><span style="font-size:11px;">O status deve ser gerenciado manualmente.</span>`; aggrBditran.style.display = 'flex'; } });
+            }
+            supabase.from('demandas_pai').select('protocolo_oficial').eq('id_demanda_principal', d.id).then(({ data: fd }) => { if (fd && fd.length > 0 && aggrBditran && aggrBditran.style.display === 'none') { document.getElementById('ditran-aggr-banner-title').textContent = 'Processos agregados a este:'; document.getElementById('ditran-aggr-banner-text').innerHTML = fd.map(f => `<strong style="color:#fde68a;">${f.protocolo_oficial}</strong>`).join(', ') + '<br><span style="font-size:11px;">Verifique e atualize os status manualmente.</span>'; aggrBditran.style.display = 'flex'; } });
+
+            // Btn Verificar no Local
+            let btnVDitran = document.getElementById('btn-verify-local');
+            if (!btnVDitran) { btnVDitran = document.createElement('button'); btnVDitran.id = 'btn-verify-local'; btnVDitran.innerHTML = '<i class="fa fa-magnifying-glass-location"></i> Verificar no Local'; const mh = document.querySelector('#ditran-modal .modal-header > div'); if (mh) mh.appendChild(btnVDitran); }
+            btnVDitran.onclick = () => openAggrModal(d.id, d.protocolo_oficial, bairro, d.endereco || rua, d.cat_bairros && d.cat_bairros.cat_regionais ? d.cat_bairros.cat_regionais.nome_regional : '');
+            btnVDitran.style.display = 'inline-flex';
+
+            populatePreviewTabs(d);
+            switchTab('tab-visualizacao');
+            document.getElementById('ditran-modal').classList.add('show');
+        }
+
+        function populatePreviewTabs(d) {
+            const container = document.getElementById('preview-consolidado-content');
+            if (!container) return;
+
+            const npa = d.analise_npa ? (Array.isArray(d.analise_npa) ? d.analise_npa[0] : d.analise_npa) : null;
+            const npo = d.projetos_npo ? (Array.isArray(d.projetos_npo) ? d.projetos_npo[0] : d.projetos_npo) : null;
+            const npe = d.projetos_npe ? (Array.isArray(d.projetos_npe) ? d.projetos_npe[0] : d.projetos_npe) : null;
+            const ngc = d.projetos_ngc ? (Array.isArray(d.projetos_ngc) ? d.projetos_ngc[0] : d.projetos_ngc) : null;
+            const nce = d.execucao_nce ? (Array.isArray(d.execucao_nce) ? d.execucao_nce[0] : d.execucao_nce) : null;
+            const nco = d.execucao_nco ? (Array.isArray(d.execucao_nco) ? d.execucao_nco[0] : d.execucao_nco) : null;
+
+            let html = '';
+
+            // NPA Card
+            if (npa) {
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #38bdf8;">
+                        <div class="nuc-preview-title nuc-npa"><i class="fa fa-chart-pie"></i> NPA — Planejamento e Análise</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Tipo de Localização</span><span class="nuc-value">${npa.tipo_localizacao || '—'}</span></div>
+                            <div><span class="nuc-label">Rua Principal</span><span class="nuc-value">${npa.rua_principal || '—'}</span></div>
+                            ${npa.tipo_localizacao === 'Cruzamento' ? 
+                                `<div><span class="nuc-label">Cruzamento com</span><span class="nuc-value">${npa.rua_cruzamento || '—'}</span></div>` : 
+                                `<div><span class="nuc-label">Limites</span><span class="nuc-value">${npa.rua_limite_a || '—'} a ${npa.rua_limite_b || '—'}</span></div>`
+                            }
+                            <div class="nuc-field-full"><span class="nuc-label">Título do Projeto NPA</span><span class="nuc-value">${npa.projeto_npa_titulo || npa.projeto_npa_nome || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Projeto NPA</span><span class="nuc-value">${npa.projeto_npa_numero || '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Observações da Análise</span><span class="nuc-value">${npa.observacoes || '—'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // NPO Card
+            if (npo) {
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #fb7185;">
+                        <div class="nuc-preview-title nuc-npo"><i class="fa fa-list-check"></i> NPO — Projetos Operacionais</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Trecho/Local</span><span class="nuc-value">${npo.trecho || '—'}</span></div>
+                            <div><span class="nuc-label">Divisão / Área</span><span class="nuc-value">${npo.divisao_area || '—'}</span></div>
+                            <div><span class="nuc-label">Sinalização Horizontal Projetada</span><span class="nuc-value">${npo.quant_sinalizacao_horizontal_m2 ? npo.quant_sinalizacao_horizontal_m2 + ' m²' : '—'}</span></div>
+                            <div><span class="nuc-label">Sinalização Vertical Projetada</span><span class="nuc-value">${npo.quant_sinalizacao_vertical_unid ? npo.quant_sinalizacao_vertical_unid + ' un' : '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Título do Projeto NPO</span><span class="nuc-value">${npo.projeto_npo_titulo || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Projeto NPO</span><span class="nuc-value">${npo.projeto_npo_numero || '—'}</span></div>
+                            <div><span class="nuc-label">Técnico NPO</span><span class="nuc-value">${npo.tecnico_responsavel || '—'}</span></div>
+                        </div>
+                        <!-- Detalhes colapsáveis adicionais do NPO -->
+                        ${renderNpoCollapsibleDetails(npo)}
+                    </div>
+                `;
+            }
+
+            // NPE Card
+            if (npe) {
+                let medNpeStr = '—';
+                if (npe.medidas_mitigadoras) {
+                    if (Array.isArray(npe.medidas_mitigadoras)) {
+                        medNpeStr = npe.medidas_mitigadoras.join(', ');
+                    } else if (typeof npe.medidas_mitigadoras === 'object') {
+                        medNpeStr = JSON.stringify(npe.medidas_mitigadoras);
+                    } else {
+                        medNpeStr = String(npe.medidas_mitigadoras);
+                    }
+                }
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #a78bfa;">
+                        <div class="nuc-preview-title nuc-npe"><i class="fa fa-folder-open"></i> NPE — Projetos Especiais</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Tipo de Estudo</span><span class="nuc-value">${npe.tipo_estudo || '—'}</span></div>
+                            <div><span class="nuc-label">Origem do Projeto</span><span class="nuc-value">${npe.origem_projeto || '—'}</span></div>
+                            <div><span class="nuc-label">Trecho</span><span class="nuc-value">${npe.detalhes_projeto ? (npe.detalhes_projeto.trecho || '—') : '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Título do Projeto NPE</span><span class="nuc-value">${npe.projeto_npe_titulo || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Projeto NPE</span><span class="nuc-value">${npe.projeto_npe_numero || '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Medidas Mitigadoras</span><span class="nuc-value">${medNpeStr}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Observações</span><span class="nuc-value">${npe.detalhes_projeto ? (npe.detalhes_projeto.observacao_projeto || '—') : '—'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // NGC Card
+            if (ngc) {
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #22d3ee;">
+                        <div class="nuc-preview-title nuc-ngc"><i class="fa fa-bicycle"></i> NGC — Gestão Cicloviária</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Tipologia Cicloviária</span><span class="nuc-value">${ngc.tipologia || '—'}</span></div>
+                            <div><span class="nuc-label">Posição na Via</span><span class="nuc-value">${ngc.posicao_via || '—'}</span></div>
+                            <div><span class="nuc-label">Sentido de Circulação</span><span class="nuc-value">${ngc.sentido_circulacao || '—'}</span></div>
+                            <div><span class="nuc-label">Tipo de Pavimento</span><span class="nuc-value">${ngc.pavimento || '—'}</span></div>
+                            <div><span class="nuc-label">Extensão Projetada</span><span class="nuc-value">${ngc.extensao_km ? ngc.extensao_km + ' km' : '—'}</span></div>
+                            <div><span class="nuc-label">Orientação</span><span class="nuc-value">${ngc.orientacao || '—'}</span></div>
+                            <div><span class="nuc-label">Elementos de Separação</span><span class="nuc-value">${ngc.elementos_separacao || '—'}</span></div>
+                            <div><span class="nuc-label">Infraestrutura Protegida?</span><span class="nuc-value">${ngc.protegida ? 'Sim' : 'Não'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Título do Projeto NGC</span><span class="nuc-value">${ngc.projeto_ngc_titulo || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Projeto NGC</span><span class="nuc-value">${ngc.projeto_ngc_numero || '—'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // NCE Card
+            if (nce) {
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #c084fc;">
+                        <div class="nuc-preview-title nuc-nce"><i class="fa fa-building-columns"></i> NCE — Controle de Execução (Sinalização)</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Status da Execução</span><span class="nuc-value">${nce.status_nce || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Processo NCE</span><span class="nuc-value">${nce.numero_processo || '—'}</span></div>
+                            <div><span class="nuc-label">Equipe Designada</span><span class="nuc-value">${nce.equipe_nome ? `${nce.equipe_tipo} - ${nce.equipe_nome}` : 'Não designada'}</span></div>
+                            <div><span class="nuc-label">Técnico Responsável</span><span class="nuc-value">${nce.tecnico_responsavel || '—'}</span></div>
+                            <div><span class="nuc-label">Sinalização Horizontal Autorizada</span><span class="nuc-value">${nce.horizontal_m2_autorizado != null ? nce.horizontal_m2_autorizado + ' m²' : '—'}</span></div>
+                            <div><span class="nuc-label">Sinalização Vertical Autorizada</span><span class="nuc-value">${nce.vertical_un_autorizada != null ? nce.vertical_un_autorizada + ' un' : '—'}</span></div>
+                            <div><span class="nuc-label">Ciclovia Autorizada</span><span class="nuc-value">${nce.extensao_km_autorizada != null ? nce.extensao_km_autorizada + ' km' : '—'}</span></div>
+                            <div><span class="nuc-label">Data da Execução</span><span class="nuc-value">${nce.data_programada_execucao ? new Date(nce.data_programada_execucao).toLocaleDateString('pt-BR') : '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Medidas NPA Autorizadas</span><span class="nuc-value">${nce.medidas_npa_autorizadas || '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Medidas NPE Autorizadas</span><span class="nuc-value">${nce.medidas_npe_autorizadas || '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Observações de Campo</span><span class="nuc-value">${nce.observacoes_campo || '—'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // NCO Card
+            if (nco) {
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #fbbf24;">
+                        <div class="nuc-preview-title nuc-nco"><i class="fa fa-screwdriver-wrench"></i> NCO — Controle de Obras (Elementos Físicos)</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Status da Obra</span><span class="nuc-value">${nco.status_nco || '—'}</span></div>
+                            <div><span class="nuc-label">Tipo de Obra</span><span class="nuc-value">${nco.tipo_obra || '—'}</span></div>
+                            <div><span class="nuc-label">Equipe/Empresa</span><span class="nuc-value">${nco.equipe_nome ? `${nco.equipe_tipo} - ${nco.equipe_nome}` : (nco.empresa_terceirizada || 'Não designada')}</span></div>
+                            <div><span class="nuc-label">Técnico Fiscal</span><span class="nuc-value">${nco.tecnico_responsavel_nco || '—'}</span></div>
+                            <div><span class="nuc-label">Valor Medido</span><span class="nuc-value">${nco.valor_medido_reais ? 'R$ ' + parseFloat(nco.valor_medido_reais).toLocaleString('pt-BR', {minimumFractionDigits:2}) : '—'}</span></div>
+                            <div><span class="nuc-label">Avanço Físico</span><span class="nuc-value">${nco.percentual_execucao != null ? nco.percentual_execucao + '%' : '0%'}</span></div>
+                            
+                            <div class="nuc-field-full">
+                                <span class="nuc-label">Elementos de Obra Autorizados</span>
+                                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;">
+                                    ${nco.lombada_autorizada ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Lombada: ${nco.lombada_autorizada} un</span>` : ''}
+                                    ${nco.plato_autorizado ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Platô: ${nco.plato_autorizado} un</span>` : ''}
+                                    ${nco.travessia_pedestre_autorizada ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Travessia: ${nco.travessia_pedestre_autorizada} un</span>` : ''}
+                                    ${nco.ciclofaixa_m_autorizada ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Ciclofaixa: ${nco.ciclofaixa_m_autorizada} m</span>` : ''}
+                                    ${nco.sinalizacao_horizontal_m2_autorizada ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Horiz: ${nco.sinalizacao_horizontal_m2_autorizada} m²</span>` : ''}
+                                    ${nco.sinalizacao_vertical_un_autorizada ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Vert: ${nco.sinalizacao_vertical_un_autorizada} un</span>` : ''}
+                                    ${nco.barreira_m_autorizada ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Barreira: ${nco.barreira_m_autorizada} m</span>` : ''}
+                                    ${nco.estacionamento_vagas_autorizado ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Vagas: ${nco.estacionamento_vagas_autorizado}</span>` : ''}
+                                    ${nco.calcada_m_autorizada ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Calçada: ${nco.calcada_m_autorizada} m</span>` : ''}
+                                    ${nco.semaforo_autorizado ? `<span style="font-size:11px; padding:3px 8px; background:rgba(255,255,255,0.04); border-radius:4px;">Semáforo: ${nco.semaforo_autorizado} un</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="nuc-field-full"><span class="nuc-label">Parecer/Relatório de Obra</span><span class="nuc-value">${nco.relatorio_fiscalizacao || nco.observacoes || '—'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Documentos Consolidados
+            let docsHtml = '';
+            
+            // NPA
+            const npaProj = npa ? (npa.projeto_npa || npa.url_projeto_pdf) : null;
+            const npaPar = npa ? (npa.parecer_npa || npa.url_parecer_pdf) : null;
+            if (npaProj) docsHtml += `<a class="doc-link-btn" href="${npaProj}" target="_blank"><i class="fa fa-file-pdf" style="color:#ef4444;"></i> Projeto NPA</a>`;
+            if (npaPar) docsHtml += `<a class="doc-link-btn" href="${npaPar}" target="_blank"><i class="fa fa-file-invoice" style="color:#3b82f6;"></i> Parecer NPA</a>`;
+            
+            // NPO
+            const npoProj = npo ? (npo.projeto_npo || npo.url_projeto_pdf) : null;
+            const npoPar = npo ? (npo.parecer_npo || npo.url_parecer_pdf) : null;
+            if (npoProj) docsHtml += `<a class="doc-link-btn" href="${npoProj}" target="_blank"><i class="fa fa-file-pdf" style="color:#ef4444;"></i> Projeto NPO</a>`;
+            if (npoPar) docsHtml += `<a class="doc-link-btn" href="${npoPar}" target="_blank"><i class="fa fa-file-invoice" style="color:#3b82f6;"></i> Parecer NPO</a>`;
+            
+            // NPE
+            const npeProj = npe ? (npe.projeto_npe || npe.url_projeto_nce_pdf || npe.url_projeto_pdf) : null;
+            const npePar = npe ? (npe.parecer_npe || npe.url_parecer_pdf) : null;
+            const npeRist = npe ? npe.url_rist_pdf : null;
+            if (npeProj) docsHtml += `<a class="doc-link-btn" href="${npeProj}" target="_blank"><i class="fa fa-file-pdf" style="color:#ef4444;"></i> Projeto NPE</a>`;
+            if (npePar) docsHtml += `<a class="doc-link-btn" href="${npePar}" target="_blank"><i class="fa fa-file-invoice" style="color:#3b82f6;"></i> Parecer NPE</a>`;
+            if (npeRist) docsHtml += `<a class="doc-link-btn" href="${npeRist}" target="_blank"><i class="fa fa-file-pdf" style="color:#10b981;"></i> RIST NPE</a>`;
+            
+            // NGC
+            const ngcProj = ngc ? (ngc.projeto_ngc || ngc.url_projeto_pdf) : null;
+            const ngcPar = ngc ? (ngc.parecer_ngc || ngc.url_parecer_pdf) : null;
+            if (ngcProj) docsHtml += `<a class="doc-link-btn" href="${ngcProj}" target="_blank"><i class="fa fa-file-pdf" style="color:#ef4444;"></i> Projeto NGC</a>`;
+            if (ngcPar) docsHtml += `<a class="doc-link-btn" href="${ngcPar}" target="_blank"><i class="fa fa-file-invoice" style="color:#3b82f6;"></i> Parecer NGC</a>`;
+
+            html += `
+                <div class="nuc-preview-box" style="border-left: 4px solid var(--amc-primary); background: rgba(255,255,255,0.01);">
+                    <div class="nuc-preview-title" style="color:var(--amc-primary);"><i class="fa fa-folder-open"></i> Arquivos e Pareceres Anexados</div>
+                    <div class="nuc-field-full doc-view-row">
+                        ${docsHtml || '<span style="color:var(--amc-text-muted); font-size:12px;">Nenhum documento PDF anexado pelos núcleos</span>'}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        async function saveDitranDespacho() {
+            const recordId = document.getElementById('ditran-record-id').value;
+            if (!recordId) {
+                showToast('Erro', 'Nenhum processo selecionado para salvar.', 'error');
+                return;
+            }
+
+            const statusGeral = document.getElementById('ditran-status-geral').value;
+            const autorizadoParcialmente = document.getElementById('ditran-autorizado-parcialmente').value === 'true';
+            const despachoTexto = document.getElementById('ditran-despacho-texto').value.trim();
+
+            // Lógica de Prioridades
+            const prioridadeDiretoria = document.getElementById('ditran-prioridade-diretoria').checked;
+            let prioridadeNome = '';
+
+            if (prioridadeDiretoria) {
+                const select = document.getElementById('ditran-prioridade-nome');
+                const inputNovo = document.getElementById('ditran-prioridade-nome-novo');
+                
+                if (inputNovo && inputNovo.style.display !== 'none') {
+                    prioridadeNome = inputNovo.value.trim();
+                    if (prioridadeNome) {
+                        showToast('Processando', 'Cadastrando nova prioridade...', 'info');
+                        const { error: pError } = await supabase
+                            .from('cat_prioridades')
+                            .insert([{ nome: prioridadeNome }]);
+                        
+                        if (pError && pError.code !== '23505') {
+                            console.error("Erro ao cadastrar prioridade automática:", pError);
+                            showToast('Erro', 'Falha ao cadastrar prioridade: ' + pError.message, 'error');
+                            return;
+                        }
+                    }
+                } else if (select) {
+                    prioridadeNome = select.value;
+                }
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('demandas_pai')
+                    .update({
+                        status_geral: statusGeral,
+                        autorizado_parcialmente: autorizadoParcialmente,
+                        despacho_diretoria: despachoTexto,
+                        prioridade_diretoria: prioridadeDiretoria,
+                        prioridade_nome: prioridadeNome || null
+                    })
+                    .eq('id', recordId);
+
+                if (error) throw error;
+
+                showToast('Sucesso', 'Despacho da diretoria salvo com sucesso!', 'success');
+                closeModal();
+                await loadConsolidatedData(); // Recarrega a tabela principal
+
+            } catch (err) {
+                console.error("Erro ao salvar despacho DITRAN:", err);
+                showToast('Erro', 'Falha ao salvar despacho: ' + err.message, 'error');
+            }
+        }
+        // ─── DITRAN Report Logic — via reports.js (shared) ───
+        const ditranReportConfig = {
+            title: 'Diretoria (DITRAN)',
+            color: '#f8b700',
+            getData: () => rawData,
+            nucleoKey: 'execucao_nce',
+            statusField: 'status_nce',
+            dateField: 'data_execucao',
+            teamFields: { nome: 'equipe_nome', tipo: 'equipe_tipo' },
+            statusOptions: [
+                'Aguardando Programação', 'Programado', 'Equipe em Campo',
+                'Concluído', 'Cancelado', 'Pendência Técnica'
+            ],
+            totalsFields: [
+                { label: 'Sinalização Horiz.', field: 'horizontal_m2_autorizado', suffix: 'm²', parse: 'float' },
+                { label: 'Sinalização Vert.',  field: 'vertical_un_autorizada',   suffix: 'un',  parse: 'int' }
+            ],
+            detailsBuilder: (nuc) => {
+                const d = [];
+                if (nuc.horizontal_m2_autorizado > 0) d.push(`${nuc.horizontal_m2_autorizado} m² sinal. horizontal`);
+                if (nuc.vertical_un_autorizada > 0) d.push(`${nuc.vertical_un_autorizada} un sinal. vertical`);
+                if (nuc.extensao_km_autorizada > 0) d.push(`${nuc.extensao_km_autorizada} km ciclovia`);
+                if (nuc.observacoes_campo && nuc.observacoes_campo !== '—') d.push(`Obs: ${nuc.observacoes_campo}`);
+                return d;
+            },
+            hasOS: false,
+            hasCriteriaReport: true,
+            hasVistoriaReport: true,
+            valueResolver: (p) => {
+                // Se for obra e tiver valor medido na NCO, usa ele
+                const nco = p.raw?.execucao_nco?.[0] || p.raw?.execucao_nco;
+                if (nco && nco.valor_medido_reais != null) {
+                    return parseFloat(nco.valor_medido_reais) || 0;
+                }
+                // Senão usa o custo estimado do processo
+                return parseFloat(p.custo_estimado || p.raw?.custo_estimado) || 0;
+            }
+        };
+
+        function openReportModalDITRAN() { openReportModal(ditranReportConfig); }
+    </script>
+    <script src="reports.js?v=20260806"></script>
+</body>
+</html>

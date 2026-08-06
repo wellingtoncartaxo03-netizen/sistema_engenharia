@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Gestão de Acesso</title>
+    
+    <!-- Scripts Externos & Fontes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+            --amc-green-glow: rgba(16, 185, 129, 0.4);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Glassmorphism --- */
+        .glass {
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ds-card {
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar Lateral --- */
+        aside {
+            width: 320px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 16px;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .menu-item {
+            margin-bottom: 8px;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .menu-link:hover, .menu-link.active {
+            color: #fff;
+            background: rgba(248, 183, 0, 0.1);
+            border-left: 3px solid var(--amc-primary);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            margin-left: 320px;
+            flex-grow: 1;
+            padding: 2.5rem;
+            max-width: 1200px;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 80% 20%, rgba(248, 183, 0, 0.05) 0%, transparent 60%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- Form Elements --- */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--amc-text-muted);
+        }
+        .form-input {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .form-input:focus {
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 10px rgba(248, 183, 0, 0.2);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .btn-amc {
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .btn-primary-amc {
+            background: var(--amc-primary);
+            color: #000;
+            box-shadow: 0 4px 15px var(--amc-glow);
+        }
+        .btn-primary-amc:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px var(--amc-glow);
+        }
+
+        /* --- Tables --- */
+        .ds-table-container {
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th {
+            background: rgba(255,255,255,0.02);
+            padding: 16px 20px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--amc-text-muted);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        td {
+            padding: 16px 20px;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            color: rgba(255,255,255,0.9);
+        }
+        tr:hover td {
+            background: rgba(255,255,255,0.01);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-admin { background: rgba(241, 90, 34, 0.15); color: var(--amc-secondary); }
+        .badge-diretor { background: rgba(248, 183, 0, 0.15); color: var(--amc-primary); }
+        .badge-coordenador { background: rgba(48, 133, 214, 0.15); color: var(--amc-accent); }
+        .badge-operacional { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+        /* Toast Alert */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(10, 10, 12, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(150%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+        .toast.show { transform: translateY(0); }
+        .toast.success { border-left: 4px solid #10b981; }
+        .toast.error { border-left: 4px solid #ef4444; }
+    
+        /* --- Sidebar Menu List Scrollbar (Checkpoint 4) --- */
+        .menu-list {
+            overflow-y: auto !important;
+            max-height: calc(100vh - 220px) !important;
+        }
+        .menu-list::-webkit-scrollbar {
+            width: 4px !important;
+            display: block !important;
+        }
+        .menu-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-radius: 4px !important;
+        }
+        .menu-list::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Lateral -->
+    <aside class="glass">
+        <div>
+            <div class="logo-container">
+            <i class="fa fa-car-side fa-xl" style="color:var(--amc-primary, #F8B700);"></i>
+            <span class="logo-text">AMC — Engenharia</span>
+        </div>
+        <ul class="menu-list">
+            <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link active"><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+            <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+            <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link "><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+            <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link "><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+            <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+            <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link "><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+            <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link "><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+            <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link "><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+            <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link "><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+            <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link "><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+            <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link "><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+        </ul>
+        </div>
+
+        <div class="glass-dark" style="padding: 1rem; border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <span id="admin-name" style="font-size: 13px; font-weight: 600; color: #fff; block">Administrador</span>
+            <button class="btn-amc" style="padding: 6px 12px; font-size: 11px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); width: 100%; border-radius: 8px; justify-content: center;" onclick="realizarLogout()">Desconectar</button>
+        </div>
+    </aside>
+
+    <!-- Área de Conteúdo Central -->
+    <main>
+        <div class="hero-bg"></div>
+
+        <div>
+            <h1 style="font-family: 'Oswald', sans-serif; font-size: 2.5rem; font-weight: 300; margin: 0; text-transform: uppercase;">
+                Controle de Acesso & Usuários
+            </h1>
+            <p style="color: var(--amc-text-muted); margin: 0.5rem 0 0 0; font-size: 14px;">
+                Envie convites seguros para novos servidores e gerencie as permissões por núcleo e nível de acesso.
+            </p>
+        </div>
+
+        <!-- Seção 1: Formulário de Convite -->
+        <div class="ds-card glass">
+            <h2 style="font-family: 'Oswald', sans-serif; font-size: 1.5rem; font-weight: 300; margin: 0 0 1.5rem 0;">Convidar Novo Servidor</h2>
+            <form id="invite-form" onsubmit="enviarConvite(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="invite-name">Nome Completo</label>
+                        <input type="text" id="invite-name" class="form-input" placeholder="Ex: João da Silva" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="invite-cpf">CPF</label>
+                        <input type="text" id="invite-cpf" class="form-input" placeholder="000.000.000-00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="invite-email">E-mail Corporativo</label>
+                        <input type="email" id="invite-email" class="form-input" placeholder="servidor@amc.fortaleza.ce.gov.br" required>
+                    </div>
+                    <div class="form-grid" style="gap: 1rem; grid-column: span 1;">
+                        <div class="form-group">
+                            <label for="invite-nucleo">Núcleo de Lotação</label>
+                            <select id="invite-nucleo" class="form-input" style="background: #0A0A0C;" required>
+                                <option value="Triagem">Triagem</option>
+                                <option value="NPO">NPO (Projetos)</option>
+                                <option value="NCE">NCE (Despacho)</option>
+                                <option value="NCO">NCO (Fiscalização)</option>
+                                <option value="NGC">NGC (Ciclovias)</option>
+                                <option value="NPE">NPE (Especiais)</option>
+                                <option value="Diretoria">Diretoria</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="invite-nivel">Nível de Acesso</label>
+                            <select id="invite-nivel" class="form-input" style="background: #0A0A0C;" required>
+                                <option value="operacional">Operacional</option>
+                                <option value="coordenador">Coordenador</option>
+                                <option value="diretor">Diretor</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn-amc btn-primary-amc">
+                        <i class="fa fa-paper-plane"></i>
+                        <span>Convidar Usuário</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Seção 2: Tabela de Usuários Cadastrados -->
+        <div class="ds-card glass" style="padding: 1.5rem;">
+            <h2 style="font-family: 'Oswald', sans-serif; font-size: 1.5rem; font-weight: 300; margin: 0 0 1.25rem 0;">Servidores Cadastrados</h2>
+            <div class="ds-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Lotação / Núcleo</th>
+                            <th>Nível de Acesso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <!-- Carregado via script -->
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: var(--amc-text-muted);">Carregando usuários...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i id="toast-icon" class="fa fa-lg"></i>
+        <div>
+            <strong id="toast-title" style="display: block; font-size: 14px; margin-bottom: 2px; color: #fff;"></strong>
+            <span id="toast-message" style="font-size: 13px; color: var(--amc-text-muted);"></span>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        // Formatar CPF
+        const cpfInput = document.getElementById('invite-cpf');
+        cpfInput.addEventListener('input', (e) => {
+            let val = e.target.value.replace(/\D/g, '');
+            if (val.length > 11) val = val.substring(0, 11);
+            let formatted = val;
+            if (val.length > 9) {
+                formatted = `${val.substring(0, 3)}.${val.substring(3, 6)}.${val.substring(6, 9)}-${val.substring(9)}`;
+            } else if (val.length > 6) {
+                formatted = `${val.substring(0, 3)}.${val.substring(3, 6)}.${val.substring(6)}`;
+            } else if (val.length > 3) {
+                formatted = `${val.substring(0, 3)}.${val.substring(3)}`;
+            }
+            e.target.value = formatted;
+        });
+
+        // Toast Feedback
+        function showNotification(title, message, type) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const titleEl = document.getElementById('toast-title');
+            const msgEl = document.getElementById('toast-message');
+
+            toast.className = `toast show ${type}`;
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+
+            if (type === 'success') {
+                icon.className = 'fa fa-check-circle';
+                icon.style.color = '#10b981';
+            } else {
+                icon.className = 'fa fa-exclamation-circle';
+                icon.style.color = '#ef4444';
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Executado ao carregar
+        document.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            
+            // Exibir nome do admin logado
+            const logado = sessionStorage.getItem('usuario_logado');
+            if (logado) {
+                const perfil = JSON.parse(logado);
+                document.getElementById('admin-name').textContent = perfil.nome_completo;
+            }
+
+            await carregarUsuarios();
+        });
+
+        // Carrega usuários da tabela perfis_usuarios
+        async function carregarUsuarios() {
+            const { data: usuarios, error } = await supabase
+                .from('perfis_usuarios')
+                .select('*')
+                .order('nome_completo', { ascending: true });
+
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+
+            if (error || !usuarios || usuarios.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--amc-text-muted);">Nenhum servidor cadastrado.</td></tr>`;
+                return;
+            }
+
+            usuarios.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 600;">${u.nome_completo}</td>
+                    <td>${u.cpf}</td>
+                    <td>${u.nucleo_lotacao}</td>
+                    <td><span class="badge badge-${u.nivel_acesso}">${u.nivel_acesso.toUpperCase()}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Envia o convite chamando a Edge Function
+        async function enviarConvite(e) {
+            e.preventDefault();
+            const nome_completo = document.getElementById('invite-name').value;
+            const cpf = document.getElementById('invite-cpf').value;
+            const email = document.getElementById('invite-email').value;
+            const nucleo_lotacao = document.getElementById('invite-nucleo').value;
+            const nivel_acesso = document.getElementById('invite-nivel').value;
+
+            // Validação simples de CPF
+            if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(cpf)) {
+                showNotification('Erro no Formulário', 'Informe um CPF válido no formato 000.000.000-00', 'error');
+                return;
+            }
+
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                showNotification('Erro de Sessão', 'Você precisa estar logado.', 'error');
+                return;
+            }
+
+            try {
+                showNotification('Processando', 'Enviando convite ao servidor...', 'success');
+                
+                const response = await fetch('https://gydkginbvvcsnyhyixrv.supabase.co/functions/v1/convidar-usuario', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({
+                        email,
+                        nome_completo,
+                        cpf,
+                        nucleo_lotacao,
+                        nivel_acesso
+                    })
+                });
+
+                const resData = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(resData.error || 'Erro na requisição');
+                }
+
+                showNotification('Sucesso!', 'E-mail de convite enviado e servidor registrado.', 'success');
+                document.getElementById('invite-form').reset();
+                await carregarUsuarios();
+
+            } catch (err) {
+                console.error("Erro ao convidar:", err);
+                showNotification('Falha no Convite', err.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

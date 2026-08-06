@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Login</title>
+    
+    <!-- Scripts Externos & Fontes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- Falling Beams --- */
+        .beam { position: absolute; top: 0; width: 1px; height: 100px; background: linear-gradient(to bottom, transparent, var(--amc-primary), transparent); pointer-events: none; z-index: 0; opacity: 0.3; }
+        .beam-1 { left: 20%; animation: beam-fall 8s linear infinite; }
+        .beam-2 { left: 50%; animation: beam-fall 12s linear infinite; animation-delay: 2s; }
+        .beam-3 { left: 80%; animation: beam-fall 10s linear infinite; animation-delay: 5s; }
+
+        @keyframes beam-fall {
+            0% { transform: translateY(-100px); opacity: 0; }
+            5% { opacity: 0.5; }
+            50% { opacity: 1; }
+            95% { opacity: 0.5; }
+            100% { transform: translateY(110vh); opacity: 0; }
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(248, 183, 0, 0.08) 0%, transparent 60%);
+            z-index: 0;
+        }
+
+        /* Glass Container */
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(10, 10, 12, 0.8);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1.5rem;
+            padding: 3rem 2.5rem;
+            box-sizing: border-box;
+            z-index: 10;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.8s ease both;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 20px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--amc-text-muted);
+        }
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-wrapper i {
+            position: absolute;
+            left: 16px;
+            color: var(--amc-text-muted);
+            font-size: 16px;
+        }
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px 16px 14px 46px;
+            box-sizing: border-box;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .form-input:focus {
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 10px rgba(248, 183, 0, 0.2);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--amc-primary);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+            box-shadow: 0 4px 15px var(--amc-glow);
+        }
+        .btn-submit:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px var(--amc-glow);
+        }
+
+        .forgot-link {
+            text-align: right;
+            font-size: 13px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            transition: color 0.3s;
+            margin-top: -0.5rem;
+            cursor: pointer;
+        }
+        .forgot-link:hover {
+            color: var(--amc-primary);
+        }
+
+        /* Toast Alert */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: rgba(10, 10, 12, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(150%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 1000;
+        }
+        .toast.show { transform: translateY(0); }
+        .toast.success { border-left: 4px solid #10b981; }
+        .toast.error { border-left: 4px solid #ef4444; }
+    </style>
+</head>
+<body>
+
+    <div class="beam beam-1"></div>
+    <div class="beam beam-2"></div>
+    <div class="beam beam-3"></div>
+    <div class="hero-bg"></div>
+
+    <div class="login-card">
+        <div class="logo-container">
+            <span class="logo-text" style="color: #fff;">AMC <span style="color: var(--amc-primary); font-weight: 700;">PROJETOS</span></span>
+        </div>
+        
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="identifier">E-mail ou CPF</label>
+                <div class="input-wrapper">
+                    <i class="fa fa-user"></i>
+                    <input type="text" id="identifier" class="form-input" placeholder="Digite seu e-mail ou CPF" required>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label for="password">Senha</label>
+                <div class="input-wrapper">
+                    <i class="fa fa-lock"></i>
+                    <input type="password" id="password" class="form-input" placeholder="Digite sua senha" required>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 1.5rem;">
+                <span class="forgot-link" onclick="handleForgotPassword()">Esqueci minha senha</span>
+            </div>
+
+            <button type="submit" class="btn-submit">Entrar</button>
+        </form>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i id="toast-icon" class="fa fa-lg"></i>
+        <div>
+            <strong id="toast-title" style="display: block; font-size: 14px; margin-bottom: 2px; color: #fff;"></strong>
+            <span id="toast-message" style="font-size: 13px; color: var(--amc-text-muted);"></span>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        // Mascara de CPF no input
+        const inputIdentifier = document.getElementById('identifier');
+        inputIdentifier.addEventListener('input', (e) => {
+            let val = e.target.value;
+            // Se tiver apenas números, aplica máscara de CPF
+            if (/^\d+$/.test(val.replace(/[\.\-]/g, ''))) {
+                let clean = val.replace(/\D/g, '');
+                if (clean.length > 11) clean = clean.substring(0, 11);
+                
+                let formatted = clean;
+                if (clean.length > 9) {
+                    formatted = `${clean.substring(0, 3)}.${clean.substring(3, 6)}.${clean.substring(6, 9)}-${clean.substring(9)}`;
+                } else if (clean.length > 6) {
+                    formatted = `${clean.substring(0, 3)}.${clean.substring(3, 6)}.${clean.substring(6)}`;
+                } else if (clean.length > 3) {
+                    formatted = `${clean.substring(0, 3)}.${clean.substring(3)}`;
+                }
+                e.target.value = formatted;
+            }
+        });
+
+        // Exibe feedback visual de Toast
+        function showNotification(title, message, type) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const titleEl = document.getElementById('toast-title');
+            const msgEl = document.getElementById('toast-message');
+
+            toast.className = `toast show ${type}`;
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+
+            if (type === 'success') {
+                icon.className = 'fa fa-check-circle';
+                icon.style.color = '#10b981';
+            } else {
+                icon.className = 'fa fa-exclamation-circle';
+                icon.style.color = '#ef4444';
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // Fluxo de Autenticação
+        async function handleLogin(e) {
+            e.preventDefault();
+            const identifier = document.getElementById('identifier').value.trim();
+            const password = document.getElementById('password').value;
+            
+            let email = identifier;
+
+            // Se for CPF, resolve o e-mail primeiro
+            if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(identifier) || /^\d{11}$/.test(identifier.replace(/\D/g, ''))) {
+                let cleanCpf = identifier;
+                if (/^\d{11}$/.test(identifier.replace(/\D/g, ''))) {
+                    const d = identifier.replace(/\D/g, '');
+                    cleanCpf = `${d.substring(0, 3)}.${d.substring(3, 6)}.${d.substring(6, 9)}-${d.substring(9, 11)}`;
+                }
+                
+                try {
+                    const { data: resolvedEmail, error: rpcError } = await supabase.rpc('obter_email_por_cpf', { p_cpf: cleanCpf });
+                    if (rpcError || !resolvedEmail) {
+                        showNotification('Erro de Login', 'CPF não associado a nenhum usuário ativo.', 'error');
+                        return;
+                    }
+                    email = resolvedEmail;
+                } catch (err) {
+                    console.error("Erro no mapeamento do CPF:", err);
+                    showNotification('Erro de Login', 'Erro de comunicação ao resolver CPF.', 'error');
+                    return;
+                }
+            }
+
+            // Realiza login no Supabase Auth
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: email,
+                password: password
+            });
+
+            if (error) {
+                showNotification('Falha na Autenticação', 'Verifique suas credenciais e tente novamente.', 'error');
+                return;
+            }
+
+            showNotification('Login bem-sucedido', 'Redirecionando...', 'success');
+
+            // Busca o perfil para saber qual tela redirecionar
+            const { data: perfil } = await supabase
+                .from('perfis_usuarios')
+                .select('*')
+                .eq('id', data.user.id)
+                .single();
+
+            setTimeout(() => {
+                if (perfil) {
+                    const mapeamentoRotas = {
+                        'Triagem': 'triagem.html',
+                        'NPO': 'npo_dashboard.html',
+                        'NCE': 'nce_dashboard.html',
+                        'NCO': 'nco_dashboard.html',
+                        'NGC': 'ngc_dashboard.html',
+                        'NPE': 'nce_dashboard.html',
+                        'NPA': 'npa_dashboard.html',
+                        'Diretoria': 'diretoria_dashboard.html',
+                        'Admin': 'admin_usuarios.html'
+                    };
+                    const destino = mapeamentoRotas[perfil.nucleo_lotacao] || 'diretoria_dashboard.html';
+                    window.location.href = destino;
+                } else {
+                    window.location.href = 'diretoria_dashboard.html';
+                }
+            }, 1000);
+        }
+
+        // Fluxo de redefinição de senha
+        async function handleForgotPassword() {
+            const emailOrCpf = prompt("Informe seu E-mail ou CPF para receber o link de recuperação:");
+            if (!emailOrCpf) return;
+
+            let email = emailOrCpf.trim();
+
+            // Mapeia CPF em E-mail se aplicável
+            if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(emailOrCpf) || /^\d{11}$/.test(emailOrCpf.replace(/\D/g, ''))) {
+                let cleanCpf = emailOrCpf;
+                if (/^\d{11}$/.test(emailOrCpf.replace(/\D/g, ''))) {
+                    const d = emailOrCpf.replace(/\D/g, '');
+                    cleanCpf = `${d.substring(0, 3)}.${d.substring(3, 6)}.${d.substring(6, 9)}-${d.substring(9, 11)}`;
+                }
+                const { data: resolvedEmail } = await supabase.rpc('obter_email_por_cpf', { p_cpf: cleanCpf });
+                if (!resolvedEmail) {
+                    showNotification('Erro', 'CPF não cadastrado no sistema.', 'error');
+                    return;
+                }
+                email = resolvedEmail;
+            }
+
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/login.html'
+            });
+
+            if (error) {
+                showNotification('Erro', 'Não foi possível enviar o e-mail de recuperação.', 'error');
+            } else {
+                showNotification('E-mail enviado', 'O link para redefinir sua senha foi enviado para seu e-mail.', 'success');
+            }
+        }
+    </script>
+</body>
+</html>

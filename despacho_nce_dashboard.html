@@ -1,0 +1,1245 @@
+﻿﻿<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Despacho e Execução (NCE)</title>
+    
+    <!-- Scripts Externos & Fontes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+
+    <style>
+        :root {
+            /* AMC Colors */
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+            --amc-red-glow: rgba(241, 90, 34, 0.4);
+            --amc-blue-glow: rgba(48, 133, 214, 0.4);
+            --amc-green-glow: rgba(16, 185, 129, 0.4);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Estilo de Vidro (Glassmorphism) --- */
+        .glass {
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ds-card {
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Sidebar Lateral --- */
+        aside {
+            width: 320px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 16px;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .menu-item {
+            margin-bottom: 8px;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .menu-link:hover, .menu-link.active {
+            color: #fff;
+            background: rgba(248, 183, 0, 0.1);
+            border-left: 3px solid var(--amc-primary);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            margin-left: 320px;
+            flex-grow: 1;
+            padding: 3rem;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Hero background glows --- */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 70% 20%, rgba(248, 183, 0, 0.08) 0%, transparent 60%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--amc-glow);
+            filter: blur(120px);
+            border-radius: 50%;
+            z-index: -2;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* --- Tabs --- */
+        .tab-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--amc-text-muted);
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: #000;
+            background: var(--amc-primary);
+            box-shadow: 0 4px 15px var(--amc-glow);
+        }
+
+        /* --- Grid layout of cards --- */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        /* --- Card NCE --- */
+        .nce-card {
+            border-radius: 1.25rem;
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 1.5rem;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .nce-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--amc-primary);
+            box-shadow: 0 8px 25px -5px var(--amc-glow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-protocol {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.25rem;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .card-badge {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-priority {
+            background: rgba(241, 90, 34, 0.15);
+            color: var(--amc-secondary);
+            border: 1px solid var(--amc-secondary);
+            box-shadow: 0 0 10px var(--amc-red-glow);
+        }
+
+        .badge-status {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--amc-text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-aguardando {
+            background: rgba(248, 183, 0, 0.1);
+            color: var(--amc-primary);
+            border: 1px solid var(--amc-primary);
+        }
+
+        .status-campo {
+            background: rgba(48, 133, 214, 0.15);
+            color: var(--amc-accent);
+            border: 1px solid var(--amc-accent);
+        }
+
+        .status-concluido {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+
+        .status-pendencia {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+
+        .card-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 4px 0;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .info-row i {
+            margin-top: 3px;
+            color: var(--amc-primary);
+            width: 16px;
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--amc-text-muted);
+            font-weight: 600;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .scope-badge {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* --- Modal de Despacho --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(15px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 650px;
+            border-radius: 1.5rem;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--amc-text-muted);
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        /* Formulario no Modal */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            color: var(--amc-text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 15px rgba(248, 183, 0, 0.2);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: -400px;
+            width: 350px;
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 1100;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .toast.show {
+            right: 24px;
+        }
+
+        .toast-success {
+            background: rgba(10, 30, 10, 0.9);
+            border: 1px solid #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .toast-error {
+            background: rgba(30, 10, 10, 0.9);
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Header superior */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .header-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin: 0;
+        }
+
+        .header-status {
+            font-size: 13px;
+            color: var(--amc-text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 99px;
+        }
+
+        /* --- Painel de Autenticação na Sidebar --- */
+        .auth-panel {
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .auth-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amc-primary);
+            margin-bottom: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-amc {
+            padding: 12px 24px;
+            border-radius: 9999px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            font-size: 12px;
+        }
+        
+        .btn-primary-amc {
+            background: var(--amc-primary);
+            color: #000;
+            box-shadow: 0 4px 15px var(--amc-glow);
+        }
+
+        .btn-primary-amc:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px var(--amc-glow);
+        }
+
+        .btn-outline-amc {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn-outline-amc:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: var(--amc-primary);
+        }
+
+        .btn-outline-amc:disabled {
+            border-color: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.2);
+            cursor: not-allowed;
+        }
+
+        .btn-primary-amc:disabled {
+            background: #555;
+            color: #888;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--amc-text-muted);
+            font-size: 15px;
+            border: 2px dashed rgba(255, 255, 255, 0.06);
+            border-radius: 1.5rem;
+            grid-column: 1 / -1;
+        }
+    
+        /* --- Sidebar Menu List Scrollbar (Checkpoint 4) --- */
+        .menu-list {
+            overflow-y: auto !important;
+            max-height: calc(100vh - 220px) !important;
+        }
+        .menu-list::-webkit-scrollbar {
+            width: 4px !important;
+            display: block !important;
+        }
+        .menu-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-radius: 4px !important;
+        }
+        .menu-list::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Background Glows -->
+    <div class="hero-bg"></div>
+    <div class="hero-glow" style="top: 20%; right: 10%;"></div>
+
+    <!-- Sidebar Lateral -->
+    <aside class="glass">
+        <div>
+            <!-- Logo AMC -->
+            <div class="logo-container">
+            <i class="fa fa-car-side fa-xl" style="color:var(--amc-nce, #a78bfa);"></i>
+            <span class="logo-text">AMC — Engenharia</span>
+        </div>
+        <ul class="menu-list">
+            <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link "><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+            <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+            <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link "><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+            <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link active"><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+            <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+            <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link "><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+            <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link "><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+            <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link "><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+            <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link "><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+            <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link "><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+            <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link "><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+        </ul>
+        </div>
+
+        <!-- Painel de Login e Simulação de Perfis -->
+        <div class="auth-panel glass-dark">
+            <div class="auth-title">
+                <i class="fa fa-user-shield"></i>
+                <span>NCE — Despacho</span>
+            </div>
+            
+            <div id="auth-unlogged">
+                <div class="form-group">
+                    <input type="email" id="auth-email" placeholder="E-mail" class="form-input" style="padding: 8px 12px; font-size: 11px; margin-bottom: 6px;">
+                    <input type="password" id="auth-password" placeholder="Senha" class="form-input" style="padding: 8px 12px; font-size: 11px;">
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn-amc btn-primary-amc" style="padding: 6px; font-size: 10px; flex: 1;" onclick="login()">Entrar</button>
+                    <button class="btn-amc btn-outline-amc" style="padding: 6px; font-size: 10px; flex: 1;" onclick="register()">Registrar</button>
+                </div>
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 10px 0;">
+                <button class="btn-amc btn-outline-amc" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="simulateQuickLogin()">
+                    Simular Login Rápido (Técnico)
+                </button>
+            </div>
+
+            <div id="auth-logged" style="display: none;">
+                <p id="logged-email" style="font-size: 11px; margin: 0 0 8px 0; color: #fff; word-break: break-all; font-weight: 500;"></p>
+                
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label class="form-label" style="font-size: 9px; margin-bottom: 4px;">Simular Papel (Role)</label>
+                    <select id="role-selector" class="form-input" style="padding: 6px 10px; font-size: 11px;" onchange="changeRole(this.value)">
+                        <option value="Público">Público</option>
+                        <option value="Técnico">Técnico</option>
+                        <option value="Gerência">Gerência</option>
+                        <option value="Diretoria">Diretoria</option>
+                    </select>
+                </div>
+                <button class="btn-amc btn-outline-amc" style="padding: 6px 12px; font-size: 10px; color: var(--amc-secondary); width: 100%;" onclick="logout()">Desconectar</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Área de Conteúdo Central -->
+    <main>
+        <div class="dashboard-header">
+            <h1 class="header-title">Despacho de Equipes</h1>
+            <div class="header-status glass-dark" id="role-badge">
+                <i class="fa fa-info-circle"></i>
+                <span>Conectando ao banco de dados...</span>
+            </div>
+        </div>
+
+        <!-- Sistema de Abas (Tabs) -->
+        <div class="tab-container">
+            <button class="tab-btn active" id="tab-fila" onclick="switchTab('fila')">
+                <i class="fa fa-list-check"></i> Fila de Despacho
+            </button>
+            <button class="tab-btn" id="tab-historico" onclick="switchTab('historico')">
+                <i class="fa fa-clock-rotate-left"></i> Histórico de Conclusão
+            </button>
+        </div>
+
+        <!-- Grid de Cards Dinâmico -->
+        <div class="cards-grid" id="cards-container">
+            <div class="empty-state">Carregando demandas...</div>
+        </div>
+    </main>
+
+
+    <!-- Toast Notification -->->
+    <div id="toast" class="toast">
+        <i id="toast-icon" class="fa fa-2x"></i>
+        <div>
+            <strong id="toast-title" style="display: block; font-size: 14px; margin-bottom: 4px; color: #fff;">Sucesso</strong>
+            <span id="toast-message" style="font-size: 13px; color: rgba(255,255,255,0.8);">Ação concluída.</span>
+        </div>
+    </div>
+
+    <script>
+        // Supabase já inicializado pelo auth.js
+
+        // Estado Global
+        let currentTab = 'fila'; // 'fila' ou 'historico'
+        let demandsData = [];
+        let currentUser = null;
+        let currentUserProfile = null;
+
+        // Ao carregar a página
+        window.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            await checkSession();
+            await fetchDemands();
+        });
+
+        // Monitor de Autenticação
+        async function checkSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                await loadUserProfile(currentUser.id);
+                showLoggedState();
+            } else {
+                showUnloggedState();
+            }
+        }
+
+        // Carregar Perfil do Usuário
+        async function loadUserProfile(userId) {
+            const { data, error } = await supabase
+                .from('perfis_usuarios')
+                .select('*')
+                .eq('id', userId)
+                .single();
+            
+            if (data) {
+                const mappedRole = data.nivel_acesso === 'admin' ? 'Gerência' : (data.nivel_acesso === 'diretor' ? 'Diretoria' : (data.nivel_acesso === 'coordenador' ? 'Gerência' : 'Técnico'));
+                currentUserProfile = { ...data, role: mappedRole };
+                updateRoleBadge(mappedRole);
+                const roleSel = document.getElementById('role-selector');
+                if (roleSel) roleSel.value = mappedRole;
+            } else {
+                updateRoleBadge("Erro no Perfil");
+            }
+        }
+
+        // Atualizar Badge de Role
+        function updateRoleBadge(role) {
+            const badge = document.getElementById('role-badge');
+            const saveBtn = document.getElementById('btn-save-dispatch');
+            let color = 'var(--amc-text-muted)';
+            let icon = 'fa-user';
+            
+            if (role === 'Diretoria' || role === 'Gerência') {
+                color = 'var(--amc-secondary)';
+                icon = 'fa-user-shield';
+                if (saveBtn) saveBtn.removeAttribute('disabled');
+            } else if (role === 'Técnico') {
+                color = 'var(--amc-accent)';
+                icon = 'fa-user-gear';
+                if (saveBtn) saveBtn.removeAttribute('disabled');
+            } else {
+                // Público ou sem permissão de escrita
+                if (saveBtn) saveBtn.setAttribute('disabled', 'true');
+            }
+
+            badge.style.border = `1px solid ${color}`;
+            badge.style.color = color;
+            badge.innerHTML = `<i class="fa ${icon}"></i> <span>Operador: ${role}</span>`;
+        }
+
+        // Mostrar Tela Logada
+        function showLoggedState() {
+            document.getElementById('auth-unlogged').style.display = 'none';
+            document.getElementById('auth-logged').style.display = 'block';
+            document.getElementById('logged-email').innerText = currentUser.email;
+        }
+
+        // Mostrar Tela Não Logada
+        function showUnloggedState() {
+            document.getElementById('auth-unlogged').style.display = 'block';
+            document.getElementById('auth-logged').style.display = 'none';
+            
+            const badge = document.getElementById('role-badge');
+            badge.style.border = '1px solid #ef4444';
+            badge.style.color = '#ef4444';
+            badge.innerHTML = `<i class="fa fa-exclamation-triangle"></i> <span>Acesso Restrito (Faça Login)</span>`;
+            
+            const saveBtn = document.getElementById('btn-save-dispatch');
+            if (saveBtn) saveBtn.setAttribute('disabled', 'true');
+        }
+
+        // Simular Login Rápido
+        async function simulateQuickLogin() {
+            const testEmail = `despachante_${Math.floor(Math.random() * 10000)}@amc.fortaleza.br`;
+            const testPassword = 'amcTestPassword123';
+
+            showToast('Aguarde', 'Criando e autenticando técnico...', 'info');
+
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email: testEmail,
+                password: testPassword
+            });
+
+            if (signUpError) {
+                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                    email: testEmail,
+                    password: testPassword
+                });
+                if (signInError) {
+                    showToast('Erro', 'Falha ao simular login.', 'error');
+                    return;
+                }
+                currentUser = signInData.user;
+            } else {
+                currentUser = signUpData.user;
+            }
+
+            setTimeout(async () => {
+                await checkSession();
+                await changeRole('Técnico');
+                showToast('Conectado', 'Conectado como Técnico!', 'success');
+                await fetchDemands();
+            }, 1500);
+        }
+
+        // Login Manual
+        async function login() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return;
+
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                showToast('Erro de Login', error.message, 'error');
+            } else {
+                currentUser = data.user;
+                await checkSession();
+                showToast('Conectado', 'Acesso autorizado.', 'success');
+                await fetchDemands();
+            }
+        }
+
+        // Cadastro Manual
+        async function register() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return;
+
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            if (error) {
+                showToast('Erro de Registro', error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Verifique seu e-mail para confirmação.', 'success');
+            }
+        }
+
+        // Logout
+        async function logout() {
+            await realizarLogout();
+        }
+
+        // Alterar Role do Usuário
+        async function changeRole(newRole) {
+            if (!currentUser) return;
+            const { error } = await supabase
+                .from('profiles')
+                .update({ role: newRole })
+                .eq('id', currentUser.id);
+
+            if (error) {
+                showToast('Erro RLS', 'Erro: ' + error.message, 'error');
+            } else {
+                await loadUserProfile(currentUser.id);
+                showToast('Role Alterada', `Perfil alterado para: ${newRole}`, 'success');
+                await fetchDemands();
+            }
+        }
+
+        // Buscar execuções NCE com dados completos do projeto e demanda
+        async function fetchDemands() {
+            if (!currentUser) {
+                renderDemands([]);
+                return;
+            }
+
+            const { data, error } = await supabase
+                .from('execucao_nce')
+                .select(`
+                    id,
+                    equipe_amc_designada,
+                    status_nce,
+                    data_programada_execucao,
+                    data_conclusao_real,
+                    observacoes_campo,
+                    id_projeto_nce,
+                    id_demanda_pai,
+                    projetos_npe:id_projeto_nce (
+                        id,
+                        url_projeto_nce_pdf,
+                        detalhes_projeto,
+                        demandas_pai:id_demanda_pai (
+                            protocolo_oficial,
+                            tipo_solicitacao,
+                            prioridade_diretoria,
+                            cat_bairros (nome_bairro, cat_regionais(nome_regional)),
+                            ruas_fortaleza:id_rua (nome)
+                        )
+                    )
+                `)
+                .order('data_programada_execucao', { ascending: true });
+
+            if (error) {
+                console.error("Erro ao buscar execuções:", error);
+                showToast('Erro de Leitura', 'Erro ao carregar: ' + error.message, 'error');
+                renderDemands([]);
+            } else {
+                demandsData = data || [];
+                renderDemands(demandsData);
+            }
+        }
+
+        // Alternar Abas (Tabs)
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-fila').className = tab === 'fila' ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('tab-historico').className = tab === 'historico' ? 'tab-btn active' : 'tab-btn';
+            renderDemands(demandsData);
+        }
+
+        // Renderizar Cards Ricos de Execução
+        function renderDemands(demands) {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            if (!demands || demands.length === 0) {
+                container.innerHTML = `<div class="empty-state">Faça login para carregar os dados.</div>`;
+                return;
+            }
+
+            // Filtrar por aba
+            const filtered = demands.filter(d => {
+                const status = d.status_nce || 'Aguardando Programação';
+                if (currentTab === 'fila') return status !== 'Concluído';
+                return status === 'Concluído';
+            });
+
+            if (filtered.length === 0) {
+                const msg = currentTab === 'fila'
+                    ? 'Nenhuma obra pendente de execução no momento.'
+                    : 'Nenhuma obra concluída no histórico.';
+                container.innerHTML = `<div class="empty-state">${msg}</div>`;
+                return;
+            }
+
+            filtered.forEach(d => {
+                const nceStatus = d.status_nce || 'Aguardando Programação';
+                const equipe = d.equipe_amc_designada || null;
+                const dataProg = d.data_programada_execucao || null;
+                const dataConcl = d.data_conclusao_real || null;
+                const obsExistente = d.observacoes_campo || '';
+
+                // Dados do projeto NCE
+                const projeto = d.projetos_npe || null;
+                const det = projeto ? (projeto.detalhes_projeto || {}) : {};
+                const pdfUrl = projeto ? projeto.url_projeto_nce_pdf : null;
+
+                // Dados da demanda pai
+                const demanda = projeto ? projeto.demandas_pai : null;
+                const protocolo = demanda ? demanda.protocolo_oficial : '—';
+                const tipoDemanda = demanda ? demanda.tipo_solicitacao : '—';
+                const prioritario = demanda ? demanda.prioridade_diretoria : false;
+                const bairro = demanda && demanda.cat_bairros ? demanda.cat_bairros.nome_bairro : '—';
+                const regional = demanda && demanda.cat_bairros && demanda.cat_bairros.cat_regionais
+                    ? demanda.cat_bairros.cat_regionais.nome_regional : '';
+                const rua = demanda && demanda.ruas_fortaleza ? demanda.ruas_fortaleza.nome : '';
+
+                // Detalhes técnicos do NCE
+                const tipoImplantacao = det.tipo_implantacao || tipoDemanda || '—';
+                const descricaoSinal = det.descricao_sinalizacao || '—';
+                const trecho = det.trecho || '';
+                const enderecoFull = rua
+                    ? `${rua}, ${bairro}${regional ? ' — Reg. ' + regional : ''}`
+                    : `${bairro}${regional ? ' — Reg. ' + regional : ''}`;
+
+                // Quantitativos de Implantação
+                const qi = det.quantitativo_implantar || {};
+                const qiItems = [
+                    { label: 'Hz Mecânica', val: qi.hz_mecanica, unit: 'm²' },
+                    { label: 'Hz Manual', val: qi.hz_manual, unit: 'm²' },
+                    { label: 'Hz Plástico', val: qi.hz_plastico_frio, unit: 'm²' },
+                    { label: 'Placa', val: qi.placa, unit: 'un' },
+                    { label: 'Balizador', val: qi.balizador, unit: 'un' },
+                    { label: 'Tachão', val: qi.tacha_bi, unit: 'un' },
+                    { label: 'Sonorizador', val: qi.sonorizador, unit: 'un' },
+                    { label: 'Gradil', val: qi.gradil, unit: 'un' },
+                    { label: 'Coluna', val: qi.coluna, unit: 'un' },
+                ].filter(x => x.val && parseInt(x.val) > 0);
+
+                // Quantitativos de Retirada
+                const qr = det.quantitativo_retirar || {};
+                const qrItems = [
+                    { label: 'Placa', val: qr.placa, unit: 'un' },
+                    { label: 'Balizador', val: qr.balizador, unit: 'un' },
+                    { label: 'Tacha', val: qr.tacha, unit: 'un' },
+                    { label: 'Tachão', val: qr.tachao, unit: 'un' },
+                    { label: 'Coluna', val: qr.coluna, unit: 'un' },
+                    { label: 'Sinalização Hz', val: qr.sinalizacao_hz, unit: 'm²' },
+                    { label: 'Extensão', val: qr.extensao, unit: 'm' },
+                    { label: 'Gelito', val: qr.gelito, unit: 'un' },
+                ].filter(x => x.val && parseInt(x.val) > 0);
+
+                // Cruzamento
+                const cruz = det.cruzamento || {};
+                const cruzItems = [
+                    { label: 'Impl. Semáforo', val: cruz.implantar_semaforo, unit: 'un' },
+                    { label: 'Renov. Semáforo', val: cruz.renovar_semaforo, unit: 'un' },
+                    { label: 'Desativ. Semáforo', val: cruz.desativar_semaforo, unit: 'un' },
+                ].filter(x => x.val && parseInt(x.val) > 0);
+
+                // Sinalização (tipos)
+                const sin = det.sinalizacao || {};
+                const sinItems = [
+                    { label: 'Sentido Único', val: sin.sentido_unico_inversao },
+                    { label: 'Travessia Pedestre', val: sin.travessia_pedestre },
+                    { label: 'Travessia Colorida', val: sin.travessia_colorida },
+                    { label: 'Faixa X', val: sin.faixa_x },
+                    { label: 'Faixa Longa', val: sin.faixa_longa },
+                    { label: 'Projeto Escola', val: sin.projeto_escola },
+                    { label: 'Esquina Segura', val: sin.esquina_segura },
+                    { label: 'Yellow Box', val: sin.yellow_box },
+                    { label: 'Rotatória', val: sin.rotatoria },
+                ].filter(x => x.val && parseInt(x.val) > 0);
+
+                // Badges
+                let statusClass = 'status-aguardando';
+                if (nceStatus === 'Equipe em Campo') statusClass = 'status-campo';
+                if (nceStatus === 'Concluído') statusClass = 'status-concluido';
+                if (nceStatus === 'Pendência Técnica') statusClass = 'status-pendencia';
+
+                const dataProgStr = dataProg
+                    ? new Date(dataProg).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                    : 'Não agendada';
+                const dataConclStr = dataConcl
+                    ? new Date(dataConcl).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                    : null;
+
+                const badgesPriority = prioritario
+                    ? `<span class="card-badge badge-priority"><i class="fa fa-triangle-exclamation"></i> Prioritário</span>` : '';
+
+                // Build quantitativos markup
+                function badgeList(items, color) {
+                    return items.map(x => `<span class="scope-badge" style="border-color:rgba(${color},0.3);"><span style="color:rgba(${color},1);font-weight:600;">${x.val}</span> ${x.label} ${x.unit}</span>`).join('');
+                }
+
+                const implantarHTML = qiItems.length > 0
+                    ? `<div class="info-row" style="margin-top:4px;">
+                        <i class="fa fa-arrow-up-from-bracket" style="color:#10b981;"></i>
+                        <div>
+                            <span class="info-label">Implantações</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;">${badgeList(qiItems, '16,185,129')}</div>
+                        </div>
+                       </div>` : '';
+
+                const retiradaHTML = qrItems.length > 0
+                    ? `<div class="info-row" style="margin-top:4px;">
+                        <i class="fa fa-trash" style="color:#ef4444;"></i>
+                        <div>
+                            <span class="info-label">Retiradas</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;">${badgeList(qrItems, '239,68,68')}</div>
+                        </div>
+                       </div>` : '';
+
+                const cruzHTML = cruzItems.length > 0
+                    ? `<div class="info-row" style="margin-top:4px;">
+                        <i class="fa fa-traffic-light" style="color:#3085d6;"></i>
+                        <div>
+                            <span class="info-label">Semáforos</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;">${badgeList(cruzItems, '48,133,214')}</div>
+                        </div>
+                       </div>` : '';
+
+                const sinHTML = sinItems.length > 0
+                    ? `<div class="info-row" style="margin-top:4px;">
+                        <i class="fa fa-paint-roller" style="color:#a78bfa;"></i>
+                        <div>
+                            <span class="info-label">Sinalização Especial</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;">${sinItems.map(x => `<span class="scope-badge">${x.label}: <strong>${x.val}</strong></span>`).join('')}</div>
+                        </div>
+                       </div>` : '';
+
+                const card = document.createElement('div');
+                card.className = 'nce-card glass';
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="card-protocol" style="color:var(--amc-primary);">${protocolo}</span>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            ${badgesPriority}
+                            <span class="card-badge ${statusClass}">${nceStatus}</span>
+                        </div>
+                    </div>
+
+                    <div class="card-divider" style="margin:10px 0;"></div>
+
+                    <!-- Tipo e Descrição -->
+                    <div class="info-row">
+                        <i class="fa fa-hammer"></i>
+                        <div>
+                            <span class="info-label">Tipo de Implantação</span>
+                            <span style="font-weight:600;">${tipoImplantacao}</span>
+                            ${descricaoSinal !== '—' ? `<span style="color:rgba(255,255,255,0.55);font-size:12px;display:block;">${descricaoSinal}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Localização -->
+                    <div class="info-row" style="margin-top:10px;">
+                        <i class="fa fa-location-dot"></i>
+                        <div>
+                            <span class="info-label">Endereço</span>
+                            <span>${enderecoFull}</span>
+                            ${trecho ? `<span style="color:rgba(255,255,255,0.55);font-size:12px;display:block;margin-top:2px;"><i class="fa fa-arrows-left-right" style="color:var(--amc-primary);"></i> Trecho: ${trecho}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="card-divider" style="margin:10px 0;"></div>
+
+                    <!-- Quantitativos -->
+                    ${implantarHTML}
+                    ${retiradaHTML}
+                    ${cruzHTML}
+                    ${sinHTML}
+
+                    <!-- Projeto PDF -->
+                    ${pdfUrl ? `
+                    <div class="info-row" style="margin-top:8px;">
+                        <i class="fa fa-file-pdf" style="color:var(--amc-secondary);"></i>
+                        <div>
+                            <span class="info-label">Projeto NCE</span>
+                            <a href="${pdfUrl}" target="_blank" style="color:var(--amc-secondary);text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:5px;" onclick="event.stopPropagation()">
+                                <i class="fa fa-external-link"></i> Abrir Projeto PDF
+                            </a>
+                        </div>
+                    </div>` : ''}
+
+                    <div class="card-divider" style="margin:10px 0;"></div>
+
+                    <!-- Programação -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                        <div class="info-row">
+                            <i class="fa fa-truck-pickup"></i>
+                            <div>
+                                <span class="info-label">Equipe</span>
+                                <span>${equipe || '<span style="color:var(--amc-text-muted);font-style:italic;">Não designada</span>'}</span>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <i class="fa fa-calendar-days"></i>
+                            <div>
+                                <span class="info-label">Data Programada</span>
+                                <span>${dataProgStr}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${dataConclStr ? `
+                    <div class="info-row" style="margin-bottom:8px;">
+                        <i class="fa fa-circle-check" style="color:#10b981;"></i>
+                        <div>
+                            <span class="info-label">Concluída em</span>
+                            <span>${dataConclStr}</span>
+                        </div>
+                    </div>` : ''}
+
+                    <div class="card-divider" style="margin:10px 0;"></div>
+
+                    <!-- Observação de Campo (editável) -->
+                    <div>
+                        <label class="info-label" style="margin-bottom:6px;"><i class="fa fa-clipboard-question" style="color:var(--amc-primary);margin-right:4px;"></i>Retorno / Observação de Campo</label>
+                        <textarea id="obs-campo-${d.id}" rows="3" class="form-input" style="resize:none;font-size:12px;" placeholder="Registre aqui o retorno da equipe de campo...">${obsExistente}</textarea>
+                        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+                            <button class="btn-amc btn-outline-amc" style="padding:6px 14px;font-size:11px;" onclick="saveObservation('${d.id}')">
+                                <i class="fa fa-floppy-disk"></i> Salvar Observação
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Salvar Observação de Campo
+        async function saveObservation(execId) {
+            const obs = document.getElementById(`obs-campo-${execId}`)?.value || '';
+            const { error } = await supabase
+                .from('execucao_nce')
+                .update({ observacoes_campo: obs })
+                .eq('id', execId);
+            if (error) {
+                showToast('Erro', 'Falha ao salvar observação: ' + error.message, 'error');
+            } else {
+                showToast('Salvo!', 'Observação de campo registrada.', 'success');
+            }
+        }
+        // Toast de Feedback Visual
+        function showToast(title, message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastTitle.innerText = title;
+            toastMessage.innerText = message;
+            
+            toast.className = 'toast show';
+            toastIcon.className = 'fa fa-2x';
+
+            if (type === 'success') {
+                toast.classList.add('toast-success');
+                toastIcon.classList.add('fa-check-circle');
+                toastIcon.style.color = '#10b981';
+            } else if (type === 'error') {
+                toast.classList.add('toast-error');
+                toastIcon.classList.add('fa-times-circle');
+                toastIcon.style.color = '#ef4444';
+            } else {
+                toast.classList.add('toast-success');
+                toastIcon.classList.add('fa-spinner', 'fa-spin');
+                toastIcon.style.color = 'var(--amc-primary)';
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

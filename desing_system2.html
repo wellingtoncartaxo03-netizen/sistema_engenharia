@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Design System 2.0</title>
+    
+    <!-- External Scripts & Fonts (Same as references) -->
+    <script src="assets/resource_3fa48481346f.js"></script>
+    <script src="assets/lucide_latest_2eebd0ebe8c2.js"></script>
+    <link href="assets/font-awesome_84dcedcc22dc.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap" rel="stylesheet"/>
+
+    <style>
+        :root {
+            /* AMC Colors */
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        html { scroll-behavior: smooth; }
+
+        /* --- Animations --- */
+        @keyframes fadeInUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
+        @keyframes blurIn { 0% { opacity: 0; filter: blur(15px); transform: scale(0.95); } 100% { opacity: 1; filter: blur(0); transform: scale(1); } }
+        @keyframes beam-spin { to { transform: rotate(360deg); } }
+        @keyframes lines-slide { 0% { background-position: 0 0; } 100% { background-position: 24px 0; } }
+        @keyframes beam-fall {
+            0% { transform: translateY(-100%); opacity: 0; }
+            5% { opacity: 0.5; }
+            50% { opacity: 1; }
+            95% { opacity: 0.5; }
+            100% { transform: translateY(120vh); opacity: 0; }
+        }
+        @keyframes glow-pulse {
+            0%, 100% { box-shadow: 0 0 15px var(--amc-glow); }
+            50% { box-shadow: 0 0 30px var(--amc-glow); }
+        }
+        @keyframes text-shine {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .scroll-item { animation-duration: 1s; animation-fill-mode: both; animation-play-state: paused; }
+        .scroll-fade-up { animation-name: fadeInUp; }
+        .scroll-blur-in { animation-name: blurIn; }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-500 { animation-delay: 500ms; }
+
+        /* --- Components --- */
+        .glass {
+            background: rgba(10, 10, 12, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Transparent Lettering */
+        .text-transparent-bg {
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.2) 50%, #fff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: text-shine 5s linear infinite;
+        }
+
+        /* --- UI Spec Classes --- */
+        .ds-section { border-top: 1px solid rgba(255,255,255,0.05); padding: 5rem 1rem; }
+        .ds-type-row { display: flex; align-items: baseline; justify-content: space-between; padding: 2rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .ds-swatch { width: 100%; aspect-ratio: 16/9; border-radius: 1rem; position: relative; overflow: hidden; display: flex; align-items: flex-end; padding: 1rem; }
+        .ds-card { border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.1); padding: 2rem; position: relative; overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .ds-card:hover { transform: translateY(-5px); border-color: var(--amc-primary); box-shadow: 0 10px 40px -10px var(--amc-glow); }
+
+        /* --- Falling Beams --- */
+        .beam { position: fixed; top: 0; width: 1px; height: 100px; background: linear-gradient(to bottom, transparent, var(--amc-primary), transparent); pointer-events: none; z-index: 0; opacity: 0.3; }
+        .beam-1 { left: 20%; animation: beam-fall 8s linear infinite; }
+        .beam-2 { left: 45%; animation: beam-fall 12s linear infinite; animation-delay: 2s; }
+        .beam-3 { left: 75%; animation: beam-fall 10s linear infinite; animation-delay: 5s; }
+
+        /* --- Buttons --- */
+        .btn-amc {
+            position: relative;
+            padding: 12px 32px;
+            border-radius: 9999px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s;
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-primary-amc {
+            background: var(--amc-primary);
+            color: #000;
+            box-shadow: 0 4px 15px var(--amc-glow);
+        }
+        .btn-primary-amc:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px var(--amc-glow);
+        }
+
+        .btn-glass-amc {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        .btn-glass-amc:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--amc-primary);
+        }
+
+        /* Gradient Glow Button (static border) */
+        .border-beam-btn {
+            position: relative;
+            background: #000;
+            color: #fff;
+            padding: 14px 36px;
+            border-radius: 9999px;
+            border: 2px solid var(--amc-primary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(248, 183, 0, 0.3), inset 0 0 10px rgba(248, 183, 0, 0.1);
+        }
+        .border-beam-btn:hover {
+            background: rgba(248, 183, 0, 0.08);
+            box-shadow: 0 0 35px rgba(248, 183, 0, 0.5), inset 0 0 20px rgba(248, 183, 0, 0.2);
+            transform: scale(1.03);
+            border-color: #ffcc33;
+        }
+
+        /* --- Header / Hero Specific --- */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 50%, rgba(248, 183, 0, 0.15) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--amc-glow);
+            filter: blur(100px);
+            border-radius: 50%;
+            z-index: -2;
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Beams -->
+    <div class="beam beam-1"></div>
+    <div class="beam beam-2"></div>
+    <div class="beam beam-3"></div>
+
+    <!-- Navigation -->
+    <nav style="position: fixed; top: 0; left: 0; right: 0; z-index: 50; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;">
+        <!-- Logo + Title (outside the pill) -->
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <img src="assets/amc_588c5a694d82.png" alt="Logo AMC" style="height: 36px;">
+            <span style="font-family: 'Oswald', sans-serif; font-weight: 300; font-size: 14px; letter-spacing: 0.15em; color: rgba(255,255,255,0.6); text-transform: uppercase;">Design System</span>
+        </div>
+        <!-- Nav pill -->
+        <div class="glass" style="display: flex; align-items: center; gap: 24px; padding: 8px 8px 8px 24px; border-radius: 9999px;">
+            <a href="#typography" style="text-decoration: none; color: #9ca3af; font-size: 13px; font-weight: 500; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#9ca3af'">Tipografia</a>
+            <a href="#colors" style="text-decoration: none; color: #9ca3af; font-size: 13px; font-weight: 500; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#9ca3af'">Cores</a>
+            <a href="#components" style="text-decoration: none; color: #9ca3af; font-size: 13px; font-weight: 500; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#9ca3af'">Componentes</a>
+            <a href="#animations" style="text-decoration: none; color: #9ca3af; font-size: 13px; font-weight: 500; transition: color 0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#9ca3af'">Anima&#231;&#245;es</a>
+            <button class="btn-amc btn-primary-amc" style="padding: 8px 20px; font-size: 11px;">LIVE PREVIEW</button>
+        </div>
+    </nav>
+
+    <!-- 1. HERO SECTION -->
+    <header id="hero" class="relative h-screen flex items-center justify-center overflow-hidden" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding-top: 120px; padding-bottom: 60px;">
+        <div class="hero-bg"></div>
+        <div class="hero-glow" style="top: 20%; left: 20%;"></div>
+        <div class="hero-glow" style="bottom: 10%; right: 10%; background: var(--amc-secondary); opacity: 0.2;"></div>
+
+        <div style="max-width: 900px; width: 100%; text-align: left; padding-left: 40px; position: relative; z-index: 10;">
+            <div class="glass" style="display: inline-block; margin-bottom: 32px; padding: 6px 16px; border-radius: 9999px; animation: fadeInUp 0.8s ease both;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--amc-primary); letter-spacing: 0.1em; text-transform: uppercase;">
+                    AMC Design System v2.0 &#8226; 2026
+                </span>
+            </div>
+            
+            <h1 style="font-family: 'Inter', sans-serif; font-size: clamp(3rem, 10vw, 7rem); font-weight: 200; line-height: 0.95; margin: 0; letter-spacing: -0.04em; color: rgba(255,255,255,0.35); animation: blurIn 1s ease 0.1s both;">
+                ELEG&#194;NCIA NO <br> 
+                <span style="font-weight: 700; color: #fff;">MOVIMENTO.</span>
+            </h1>
+
+            <p style="font-size: 1.25rem; color: #9ca3af; max-width: 600px; margin: 2rem 0; line-height: 1.6; font-weight: 300; animation: fadeInUp 0.8s ease 0.3s both;">
+                Uma nova linguagem visual para a AMC, combinando a robustez dos servi&#231;os p&#250;blicos com a sofistica&#231;&#227;o de interfaces premium.
+            </p>
+
+            <div style="display: flex; gap: 20px; margin-top: 40px; animation: fadeInUp 0.8s ease 0.5s both;">
+                <button class="border-beam-btn">EXPLORAR FRAMEWORK</button>
+                <button class="btn-amc btn-glass-amc">DOCUMENTA&#199;&#195;O</button>
+            </div>
+        </div>
+
+        <!-- Floating Mockup -->
+        <div class="scroll-item scroll-blur-in delay-500" style="margin-top: 5rem; width: 100%; max-width: 1200px; perspective: 1000px;">
+            <div class="glass" style="transform: rotateX(15deg); border-radius: 2rem; box-shadow: 0 50px 100px -20px rgba(0,0,0,0.5); padding: 5px;">
+                <img src="assets/banner-canal-whatsapp_5cc6364b335b.jpg" alt="Preview Interface" style="width: 100%; border-radius: 1.8rem; filter: saturate(1.2) brightness(0.8);">
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-20" style="max-width: 1280px; margin: 0 auto; padding: 100px 24px;">
+
+        <!-- 2. TYPOGRAPHY -->
+        <section id="typography" class="ds-section">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 48px;">
+                <span class="glass" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--amc-primary); font-weight: 700;">01</span>
+                <h2 style="font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 300; margin: 0;">TIPOGRAFIA</h2>
+            </div>
+
+            <div class="ds-type-row">
+                <div style="width: 200px;">
+                    <p style="font-size: 10px; color: #666; text-transform: uppercase;">Heading 1 (Hero)</p>
+                    <p style="font-size: 12px; color: #999;">Oswald Light / 72-128px</p>
+                </div>
+                <div style="flex: 1;">
+                    <h1 style="font-family: 'Oswald', sans-serif; font-size: 5rem; font-weight: 300; line-height: 1; margin: 0;">Design System 2026</h1>
+                </div>
+            </div>
+
+            <div class="ds-type-row">
+                <div style="width: 200px;">
+                    <p style="font-size: 10px; color: #666; text-transform: uppercase;">Heading 2 (Section)</p>
+                    <p style="font-size: 12px; color: #999;">Oswald Regular / 48px</p>
+                </div>
+                <div style="flex: 1;">
+                    <h2 style="font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 500; margin: 0;">A Evolução do Trânsito</h2>
+                </div>
+            </div>
+
+            <div class="ds-type-row">
+                <div style="width: 200px;">
+                    <p style="font-size: 10px; color: #666; text-transform: uppercase;">Body Content</p>
+                    <p style="font-size: 12px; color: #999;">Inter Light / 18px</p>
+                </div>
+                <div style="flex: 1;">
+                    <p style="font-size: 1.125rem; font-weight: 300; line-height: 1.6; color: #9ca3af; max-width: 600px;">
+                        Desenvolvido para máxima legibilidade e clareza. O uso de pesos leves cria um contraste premium com as fontes de display.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. CORES -->
+        <section id="colors" class="ds-section">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 48px;">
+                <span class="glass" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--amc-primary); font-weight: 700;">02</span>
+                <h2 style="font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 300; margin: 0;">SISTEMA DE CORES</h2>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
+                <div>
+                    <div class="ds-swatch" style="background: var(--amc-primary);">
+                        <span style="color: #000; font-weight: 700;">PRIMARY YELLOW</span>
+                    </div>
+                    <div style="margin-top: 12px; display: flex; justify-content: space-between;">
+                        <span style="font-size: 14px; font-weight: 500;">Brand Main</span>
+                        <code style="color: var(--amc-primary);">#F8B700</code>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="ds-swatch" style="background: var(--amc-secondary);">
+                        <span style="color: #fff; font-weight: 700;">BRAND ORANGE</span>
+                    </div>
+                    <div style="margin-top: 12px; display: flex; justify-content: space-between;">
+                        <span style="font-size: 14px; font-weight: 500;">Secondary/Alert</span>
+                        <code style="color: var(--amc-secondary);">#f15a22</code>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="ds-swatch" style="background: var(--amc-accent);">
+                        <span style="color: #fff; font-weight: 700;">ACTION BLUE</span>
+                    </div>
+                    <div style="margin-top: 12px; display: flex; justify-content: space-between;">
+                        <span style="font-size: 14px; font-weight: 500;">Interactive UI</span>
+                        <code style="color: var(--amc-accent);">#3085d6</code>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="ds-swatch" style="background: #000A12; border: 1px solid rgba(255,255,255,0.1);">
+                        <span style="color: #fff; font-weight: 700;">TITLE DARK</span>
+                    </div>
+                    <div style="margin-top: 12px; display: flex; justify-content: space-between;">
+                        <span style="font-size: 14px; font-weight: 500;">Deep Neutrals</span>
+                        <code>#000A12</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gradients -->
+            <div style="margin-top: 60px;">
+                <h4 style="font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 24px;">Gradients & Glows</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;">
+                    <div style="height: 100px; border-radius: 12px; background: linear-gradient(135deg, var(--amc-primary), var(--amc-secondary));"></div>
+                    <div style="height: 100px; border-radius: 12px; background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid rgba(255,255,255,0.1);"></div>
+                    <div style="height: 100px; border-radius: 12px; background: radial-gradient(circle, var(--amc-primary) 0%, transparent 70%); opacity: 0.5;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. COMPONENTS -->
+        <section id="components" class="ds-section">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 48px;">
+                <span class="glass" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--amc-primary); font-weight: 700;">03</span>
+                <h2 style="font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 300; margin: 0;">COMPONENTES UI</h2>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 40px;">
+                <!-- Buttons Card -->
+                <div class="ds-card glass">
+                    <h3 style="margin-top: 0; font-size: 18px; color: var(--amc-primary);">BOTÕES</h3>
+                    <p style="font-size: 14px; color: #999; margin-bottom: 32px;">Padrões de interação com efeitos de brilho e animação perimétrica.</p>
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <button class="btn-amc btn-primary-amc w-full" style="width: 100%; justify-content: center;">Primary Action</button>
+                        <button class="border-beam-btn w-full" style="width: 100%; justify-content: center; padding: 10px;">Animated Glow</button>
+                        <button class="btn-amc btn-glass-amc w-full" style="width: 100%; justify-content: center;">Ghost Secondary</button>
+                    </div>
+                </div>
+
+                <!-- Inputs Card -->
+                <div class="ds-card glass">
+                    <h3 style="margin-top: 0; font-size: 18px; color: var(--amc-primary);">FORMULÁRIOS</h3>
+                    <p style="font-size: 14px; color: #999; margin-bottom: 32px;">Entradas de texto otimizadas com foco em "White Glow".</p>
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div>
+                            <label style="display: block; font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase;">Default Input</label>
+                            <input type="text" placeholder="Nome completo" class="glass" style="width: 100%; padding: 12px 20px; border-radius: 0.75rem; color: #fff; outline: none; transition: border 0.3s; box-sizing: border-box;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 11px; color: #666; margin-bottom: 8px; text-transform: uppercase;">Active / Focus</label>
+                            <input type="text" value="Welln" class="glass" style="width: 100%; padding: 12px 20px; border-radius: 0.75rem; color: #fff; outline: none; border-color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.2); box-sizing: border-box;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Card Spec -->
+                <div class="ds-card glass" style="grid-column: span 1;">
+                    <h3 style="margin-top: 0; font-size: 18px; color: var(--amc-primary);">CARDS</h3>
+                    <div class="glass-dark" style="padding: 24px; border-radius: 1rem; margin-top: 24px; position: relative; overflow: hidden;">
+                        <div style="width: 50px; height: 50px; background: var(--amc-primary); border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; color: #000;">
+                            <i data-lucide="shield-check"></i>
+                        </div>
+                        <h4 style="margin: 0; font-family: 'Oswald', sans-serif; font-weight: 500; font-size: 1.5rem;">SEGURANÇA</h4>
+                        <p style="font-size: 14px; color: #666; line-height: 1.6;">Design focado na proteção de dados e integridade do usuário.</p>
+                        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 20px 0;">
+                        <span style="font-size: 11px; color: var(--amc-primary);">DETALHES <i data-lucide="arrow-right" style="width: 12px; vertical-align: middle;"></i></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. ICONS -->
+        <section id="icons" class="ds-section">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 48px;">
+                <span class="glass" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--amc-primary); font-weight: 700;">04</span>
+                <h2 style="font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 300; margin: 0;">ÍCONES</h2>
+            </div>
+
+            <div class="glass" style="padding: 3rem; border-radius: 2rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 32px; text-align: center;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-home fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Home</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-car fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Tr&#226;nsito</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-usd fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Financeiro</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-exclamation-triangle fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Alertas</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-laptop fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Atendimento</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-map-marker fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Mapas</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-calendar fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Agenda</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-search fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Busca</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-bicycle fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Ciclovia</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-motorcycle fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Moto</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-file-text-o fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Documentos</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;" onmouseover="this.style.borderColor='rgba(248,183,0,0.3)'; this.style.background='rgba(248,183,0,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'; this.style.background='transparent'">
+                    <i class="fa fa-question-circle fa-2x" style="color: var(--amc-primary);"></i>
+                    <span style="font-size: 11px; color: #999;">Ajuda</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. ANIMATIONS DEMO -->
+        <section id="animations" class="ds-section">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 48px;">
+                <span class="glass" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; color: var(--amc-primary); font-weight: 700;">05</span>
+                <h2 style="font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 300; margin: 0;">ANIMAÇÕES & MOTION</h2>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;">
+                <div class="ds-card glass-dark" style="height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                    <div style="width: 60px; height: 60px; background: var(--amc-glow); border-radius: 50%; animation: glow-pulse 2s infinite;"></div>
+                    <p style="font-size: 12px; margin-top: 20px;">Pulse Glow</p>
+                </div>
+
+                <div class="ds-card glass-dark" style="height: 200px; display: flex; align-items: center; justify-content: center; flex-direction: column; overflow: hidden;">
+                    <div style="width: 100%; height: 2px; background: var(--amc-primary); animation: lines-slide 2s linear infinite; background-image: repeating-linear-gradient(90deg, #fff, #fff 10px, transparent 10px, transparent 20px); background-size: 40px 100%;"></div>
+                    <p style="font-size: 12px; margin-top: 20px;">Moving Grids</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="glass" style="border-top: 1px solid rgba(255,255,255,0.1); padding: 5rem 1rem; margin-top: 100px;">
+        <div class="max-w-7xl mx-auto" style="max-width: 1280px; margin: 0 auto; text-align: center;">
+            <img src="assets/amc_588c5a694d82.png" alt="AMC" style="height: 40px; margin-bottom: 2rem;">
+            <p style="color: #666; font-size: 14px;">© 2026 Autarquia Municipal de Trânsito e Cidadania • Fortaleza - CE</p>
+            <p style="color: #444; font-size: 11px; margin-top: 1rem;">Created for Fundamentos de Vibe Design</p>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        // Intersection Observer for Scroll Animations
+        document.addEventListener('DOMContentLoaded', () => {
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.scroll-item').forEach(el => {
+                el.style.animationPlayState = 'paused';
+                observer.observe(el);
+            });
+        });
+    </script>
+</body>
+</html>

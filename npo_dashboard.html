@@ -1,0 +1,3220 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — NPO (Projetos Operacionais)</title>
+    <meta name="description" content="Módulo de Projetos Operacionais (NPO) - Planejamento e detalhamento de sinalização, recapeamento e tapa buracos."/>
+    
+    <!-- Scripts Externos & Fontes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+
+    <style>
+        :root {
+            --amc-primary:  #F8B700;
+            --amc-secondary:#f15a22;
+            --amc-accent:   #3085d6;
+            --amc-green:    #10b981;
+            --amc-red:      #ef4444;
+            --amc-npo:      #F8B700;        /* amarelo NPO */
+            --amc-npo-glow: rgba(248, 183, 0, 0.25);
+            --amc-bg-dark:  #050505;
+            --amc-card-bg:  #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow:     rgba(248, 183, 0, 0.4);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Estilo de Vidro (Glassmorphism) --- */
+        .glass {
+            background: rgba(10, 10, 12, 0.88);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* --- Sidebar Lateral --- */
+        aside {
+            width: 300px;
+            min-width: 300px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 15px;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            overflow-y: auto;
+            max-height: calc(100vh - 220px);
+        }
+        .menu-list::-webkit-scrollbar { width: 4px; }
+        .menu-list::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+        .menu-list::-webkit-scrollbar-track { background: transparent; }
+
+        .menu-item {
+            margin-bottom: 5px;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.25s;
+        }
+
+        .menu-link:hover, .menu-link.active {
+            color: #fff;
+            background: rgba(248, 183, 0, 0.08);
+            border-left: 3px solid var(--amc-npo);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            margin-left: 300px;
+            flex-grow: 1;
+            padding: 2.5rem 3rem;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .hero-bg {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse at 80% 5%, rgba(248, 183, 0, 0.06) 0%, transparent 55%),
+                        radial-gradient(ellipse at 10% 95%, rgba(241, 90, 34, 0.03) 0%, transparent 50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .header-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 300;
+            margin: 0 0 4px;
+            text-transform: uppercase;
+        }
+
+        .header-sub {
+            font-size: 13px;
+            color: var(--amc-text-muted);
+            margin: 0;
+        }
+
+        .role-badge {
+            font-size: 12px;
+            padding: 8px 16px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* --- Barra de Filtros --- */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            background: rgba(10, 10, 12, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .filter-group.search {
+            flex: 2;
+            min-width: 220px;
+        }
+
+        .filter-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--amc-text-muted);
+            font-weight: 700;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            color: #fff;
+            font-size: 12px;
+            outline: none;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+        .filter-input:focus {
+            border-color: var(--amc-npo);
+            background: rgba(248, 183, 0, 0.04);
+        }
+
+        /* --- Tabela de Processos --- */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 1.25rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(10, 10, 12, 0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--amc-text-muted);
+            font-weight: 600;
+            padding: 18px 24px;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        td {
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.85);
+            transition: all 0.2s;
+        }
+
+        tr {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        tr:hover td {
+            background: rgba(248, 183, 0, 0.02);
+            color: #fff;
+        }
+
+        tr:hover {
+            box-shadow: inset 4px 0 0 var(--amc-npo);
+        }
+
+        .badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 9px; border-radius: 6px;
+            font-size: 10px; font-weight: 700; text-transform: uppercase; white-space: nowrap;
+        }
+
+        /* Badges de Status do NPO */
+        .b-recebido    { background: rgba(248,183,0,.12);   color: var(--amc-npo);      border: 1px solid var(--amc-npo); }
+        .b-deferido    { background: rgba(16,185,129,.12);  color: var(--amc-green);    border: 1px solid var(--amc-green); }
+        .b-indeferido  { background: rgba(239,68,68,.12);   color: var(--amc-red);      border: 1px solid var(--amc-red); }
+        .b-semprojeto  { background: rgba(255,255,255,.05); color: var(--amc-text-muted);border: 1px solid rgba(255,255,255,.1); }
+        .b-contemplado { background: rgba(48,133,214,.1);   color: var(--amc-accent);   border: 1px solid rgba(48,133,214,.3); }
+        .b-concluido   { background: rgba(167,139,250,.12); color: #a78bfa;             border: 1px solid #a78bfa; }
+        .b-generic     { background: rgba(255,255,255,.05); color: var(--amc-text-muted);border: 1px solid rgba(255,255,255,.1); }
+        .b-aguardando  { background: rgba(156,163,175,0.1); color: #d1d5db;             border: 1px solid rgba(156,163,175,0.2); }
+        .b-analise     { background: rgba(48,133,214,0.1);  color: var(--amc-accent);   border: 1px solid rgba(48,133,214,0.3); }
+        
+        .btn-status-toggle {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.03);
+            color: var(--amc-text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-status-toggle:hover:not([disabled]) {
+            border-color: var(--amc-npo);
+            color: #fff;
+            background: rgba(248, 183, 0, 0.1);
+        }
+        .btn-status-toggle.active {
+            background: var(--amc-npo);
+            color: #000;
+            border-color: var(--amc-npo);
+            box-shadow: 0 4px 12px rgba(248, 183, 0, 0.2);
+        }
+        .btn-status-toggle[disabled] {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--amc-text-muted);
+            transition: all .2s;
+        }
+
+        
+        .b-origin      { background: rgba(48,133,214,.1);   color: var(--amc-accent);   border: 1px solid rgba(48,133,214,.3); }
+        .b-tipo        { background: rgba(248,183,0,.12);   color: var(--amc-npo);      border: 1px solid rgba(248,183,0,.3); }
+
+        .btn-amc {
+            padding: 10px 20px; border-radius: 9999px;
+            font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+            transition: all .3s; display: inline-flex; align-items: center; justify-content: center;
+            gap: 8px; cursor: pointer; border: none; font-size: 11px; font-family: 'Inter', sans-serif;
+        }
+        .btn-primary { background: var(--amc-primary); color: #000; box-shadow: 0 4px 15px var(--amc-npo-glow); }
+        .btn-primary:hover { transform: scale(1.02); box-shadow: 0 8px 25px var(--amc-npo-glow); }
+        .btn-primary:disabled { background: #333; color: #666; box-shadow: none; cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,.1); color: #fff; }
+        .btn-outline:hover { background: rgba(255,255,255,.05); border-color: var(--amc-npo); }
+        
+        .btn-npo { background: rgba(248,183,0,.1); border: 1px solid rgba(248,183,0,.3); color: var(--amc-npo); padding: 7px 14px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; font-family: 'Inter', sans-serif; }
+        .btn-npo:hover { background: rgba(248,183,0,.2); box-shadow: 0 0 15px var(--amc-npo-glow); }
+        .btn-danger { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: var(--amc-red); padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 4px; font-family: 'Inter', sans-serif; }
+        .btn-danger:hover { background: rgba(239,68,68,.2); }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.7); backdrop-filter: blur(18px);
+            z-index: 1000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity .3s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            width: 750px; max-width: 95%; max-height: 90vh;
+            border-radius: 1.5rem; overflow-y: auto;
+            transform: scale(.95) translateY(12px);
+            transition: transform .35s cubic-bezier(.175,.885,.32,1.275);
+            display: flex;
+            flex-direction: column;
+        }
+        .modal-overlay.show .modal-content { transform: scale(1) translateY(0); }
+        
+        .modal-header {
+            padding: 1.5rem 2rem; border-bottom: 1px solid rgba(255,255,255,.06);
+            display: flex; justify-content: space-between; align-items: flex-start;
+            position: sticky; top: 0; z-index: 2;
+            background: rgba(8,8,10,.96); backdrop-filter: blur(14px);
+        }
+        .modal-body { 
+            padding: 2rem; 
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        /* --- INFO GRID (Estilo NPA) --- */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .info-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+        .info-item.full-width {
+            grid-column: span 2;
+        }
+        .info-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--amc-text-muted);
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .info-val {
+            font-size: 14px;
+            color: #fff;
+            font-weight: 500;
+        }
+        #npo-priority-banner {
+            grid-column: 1 / -1;
+        }
+
+        /* --- AGGREGATION BANNER --- */
+        .aggr-banner {
+            grid-column: 1 / -1;
+            display: flex; align-items: flex-start; gap: 10px;
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 10px; padding: 12px 16px; margin-bottom: .5rem;
+            font-size: 13px; color: #fbbf24;
+        }
+        .aggr-banner i { font-size: 16px; margin-top: 1px; flex-shrink: 0; }
+        .aggr-banner strong { color: #fde68a; display: block; margin-bottom: 3px; }
+        .aggr-banner-list { color: rgba(253,230,138,.75); font-size: 12px; line-height: 1.6; }
+        .badge-aggr {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px; border-radius: 4px;
+            background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4);
+            color: #f59e0b; font-size: 10px; font-weight: 900;
+            margin-left: 5px; flex-shrink: 0; vertical-align: middle;
+            cursor: default; title: 'Processo Agregado';
+        }
+        /* --- AGGR SEARCH MODAL --- */
+        #aggr-modal .modal-overlay { z-index: 1200; }
+        #aggr-modal {
+            position: fixed; inset: 0; z-index: 1200;
+            background: rgba(0,0,0,.75); backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity .25s;
+        }
+        #aggr-modal.show { opacity: 1; pointer-events: auto; }
+        #aggr-modal .aggr-inner {
+            background: #0d0d10; border: 1px solid rgba(255,255,255,.1);
+            border-radius: 16px; width: 900px; max-width: 96vw;
+            max-height: 85vh; overflow-y: auto; padding: 2rem;
+        }
+        #aggr-modal h4 { color: #f59e0b; font-family: 'Oswald', sans-serif; font-size: 1.2rem; margin: 0 0 4px; }
+        #aggr-modal .aggr-sub { color: var(--amc-text-muted); font-size: 12px; margin: 0 0 1.5rem; }
+        .aggr-filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; margin-bottom: 1.5rem; }
+        .aggr-filter-row .aggr-search-btn {
+            padding: 10px 20px; background: #f59e0b; color: #000; border: none;
+            border-radius: 8px; font-weight: 700; cursor: pointer; white-space: nowrap;
+            font-size: 13px; transition: background .2s;
+        }
+        .aggr-filter-row .aggr-search-btn:hover { background: #fbbf24; }
+        #aggr-results-table { width: 100%; border-collapse: collapse; margin-top: .5rem; }
+        #aggr-results-table th {
+            text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .06em; color: var(--amc-text-muted);
+            border-bottom: 1px solid rgba(255,255,255,.07);
+        }
+        #aggr-results-table td { padding: 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); }
+        #aggr-results-table tr:hover td { background: rgba(255,255,255,.03); }
+        .aggr-action-btn {
+            padding: 5px 12px; font-size: 11px; font-weight: 700;
+            border-radius: 6px; cursor: pointer; border: 1px solid rgba(245,158,11,.5);
+            background: rgba(245,158,11,.1); color: #f59e0b; transition: all .2s;
+            white-space: nowrap;
+        }
+        .aggr-action-btn:hover { background: rgba(245,158,11,.25); border-color: #f59e0b; }
+        .aggr-empty { text-align: center; padding: 2rem; color: var(--amc-text-muted); font-size: 13px; }
+        #btn-verify-local {
+            padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer;
+            border-radius: 8px; border: 1px solid rgba(245,158,11,.4);
+            background: rgba(245,158,11,.08); color: #f59e0b; transition: all .2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        #btn-verify-local:hover { background: rgba(245,158,11,.18); border-color: #f59e0b; }
+        
+        .modal-close { background: transparent; border: none; color: var(--amc-text-muted); cursor: pointer; font-size: 1.4rem; transition: color .2s; }
+        .modal-close:hover { color: #fff; }
+
+        .modal-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        /* --- FORMULÁRIO --- */
+        .form-section {
+            padding: 1.25rem; border-radius: 12px;
+            background: rgba(255,255,255,.02);
+            border: 1px solid rgba(255,255,255,.05);
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+        .form-section-title {
+            font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+            color: var(--amc-npo); font-weight: 700; margin: 0 0 1rem;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .form-group { margin-bottom: 1rem; }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .form-row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+        
+        /* Checkbox grid */
+        .form-row-checkboxes { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+        .checkbox-container { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+        .checkbox-container input { width: 16px; height: 16px; accent-color: var(--amc-npo); cursor: pointer; }
+        .checkbox-container span { font-size: 12px; color: rgba(255,255,255,0.85); transition: color 0.2s; }
+        .checkbox-container:hover span { color: #fff; }
+
+        /* Qty grid e tabelas */
+        .form-grid-qty { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; width: 100%; }
+        .form-group-qty {
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(255,255,255,.015); border: 1px solid rgba(255,255,255,.05);
+            border-radius: 6px; padding: 6px 10px; transition: border-color 0.2s, background-color 0.2s;
+        }
+        .form-group-qty:hover { background: rgba(255,255,255,.04); border-color: var(--amc-npo); }
+        .form-group-qty label { font-size: 11px; color: rgba(255,255,255,0.85); cursor: pointer; margin: 0; }
+        .form-group-qty input {
+            width: 50px; padding: 3px 5px; font-size: 11px; text-align: center;
+            background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.1);
+            border-radius: 4px; color: #fff; outline: none; transition: border-color 0.2s;
+        }
+        .form-group-qty input:focus { border-color: var(--amc-npo); }
+
+        .vagas-table th { padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,.1); }
+        .vagas-table td { padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,.03); }
+        .vagas-table input {
+            width: 55px; padding: 3px; font-size: 11px; text-align: center;
+            background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.1);
+            border-radius: 4px; color: #fff; outline: none; transition: border-color 0.2s;
+        }
+        .vagas-table input:focus { border-color: var(--amc-npo); }
+
+        /* Acordeões */
+        .accordion-section {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.01);
+            overflow: hidden;
+            margin-bottom: 1rem;
+            flex-shrink: 0;
+        }
+        .accordion-header {
+            width: 100%;
+            padding: 12px 18px;
+            background: rgba(255, 255, 255, 0.02);
+            border: none;
+            color: #fff;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+        .accordion-header:hover {
+            background: rgba(248, 183, 0, 0.06);
+            color: var(--amc-npo);
+        }
+        .accordion-header.active {
+            background: rgba(248, 183, 0, 0.04);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .accordion-header i.arrow { transition: transform 0.3s; }
+        .accordion-header.active i.arrow { transform: rotate(180deg); }
+        .accordion-content {
+            padding: 1.25rem;
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .form-label { display: block; font-size: 10px; color: var(--amc-text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+        .form-input {
+            width: 100%; padding: 10px 14px; border-radius: .75rem;
+            background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.09);
+            color: #fff; font-size: 13px; outline: none; transition: all .25s;
+            box-sizing: border-box; font-family: 'Inter', sans-serif;
+        }
+        .form-input:focus { border-color: var(--amc-npo); box-shadow: 0 0 0 3px rgba(248,183,0,.12); background: rgba(248,183,0,.04); }
+        .form-input:disabled { background: rgba(255,255,255,0.01); color: var(--amc-text-muted); border-color: rgba(255,255,255,0.04); }
+        select option, option {
+            background-color: #0A0A0C !important;
+            color: #ffffff !important;
+        }
+        .priority-row {
+            border-left: 4px solid #ef4444 !important;
+            background: rgba(239, 68, 68, 0.04) !important;
+        }
+        .priority-row:hover {
+            background: rgba(239, 68, 68, 0.08) !important;
+        }
+
+        /* --- Upload de Arquivo --- */
+        .upload-zone {
+            border: 2px dashed rgba(248,183,0,.25);
+            border-radius: 12px; padding: 1.25rem;
+            text-align: center; cursor: pointer;
+            transition: all .25s; background: rgba(248,183,0,.03);
+            position: relative; overflow: hidden;
+        }
+        .upload-zone:hover { border-color: var(--amc-npo); background: rgba(248,183,0,.07); }
+        .upload-zone.uploading { border-color: var(--amc-secondary); }
+        .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+        .upload-icon { font-size: 1.5rem; color: var(--amc-npo); margin-bottom: 6px; }
+        .upload-text { font-size: 12px; color: var(--amc-text-muted); }
+        .upload-text strong { color: var(--amc-npo); }
+
+        .doc-link-row {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 8px; padding: 8px 12px; border-radius: 8px;
+            background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2);
+            font-size: 12px;
+        }
+        .doc-link-row a { color: var(--amc-green); text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .doc-link-row a:hover { text-decoration: underline; }
+
+        .upload-progress {
+            height: 3px; border-radius: 99px;
+            background: rgba(255,255,255,.06); margin-top: 6px; overflow: hidden; display: none;
+        }
+        .upload-progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--amc-npo), var(--amc-secondary));
+            border-radius: 99px; transition: width .3s;
+        }
+
+        /* --- TOAST --- */
+        .toast {
+            position: fixed; bottom: 24px; right: -400px;
+            width: 340px; padding: 18px; border-radius: 12px; z-index: 1100;
+            transition: right .45s cubic-bezier(.175,.885,.32,1.275);
+            display: flex; align-items: flex-start; gap: 12px;
+        }
+        .toast.show { right: 24px; }
+        .toast-success { background: rgba(6,20,10,.95); border: 1px solid #10b981; box-shadow: 0 0 24px rgba(16,185,129,.2); }
+        .toast-error   { background: rgba(20,6,6,.95);  border: 1px solid #ef4444; box-shadow: 0 0 24px rgba(239,68,68,.2); }
+        .toast-info    { background: rgba(10,6,20,.95); border: 1px solid var(--amc-npo); box-shadow: 0 0 24px var(--amc-npo-glow); }
+
+        /* --- MODO LEITURA (Idêntico ao NCE) --- */
+        .modal-view-mode .form-input, 
+        .modal-view-mode .form-select, 
+        .modal-view-mode textarea,
+        .modal-view-mode .vagas-table input,
+        .modal-view-mode input[type="checkbox"] {
+            display: none !important;
+        }
+        .modal-view-mode .checkbox-container {
+            display: none !important;
+        }
+        .modal-view-mode .upload-zone {
+            display: none !important;
+        }
+        .modal-view-mode .doc-link-row .btn-danger {
+            display: none !important;
+        }
+        .modal-view-mode .btn-npo {
+            display: none !important;
+        }
+        .modal-view-mode .view-value {
+            display: inline-block;
+            color: #fff;
+            font-weight: 500;
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            margin-top: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        .modal-view-mode .form-group.field-empty {
+            display: none !important;
+        }
+        .modal-view-mode .accordion-section.sec-empty {
+            display: none !important;
+        }
+        .modal-view-mode .form-section.sec-empty {
+            display: none !important;
+        }
+        
+        .empty-state {
+            text-align: center; padding: 4rem 2rem;
+            color: var(--amc-text-muted); font-size: 15px;
+            border: 2px dashed rgba(255,255,255,.05);
+            border-radius: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-bg"></div>
+
+    <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+    <aside class="glass">
+        <div>
+            <div class="logo-container">
+                <i class="fa fa-car-side fa-xl" style="color:var(--amc-npo, #F8B700);"></i>
+                <span class="logo-text">AMC — Engenharia</span>
+            </div>
+            <ul class="menu-list">
+                <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link "><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+                <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+                <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link "><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+                <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link "><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+                <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+                <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link "><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+                <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link active"><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+                <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link "><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+                <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link "><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+                <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link "><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+                <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link "><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+            </ul>
+        </div>
+
+        <div class="auth-panel glass-dark">
+            <div class="auth-title">
+                <i class="fa fa-user-shield"></i>
+                <span>NPO — Projetistas</span>
+            </div>
+            
+            <div id="auth-logged">
+                <p id="logged-email" style="font-size: 11px; margin: 0 0 8px 0; color: #fff; word-break: break-all; font-weight: 500;"></p>
+                <div class="form-group" style="margin-bottom:10px; display: none;" id="npo-sim-role-group">
+                    <label class="form-label" style="font-size:9px;margin-bottom:4px;">Simular Papel (Role)</label>
+                    <select id="role-selector" class="form-input" style="padding:6px 10px;font-size:11px;" onchange="changeSimulatedRole(this.value)">
+                        <option value="Técnico">Técnico NPO</option>
+                        <option value="Gerência">Coordenador</option>
+                        <option value="Diretoria">Diretoria</option>
+                    </select>
+                </div>
+                <button class="btn-amc btn-outline" style="padding: 6px 12px; font-size: 10px; color: var(--amc-secondary); width: 100%; border: 1px solid var(--amc-secondary); background: transparent; cursor: pointer; border-radius: 8px;" onclick="logout()">Desconectar</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════ AGGR SEARCH MODAL ═══════════════════ -->
+    <div id="aggr-modal">
+        <div class="aggr-inner">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+                <div>
+                    <h4><i class="fa fa-magnifying-glass-location"></i> Verificar Processos no Local</h4>
+                    <p class="aggr-sub" id="aggr-modal-sub">Pesquise processos que já contemplam este local ou região com a mesma solicitação.</p>
+                </div>
+                <button class="modal-close" onclick="closeAggrModal()">&#x2715;</button>
+            </div>
+            <div class="aggr-filter-row">
+                <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <label class="form-label" style="margin: 0;">Bairro</label>
+                        <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                            <input type="checkbox" id="aggr-use-bairro" checked onchange="toggleAggrFilter('bairro')" style="accent-color: var(--amc-npo); width: 12px; height: 12px;">
+                            <span>Ativo</span>
+                        </label>
+                    </div>
+                    <input type="text" id="aggr-filter-bairro" class="form-input" placeholder="Ex: Aldeota">
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <label class="form-label" style="margin: 0;">Regional</label>
+                        <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                            <input type="checkbox" id="aggr-use-regional" checked onchange="toggleAggrFilter('regional')" style="accent-color: var(--amc-npo); width: 12px; height: 12px;">
+                            <span>Ativo</span>
+                        </label>
+                    </div>
+                    <input type="text" id="aggr-filter-regional" class="form-input" placeholder="Ex: Regional II">
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <label class="form-label" style="margin: 0;">Endereço / Rua</label>
+                        <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                            <input type="checkbox" id="aggr-use-endereco" checked onchange="toggleAggrFilter('endereco')" style="accent-color: var(--amc-npo); width: 12px; height: 12px;">
+                            <span>Ativo</span>
+                        </label>
+                    </div>
+                    <input type="text" id="aggr-filter-endereco" class="form-input" placeholder="Ex: Av. Santos Dumont">
+                </div>
+                <button class="aggr-search-btn" onclick="searchSimilarDemandas()">
+                    <i class="fa fa-search"></i> Pesquisar
+                </button>
+            </div>
+            <div id="aggr-results-area">
+                <div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Use os filtros acima para buscar processos relacionados.</div>
+            </div>
+            <input type="hidden" id="aggr-current-demanda-id">
+            <input type="hidden" id="aggr-current-protocolo">
+        </div>
+    </div>
+
+    <!-- ═══════════════════ MAIN CONTENT ═══════════════════ -->
+    <main>
+        <div class="dashboard-header">
+            <div>
+                <h1 class="header-title">NPO — Projetos <span style="color:var(--amc-npo);">Operacionais</span></h1>
+                <p class="header-sub">Gerenciamento de sinalização, recapeamento e tapa buracos viários</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div class="role-badge glass-dark" id="role-badge" style="border: 1px solid var(--amc-npo); color: var(--amc-npo);">
+                    <i class="fa fa-circle-notch fa-spin"></i> <span>Conectando...</span>
+                </div>
+                <button class="btn-amc btn-primary" onclick="openNpoModal(null)" id="btn-novo" style="display:none;">
+                    <i class="fa fa-plus"></i> Novo Projeto NPO
+                </button>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filter-bar">
+            <div class="filter-group search">
+                <span class="filter-label">Buscar Processo / Projeto</span>
+                <input type="text" id="filter-search" class="filter-input" placeholder="Digite o nº do processo ou projeto..." oninput="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Status NPO</span>
+                <select id="filter-status" class="filter-input" onchange="applyFilters()">
+                    <option value="">Todos</option>
+                    <option value="Aguardando Recebimento">Aguardando Recebimento</option>
+                    <option value="Recebido">Recebido</option>
+                    <option value="Em Análise">Em Análise</option>
+                    <option value="Deferido">Deferido</option>
+                    <option value="Indeferido">Indeferido</option>
+                    <option value="Sem Projeto">Sem Projeto</option>
+                    <option value="Contemplado">Contemplado</option>
+                    <option value="Concluído">Concluído</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Área NPO</span>
+                <select id="filter-area" class="filter-input" onchange="applyFilters()">
+                    <option value="">Todas</option>
+                    <option value="NPO1">NPO1</option>
+                    <option value="NPO2">NPO2</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Tipo</span>
+                <select id="filter-tipo" class="filter-input" onchange="applyFilters()">
+                    <option value="">Todos</option>
+                    <option value="Sinalização">Sinalização</option>
+                    <option value="Recape">Recape</option>
+                    <option value="Tapa Buraco">Tapa Buraco</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 13%">Processo</th>
+                        <th style="width: 12%">Nº do Projeto</th>
+                        <th style="width: 8%">Área</th>
+                        <th style="width: 20%">Local (Endereço)</th>
+                        <th style="width: 13%">Técnico</th>
+                        <th style="width: 8%">Tipo</th>
+                        <th style="width: 13%">Designação</th>
+                        <th style="width: 8%">Status NPO</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <i class="fa fa-spinner fa-spin fa-lg" style="margin-right:8px;"></i> Carregando projetos operacionais...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- ═══════════════════ MODAL NPO (ESTILO NCE) ═══════════════════ -->
+    <div id="npo-modal" class="modal-overlay">
+        <div class="modal-content glass">
+            
+            <div class="modal-header">
+                <div style="flex-grow:1;">
+                    <h3 style="font-family:'Oswald',sans-serif;font-size:1.4rem;margin:0;color:#fff;" id="modal-title">—</h3>
+                    <div id="modal-sub-header" style="margin-top: 6px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <span id="npo-status-badge"></span>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Banner de Prioridade DITRAN -->
+                <div id="npo-priority-banner" style="display:none;"></div>
+
+                <!-- Banner de Agregação -->
+                <div id="npo-aggr-banner" class="aggr-banner" style="display:none;">
+                    <i class="fa fa-link"></i>
+                    <div>
+                        <strong id="npo-aggr-banner-title">Processo Agregado</strong>
+                        <div class="aggr-banner-list" id="npo-aggr-banner-text"></div>
+                    </div>
+                </div>
+
+                <input type="hidden" id="npo-record-id">
+                <input type="hidden" id="npo-demanda-id">
+                <input type="hidden" id="npo-url-projeto-pdf">
+                <input type="hidden" id="npo-parecer-npo">
+                <input type="hidden" id="npo-projeto-npo">
+
+                <!-- Informações Gerais da Demanda Pai (Modo Leitura / Estilo NPA) -->
+                <p class="form-section-title" style="color: var(--amc-npo); border-bottom-color: rgba(248, 183, 0, 0.15); margin-top: 0;">
+                    <i class="fa fa-file-invoice"></i> Dados Gerais da Demanda
+                </p>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Solicitante</div>
+                        <div class="info-val" id="info-solicitante">—</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Tipo Solicitação</div>
+                        <div class="info-val" id="info-tipo">—</div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Bairro / Regional</div>
+                        <div class="info-val" id="info-bairro-reg">—</div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Endereço Técnico (Trecho / Cruzamento)</div>
+                        <div class="info-val" id="info-endereco-detalhado" style="color: var(--amc-npo); font-weight: 600;">—</div>
+                    </div>
+                </div>
+
+                <!-- DADOS GERAIS DO NPO (Sem div wrapper externo) -->
+                    <!-- Vínculo de demanda (Modo Novo) -->
+                    <div class="form-section" id="demanda-group">
+                        <p class="form-section-title"><i class="fa fa-link"></i> Vincular Demanda da Triagem</p>
+                        <div class="form-group">
+                            <label for="select-demanda" class="form-label">Demanda Aprovada (Pai)</label>
+                            <select id="select-demanda" class="form-input" onchange="onDemandaSelected(this.value)">
+                                <option value="" disabled selected>Selecione uma demanda...</option>
+                            </select>
+                        </div>
+                        <div id="demanda-info" style="display:none;font-size:12px;color:var(--amc-text-muted);padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px;">
+                            <span id="demanda-info-text"></span>
+                        </div>
+                    </div>
+
+                    <!-- Dados do Projeto -->
+                    <div class="form-section">
+                        <p class="form-section-title"><i class="fa fa-file-lines"></i> Detalhes do Projeto Operacional</p>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="npo-numero-processo" class="form-label">Número do Processo</label>
+                                <input type="text" id="npo-numero-processo" class="form-input" disabled readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="npo-numero-projeto" class="form-label">Número do Projeto *</label>
+                                <input type="text" id="npo-numero-projeto" class="form-input" placeholder="Ex: PRJ-NPO-045/2026">
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="npo-divisao-area" class="form-label">Divisão de Área</label>
+                                <select id="npo-divisao-area" class="form-input" onchange="updateAreaTag(this.value)">
+                                    <option value="NPO1">NPO1</option>
+                                    <option value="NPO2">NPO2</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="npo-tecnico-responsavel" class="form-label">Técnico Responsável</label>
+                                <select id="npo-tecnico-responsavel" class="form-input">
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Intervenção (Múltipla Seleção)</label>
+                            <div class="form-row-checkboxes">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="npo-tipo-sinalizacao" value="Sinalização">
+                                    <span>Sinalização</span>
+                                </label>
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="npo-tipo-recape" value="Recape">
+                                    <span>Recape</span>
+                                </label>
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="npo-tipo-tapa-buraco" value="Tapa Buraco">
+                                    <span>Tapa Buraco</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label for="npo-bairro" class="form-label">Bairro</label>
+                                <input type="text" id="npo-bairro" class="form-input" disabled readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="npo-regional" class="form-label">Regional</label>
+                                <input type="text" id="npo-regional" class="form-input" disabled readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="npo-data-recebimento" class="form-label">Recebimento Técnico</label>
+                                <input type="text" id="npo-data-recebimento" class="form-input" disabled readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="npo-local" class="form-label">Local (Endereço)</label>
+                                <input type="text" id="npo-local" class="form-input" disabled readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="npo_tipo_localizacao" class="form-label">Tipo de Localização</label>
+                                <select id="npo_tipo_localizacao" class="form-input" style="background:#0A0A0C;" onchange="toggleNpoLocalizacaoInputs()">
+                                    <option value="">Não definido</option>
+                                    <option value="Cruzamento">Cruzamento</option>
+                                    <option value="Trecho">Trecho</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Campo de Cruzamento (Rua Cruzamento) -->
+                        <div id="npo-fields-cruzamento" style="display: none; margin-bottom: 1.25rem;">
+                            <div class="form-group" style="position: relative; margin-bottom: 0;">
+                                <label for="npo_rua_cruzamento" class="form-label">Rua Cruzamento</label>
+                                <input type="text" id="npo_rua_cruzamento" class="form-input street-autocomplete" placeholder="Nome da rua de cruzamento" autocomplete="off">
+                                <div class="autocomplete-suggestions street-suggestions" id="sugg-npo-rua-cruzamento" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Campos de Trecho (Limite A e Limite B) -->
+                        <div id="npo-fields-trecho" style="display: none; margin-bottom: 1.25rem;">
+                            <div class="form-row-2" style="margin-bottom: 0;">
+                                <div class="form-group" style="position: relative; margin-bottom: 0;">
+                                    <label for="npo_rua_limite_a" class="form-label">Entre (Limite A)</label>
+                                    <input type="text" id="npo_rua_limite_a" class="form-input street-autocomplete" placeholder="Primeira rua limite" autocomplete="off">
+                                    <div class="autocomplete-suggestions street-suggestions" id="sugg-npo-rua-limite-a" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                                </div>
+                                <div class="form-group" style="position: relative; margin-bottom: 0;">
+                                    <label for="npo_rua_limite_b" class="form-label">E (Limite B)</label>
+                                    <input type="text" id="npo_rua_limite_b" class="form-input street-autocomplete" placeholder="Segunda rua limite" autocomplete="off">
+                                    <div class="autocomplete-suggestions street-suggestions" id="sugg-npo-rua-limite-b" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="npo-latitude" class="form-label">Latitude</label>
+                                <input type="text" id="npo-latitude" class="form-input" placeholder="Ex: -3.7327">
+                            </div>
+                            <div class="form-group">
+                                <label for="npo-longitude" class="form-label">Longitude</label>
+                                <input type="text" id="npo-longitude" class="form-input" placeholder="Ex: -38.5270">
+                            </div>
+                        </div>
+
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label class="form-label">Status NPO</label>
+                                <div id="status-npo-buttons" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <button type="button" class="btn-status-toggle" data-status="Recebido" disabled>Recebido</button>
+                                    <button type="button" class="btn-status-toggle" data-status="Em Análise" disabled>Em Análise</button>
+                                    <button type="button" class="btn-status-toggle" data-status="Deferido" disabled>Deferido</button>
+                                    <button type="button" class="btn-status-toggle" data-status="Indeferido" disabled>Indeferido</button>
+                                    <button type="button" class="btn-status-toggle" data-status="Concluído" disabled>Concluído</button>
+                                </div>
+                                <input type="hidden" id="npo-status" value="Aguardando Recebimento" onchange="onStatusNpoChange()">
+                            </div>
+                            <div class="form-group">
+                                <label for="npo-data-status-atual" class="form-label">Data Status Atual</label>
+                                <input type="date" id="npo-data-status-atual" class="form-input">
+                            </div>
+                        </div>
+
+                        <!-- Vínculo dinâmico de projeto contemplado -->
+                        <div class="form-group" id="group-contemplado" style="display:none;">
+                            <label for="npo-projeto-contemplado" class="form-label">Contemplado em qual demanda? *</label>
+                            <select id="npo-projeto-contemplado" class="form-input">
+                                <option value="">Selecione o processo...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- PROJETO GEOMÉTRICO -->
+                    <div class="accordion-section">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion('npo-sec-geometrico')">
+                            <span><i class="fa fa-ruler-combined"></i> Projeto Geométrico</span>
+                            <i class="fa fa-chevron-down arrow"></i>
+                        </button>
+                        <div id="npo-sec-geometrico" class="accordion-content">
+                            <div class="form-row-3">
+                                <div class="form-group">
+                                    <label for="npo-geom-recapeamento" class="form-label">Teve Recapeamento?</label>
+                                    <select id="npo-geom-recapeamento" class="form-input">
+                                        <option value="">Não informado</option>
+                                        <option value="Sim">Sim</option>
+                                        <option value="Não">Não</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="group-geom-data-recapeamento" style="display:none;">
+                                    <label for="npo-geom-data-recapeamento" class="form-label">Data do Recapeamento</label>
+                                    <input type="date" id="npo-geom-data-recapeamento" class="form-input">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-geom-numero-projeto" class="form-label">Nº Projeto Geométrico</label>
+                                    <input type="text" id="npo-geom-numero-projeto" class="form-input" placeholder="Nº do geométrico">
+                                </div>
+                            </div>
+                            <div class="form-row-4">
+                                <div class="form-group">
+                                    <label for="npo-geom-travessia-elevada" class="form-label">Trav. Elevada (Qtd)</label>
+                                    <input type="number" id="npo-geom-travessia-elevada" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-geom-plato" class="form-label">Platô (Qtd)</label>
+                                    <input type="number" id="npo-geom-plato" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-geom-lombada-fisica" class="form-label">Lombada Fís (Qtd)</label>
+                                    <input type="number" id="npo-geom-lombada-fisica" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-geom-retirada-lombada" class="form-label">Retirada Lomb (Qtd)</label>
+                                    <input type="number" id="npo-geom-retirada-lombada" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CRUZAMENTO -->
+                    <div class="accordion-section">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion('npo-sec-cruzamento')">
+                            <span><i class="fa fa-road"></i> Cruzamento / Semáforos</span>
+                            <i class="fa fa-chevron-down arrow"></i>
+                        </button>
+                        <div id="npo-sec-cruzamento" class="accordion-content">
+                            <div class="form-row-3">
+                                <div class="form-group">
+                                    <label for="npo-cruz-sinalizacao-hv" class="form-label">Sinal. Horiz/Vert (Qtd)</label>
+                                    <input type="number" id="npo-cruz-sinalizacao-hv" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-cruz-horizontal" class="form-label">Horizontal (Qtd)</label>
+                                    <input type="number" id="npo-cruz-horizontal" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-cruz-vertical" class="form-label">Vertical (Qtd)</label>
+                                    <input type="number" id="npo-cruz-vertical" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="form-row-3">
+                                <div class="form-group">
+                                    <label for="npo-cruz-horizontal-tachao" class="form-label">Horiz Tachão (Qtd)</label>
+                                    <input type="number" id="npo-cruz-horizontal-tachao" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-cruz-horiz-vert-tachao" class="form-label">Horiz/Vert Tachão</label>
+                                    <input type="number" id="npo-cruz-horiz-vert-tachao" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group"></div>
+                            </div>
+                            <div class="form-row-3">
+                                <div class="form-group">
+                                    <label for="npo-cruz-implantar-semaforo" class="form-label">Implantar Semáf (Qtd)</label>
+                                    <input type="number" id="npo-cruz-implantar-semaforo" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-cruz-renovar-semaforo" class="form-label">Renovar Semáf (Qtd)</label>
+                                    <input type="number" id="npo-cruz-renovar-semaforo" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-cruz-desativar-semaforo" class="form-label">Desativar Semáf (Qtd)</label>
+                                    <input type="number" id="npo-cruz-desativar-semaforo" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SINALIZAÇÃO E MELHORIAS URBANAS -->
+                    <div class="accordion-section">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion('npo-sec-sinalizacao')">
+                            <span><i class="fa fa-circle-nodes"></i> Sinalização e Melhorias Urbanas</span>
+                            <i class="fa fa-chevron-down arrow"></i>
+                        </button>
+                        <div id="npo-sec-sinalizacao" class="accordion-content">
+                            <div class="form-grid-qty">
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-sentido-unico-inversao">Sentido Único/Inversão</label>
+                                    <input type="number" id="npo-qty-sentido-unico-inversao" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-sentido-duplo">Sentido Duplo</label>
+                                    <input type="number" id="npo-qty-sentido-duplo" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-inversao-preferencial">Inversão Preferencial</label>
+                                    <input type="number" id="npo-qty-inversao-preferencial" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-travessia-pedestre">Travessia de Pedestre</label>
+                                    <input type="number" id="npo-qty-travessia-pedestre" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-travessia-colorida">Travessia Colorida</label>
+                                    <input type="number" id="npo-qty-travessia-colorida" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-faixa-x">Faixa X</label>
+                                    <input type="number" id="npo-qty-faixa-x" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-faixa-longa">Faixa Longa</label>
+                                    <input type="number" id="npo-qty-faixa-longa" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-projeto-escola">Projeto Escola</label>
+                                    <input type="number" id="npo-qty-projeto-escola" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-esquina-segura">Esquina Segura</label>
+                                    <input type="number" id="npo-qty-esquina-segura" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-esquina-segura-renovacao">Esquina Segura Renov.</label>
+                                    <input type="number" id="npo-qty-esquina-segura-renovacao" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-calcada-verde">Calçada Verde</label>
+                                    <input type="number" id="npo-qty-calcada-verde" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-calcada-viva">Calçada Viva</label>
+                                    <input type="number" id="npo-qty-calcada-viva" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-travessia-elevada-renovar">Trav. Elevada Renovar</label>
+                                    <input type="number" id="npo-qty-travessia-elevada-renovar" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-lombada-fisica-renovar">Lombada Fís. Renovar</label>
+                                    <input type="number" id="npo-qty-lombada-fisica-renovar" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-video">Vídeo</label>
+                                    <input type="number" id="npo-qty-video" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-fiscalizacao-eletronica">Fiscalização Eletrôn.</label>
+                                    <input type="number" id="npo-qty-fiscalizacao-eletronica" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-yellow-box">Yellow Box</label>
+                                    <input type="number" id="npo-qty-yellow-box" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-semaforo-colorido">Semáforo Colorido</label>
+                                    <input type="number" id="npo-qty-semaforo-colorido" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-mot-box">Mot Box</label>
+                                    <input type="number" id="npo-qty-mot-box" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-estacionamento-bicicleta">Estac. Bicicleta</label>
+                                    <input type="number" id="npo-qty-estacionamento-bicicleta" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-paraciclo">Paraciclo</label>
+                                    <input type="number" id="npo-qty-paraciclo" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-ciclo">Ciclo</label>
+                                    <input type="number" id="npo-qty-ciclo" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-motofaixa-faixa-azul">Motofaixa/Faixa Azul</label>
+                                    <input type="number" id="npo-qty-motofaixa-faixa-azul" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-faixa-exclusiva">Faixa Exclusiva</label>
+                                    <input type="number" id="npo-qty-faixa-exclusiva" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-area-transito-calmo">Área Trânsito Calmo</label>
+                                    <input type="number" id="npo-qty-area-transito-calmo" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-transito-compartilhado">Trânsito Compart.</label>
+                                    <input type="number" id="npo-qty-transito-compartilhado" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-rotatoria">Rotatória</label>
+                                    <input type="number" id="npo-qty-rotatoria" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-praca-viva">Praça Viva</label>
+                                    <input type="number" id="npo-qty-praca-viva" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group-qty">
+                                    <label for="npo-qty-vlt">VLT</label>
+                                    <input type="number" id="npo-qty-vlt" min="0" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label for="npo-equipamento" class="form-label">Equipamento Beneficiado (Estabelecimento)</label>
+                                <input type="text" id="npo-equipamento" class="form-input" placeholder="Ex: Hospital São Lucas, Colégio X">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VAGAS ZONA AZUL -->
+                    <div class="accordion-section">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion('npo-sec-vagas-za')">
+                            <span><i class="fa fa-square-p"></i> Vagas Zona Azul</span>
+                            <i class="fa fa-chevron-down arrow"></i>
+                        </button>
+                        <div id="npo-sec-vagas-za" class="accordion-content">
+                            <p style="font-size: 11px; font-weight: 700; color: var(--amc-npo); margin: 0 0 8px 0; text-transform: uppercase;">1. Vagas a Implantar</p>
+                            <div class="form-row-4" style="margin-bottom: 1.25rem;">
+                                <div class="form-group">
+                                    <label for="npo-vza-imp-za" class="form-label">Zona Azul</label>
+                                    <input type="number" id="npo-vza-imp-za" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-imp-def" class="form-label">PCD</label>
+                                    <input type="number" id="npo-vza-imp-def" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-imp-ido" class="form-label">Idoso</label>
+                                    <input type="number" id="npo-vza-imp-ido" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-imp-cd" class="form-label">Carga/Descarga</label>
+                                    <input type="number" id="npo-vza-imp-cd" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+
+                            <p style="font-size: 11px; font-weight: 700; color: var(--amc-secondary); margin: 0 0 8px 0; text-transform: uppercase;">2. Vagas a Remover</p>
+                            <div class="form-row-4" style="margin-bottom: 1.25rem;">
+                                <div class="form-group">
+                                    <label for="npo-vza-rem-za" class="form-label">Zona Azul</label>
+                                    <input type="number" id="npo-vza-rem-za" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-rem-def" class="form-label">PCD</label>
+                                    <input type="number" id="npo-vza-rem-def" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-rem-ido" class="form-label">Idoso</label>
+                                    <input type="number" id="npo-vza-rem-ido" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-rem-cd" class="form-label">Carga/Descarga</label>
+                                    <input type="number" id="npo-vza-rem-cd" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+
+                            <p style="font-size: 11px; font-weight: 700; color: var(--amc-red); margin: 0 0 8px 0; text-transform: uppercase;">3. Vagas a Apagar</p>
+                            <div class="form-row-4">
+                                <div class="form-group">
+                                    <label for="npo-vza-apa-za" class="form-label">Zona Azul</label>
+                                    <input type="number" id="npo-vza-apa-za" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-apa-def" class="form-label">PCD</label>
+                                    <input type="number" id="npo-vza-apa-def" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-apa-ido" class="form-label">Idoso</label>
+                                    <input type="number" id="npo-vza-apa-ido" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-vza-apa-cd" class="form-label">Carga/Descarga</label>
+                                    <input type="number" id="npo-vza-apa-cd" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VAGAS DIVERSAS -->
+                    <div class="accordion-section">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion('npo-sec-vagas-div')">
+                            <span><i class="fa fa-car"></i> Vagas Diversas (Especiais)</span>
+                            <i class="fa fa-chevron-down arrow"></i>
+                        </button>
+                        <div id="npo-sec-vagas-div" class="accordion-content">
+                            <div style="width:100%; overflow-x:auto;">
+                                <table class="vagas-table" style="width:100%; border-collapse:collapse; font-size:12px;">
+                                    <thead>
+                                        <tr style="border-bottom:1px solid rgba(255,255,255,.1); text-align:left;">
+                                            <th style="padding:8px 4px; color:var(--amc-text-muted); font-weight:600; width:40%;">Tipo de Vaga</th>
+                                            <th style="padding:8px 4px; color:var(--amc-npo); font-weight:600; width:20%; text-align:center;">Implantar</th>
+                                            <th style="padding:8px 4px; color:var(--amc-secondary); font-weight:600; width:20%; text-align:center;">Renovar</th>
+                                            <th style="padding:8px 4px; color:var(--amc-red); font-weight:600; width:20%; text-align:center;">Apagar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vagas-diversas-table-body">
+                                        <!-- Preenchido dinamicamente via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QUANTITATIVO A IMPLANTAR -->
+                    <div class="accordion-section">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion('npo-sec-quant-imp')">
+                            <span><i class="fa fa-plus-circle"></i> Quantitativo a Implantar</span>
+                            <i class="fa fa-chevron-down arrow"></i>
+                        </button>
+                        <div id="npo-sec-quant-imp" class="accordion-content">
+                            <p style="font-size: 11px; font-weight: 700; color: var(--amc-npo); margin: 0 0 8px 0; text-transform: uppercase;">Valores em Metros Quadrados (m²)</p>
+                            <div class="form-row-3" style="margin-bottom: 1.25rem;">
+                                <div class="form-group">
+                                    <label for="npo-qi-hz-mecanica" class="form-label">Sinal. Hz Mecânica</label>
+                                    <input type="number" id="npo-qi-hz-mecanica" class="form-input" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-hz-mecanica-term" class="form-label">Hz Mecânica Termoplástico</label>
+                                    <input type="number" id="npo-qi-hz-mecanica-term" class="form-input" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-hz-manual-term" class="form-label">Hz Manual Termoplástico</label>
+                                    <input type="number" id="npo-qi-hz-manual-term" class="form-input" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="form-row-3" style="margin-bottom: 1.5rem;">
+                                <div class="form-group">
+                                    <label for="npo-qi-hz-plastico-frio" class="form-label">Hz Plástico a Frio</label>
+                                    <input type="number" id="npo-qi-hz-plastico-frio" class="form-input" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-hz-manual" class="form-label">Hz Manual</label>
+                                    <input type="number" id="npo-qi-hz-manual" class="form-input" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                                <div class="form-group"></div>
+                            </div>
+
+                            <p style="font-size: 11px; font-weight: 700; color: var(--amc-npo); margin: 0 0 8px 0; text-transform: uppercase;">Valores em Unidades / Extensões</p>
+                            <div class="form-row-4" style="margin-bottom: 1.25rem;">
+                                <div class="form-group">
+                                    <label for="npo-qi-sonorizador" class="form-label">Sonorizador (Un)</label>
+                                    <input type="number" id="npo-qi-sonorizador" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-placa" class="form-label">Placa (Un)</label>
+                                    <input type="number" id="npo-qi-placa" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-passagem-iluminada" class="form-label">Passagem Iluminada</label>
+                                    <input type="number" id="npo-qi-passagem-iluminada" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-pelicula" class="form-label">Película (m²)</label>
+                                    <input type="number" id="npo-qi-pelicula" class="form-input" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="form-row-4" style="margin-bottom: 1.25rem;">
+                                <div class="form-group">
+                                    <label for="npo-qi-coluna" class="form-label">Coluna (Un)</label>
+                                    <input type="number" id="npo-qi-coluna" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-coluna-cilindrica" class="form-label">Coluna Cilind/Cônica</label>
+                                    <input type="number" id="npo-qi-coluna-cilindrica" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-gradil" class="form-label">Gradil (m)</label>
+                                    <input type="number" id="npo-qi-gradil" class="form-input" min="0" step="0.1" placeholder="0.0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-balizador" class="form-label">Balizador (Un)</label>
+                                    <input type="number" id="npo-qi-balizador" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="form-row-4">
+                                <div class="form-group">
+                                    <label for="npo-qi-zebras" class="form-label">Zebras (Un)</label>
+                                    <input type="number" id="npo-qi-zebras" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-tacha-mono" class="form-label">Tacha Mono (Un)</label>
+                                    <input type="number" id="npo-qi-tacha-mono" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-tacha-bi" class="form-label">Tacha Bi (Un)</label>
+                                    <input type="number" id="npo-qi-tacha-bi" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qi-gelito" class="form-label">Gelito/Gelo Baiano</label>
+                                    <input type="number" id="npo-qi-gelito" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QUANTITATIVO A RETIRAR -->
+                    <div class="accordion-section">
+                        <button type="button" class="accordion-header" onclick="toggleAccordion('npo-sec-quant-ret')">
+                            <span><i class="fa fa-minus-circle"></i> Quantitativo a Retirar</span>
+                            <i class="fa fa-chevron-down arrow"></i>
+                        </button>
+                        <div id="npo-sec-quant-ret" class="accordion-content">
+                            <div class="form-row-4" style="margin-bottom: 1.25rem;">
+                                <div class="form-group">
+                                    <label for="npo-qr-balizador" class="form-label">Balizador (Un)</label>
+                                    <input type="number" id="npo-qr-balizador" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qr-gelito" class="form-label">Gelito / Gelo (Un)</label>
+                                    <input type="number" id="npo-qr-gelito" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qr-tacha" class="form-label">Tacha (Un)</label>
+                                    <input type="number" id="npo-qr-tacha" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qr-tachao" class="form-label">Tachão (Un)</label>
+                                    <input type="number" id="npo-qr-tachao" class="form-input" min="0" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="form-row-4">
+                                <div class="form-group">
+                                    <label for="npo-qr-coluna" class="form-label">Coluna (Un)</label>
+                                    <input type="number" id="npo-qr-coluna" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qr-placa" class="form-label">Placa (Un)</label>
+                                    <input type="number" id="npo-qr-placa" class="form-input" min="0" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qr-sinalizacao-hz" class="form-label">Sinalização Hz (m²)</label>
+                                    <input type="number" id="npo-qr-sinalizacao-hz" class="form-input" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="npo-qr-extensao" class="form-label">Extensão (m)</label>
+                                    <input type="number" id="npo-qr-extensao" class="form-input" min="0" step="0.1" placeholder="0.0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dados do Projeto e Parecer (Upload) -->
+                    <div class="form-section">
+                        <p class="form-section-title"><i class="fa fa-file-invoice"></i> Projeto e Parecer NPO</p>
+                        
+                        <div class="form-row-2">
+                            <div class="form-group">
+                                <label for="npo-projeto-npo-titulo" class="form-label">Título do Projeto *</label>
+                                <input type="text" id="npo-projeto-npo-titulo" class="form-input" placeholder="Ex: Sinalização Binário Papicu">
+                            </div>
+                            <div class="form-group">
+                                <label for="npo-projeto-npo-numero" class="form-label">Número do Projeto *</label>
+                                <input type="text" id="npo-projeto-npo-numero" class="form-input" placeholder="Ex: PRJ-NPO-045/2026">
+                            </div>
+                        </div>
+
+                        <!-- Upload do Projeto NPO -->
+                        <div class="form-group">
+                            <label class="form-label">Arquivo do Projeto (PDF)</label>
+                            <div class="upload-zone" id="zone-projeto-npo" onclick="document.getElementById('file-projeto-npo').click()">
+                                <input type="file" id="file-projeto-npo" accept="application/pdf" style="display:none;" onchange="uploadFileSpecific(this, 'projeto_npo')">
+                                <div class="upload-icon"><i class="fa fa-cloud-arrow-up"></i></div>
+                                <div class="upload-text">Clique para <strong>anexar o Projeto NPO (PDF)</strong></div>
+                                <div class="upload-progress" id="prog-projeto-npo"><div class="upload-progress-fill" id="prog-projeto-npo-fill"></div></div>
+                            </div>
+                            <div id="projeto-npo-link-row" style="display:none;">
+                                <div class="doc-link-row">
+                                    <a id="projeto-npo-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i><span>Ver Projeto NPO</span></a>
+                                    <button class="btn-danger" onclick="removeFileSpecific('projeto_npo')"><i class="fa fa-trash"></i> Remover</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload do Parecer NPO -->
+                        <div class="form-group">
+                            <label class="form-label">Arquivo do Parecer (PDF)</label>
+                            <div class="upload-zone" id="zone-parecer-npo" onclick="document.getElementById('file-parecer-npo').click()">
+                                <input type="file" id="file-parecer-npo" accept="application/pdf" style="display:none;" onchange="uploadFileSpecific(this, 'parecer_npo')">
+                                <div class="upload-icon"><i class="fa fa-cloud-arrow-up"></i></div>
+                                <div class="upload-text">Clique para <strong>anexar o Parecer NPO (PDF)</strong></div>
+                                <div class="upload-progress" id="prog-parecer-npo"><div class="upload-progress-fill" id="prog-parecer-npo-fill"></div></div>
+                            </div>
+                            <div id="parecer-npo-link-row" style="display:none;">
+                                <div class="doc-link-row">
+                                    <a id="parecer-npo-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i><span>Ver Parecer NPO</span></a>
+                                    <button class="btn-danger" onclick="removeFileSpecific('parecer_npo')"><i class="fa fa-trash"></i> Remover</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="form-section">
+                        <p class="form-section-title"><i class="fa fa-comments"></i> Observações</p>
+                        <div class="form-group">
+                            <label for="npo-observacoes" class="form-label">Parecer Técnico / Observações</label>
+                            <textarea id="npo-observacoes" class="form-input" rows="4" style="resize:none;" placeholder="Insira observações técnicas ou detalhes do projeto viário..."></textarea>
+                        </div>
+                    </div>
+
+
+                </div>
+
+            <!-- Botões Inferiores do Modal -->
+            <div style="display:flex;justify-content:flex-end;gap:12px;padding: 1.5rem 2rem; border-top: 1px solid rgba(255,255,255,.06); background: rgba(8,8,10,.96); border-radius: 0 0 1.5rem 1.5rem;">
+                <button type="button" id="btn-edit-mode" class="btn-amc btn-primary" onclick="setModalMode('edit')" style="background-color: var(--amc-primary); color: #000; display: none;">
+                    <i class="fa fa-pencil"></i> Editar
+                </button>
+                <button type="button" id="btn-cancel" class="btn-amc btn-outline" onclick="closeModal()">Cancelar</button>
+                <button type="button" id="btn-save" class="btn-amc btn-primary" onclick="saveNpoProject()">
+                    <i class="fa fa-floppy-disk"></i> Salvar Projeto
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i id="toast-icon" class="fa fa-2x"></i>
+        <div>
+            <strong id="toast-title" style="display:block;font-size:13px;margin-bottom:3px;color:#fff;"></strong>
+            <span id="toast-message" style="font-size:12px;color:rgba(255,255,255,.75);"></span>
+        </div>
+    </div>
+
+    <!-- ═══════════════════ LÓGICA JAVASCRIPT ═══════════════════ -->
+    <script>
+        const BUCKET = 'nce-documentos'; // Reutilizando a estrutura de bucket existente
+        
+        // Chaves das vagas especiais
+        const VAGAS_DIVERSAS_KEYS = [
+            { key: "taxi", label: "Táxi" },
+            { key: "moto_taxi", label: "Moto Táxi" },
+            { key: "moto_app", label: "Moto Aluguel (App)" },
+            { key: "moto", label: "Moto" },
+            { key: "deficiente", label: "Deficiente Físico" },
+            { key: "idoso", label: "Idoso" },
+            { key: "carga_descarga", label: "Carga e Descarga" },
+            { key: "embarque_desembarque", label: "Embarque/Desembarque" },
+            { key: "embarque_desembarque_app", label: "Emb/Desemb (App)" },
+            { key: "viatura_policial", label: "Viatura Policial" },
+            { key: "ambulancia", label: "Ambulância" },
+            { key: "veiculo_compartilhado", label: "Veículo Compartilhado" },
+            { key: "veiculo_particular", label: "Veículo Particular" },
+            { key: "onibus", label: "Ônibus" },
+            { key: "micro_onibus_turismo", label: "Micro Ônibus Turismo" },
+            { key: "transporte_escolar", label: "Transporte Escolar" },
+            { key: "veiculo_articulado_aluguel", label: "Veíc. Artic. Aluguel" },
+            { key: "reboque_semi_reboque", label: "Reboque/Semi-Reboque" },
+            { key: "caminhao", label: "Caminhão" },
+            { key: "carros_frete", label: "Carros de Frete" },
+            { key: "estacao_coleta", label: "Estação de Coleta" }
+        ];
+
+        // Estado do App
+        let currentUser = null;
+        let currentProfile = null;
+        let simulatedRole = null; // Simulação de papéis
+        
+        let allDemandas = [];
+        let allNpoProjects = [];
+        let filteredNpoProjects = [];
+        let allTechnicians = [];
+
+        let vagasDiversasData = {
+            implantar: {},
+            renovar: {},
+            apagar: {}
+        };
+
+        // Inicialização
+        window.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            
+            // Configurar listeners básicos
+            const selectRecape = document.getElementById('npo-geom-recapeamento');
+            if (selectRecape) {
+                selectRecape.addEventListener('change', (e) => {
+                    const grp = document.getElementById('group-geom-data-recapeamento');
+                    const input = document.getElementById('npo-geom-data-recapeamento');
+                    if (e.target.value === 'Sim') {
+                        grp.style.display = 'block';
+                    } else {
+                        grp.style.display = 'none';
+                        if (input) input.value = '';
+                    }
+                });
+            }
+
+            // Configurar botões de status NPO
+            document.querySelectorAll('#status-npo-buttons .btn-status-toggle').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (btn.hasAttribute('disabled')) return;
+                    selectStatusNpoButton(btn.getAttribute('data-status'));
+                });
+            });
+
+            await checkSession();
+
+            // Configurar autocompletes de ruas
+            setupStreetAutocomplete('npo_rua_cruzamento', 'sugg-npo-rua-cruzamento');
+            setupStreetAutocomplete('npo_rua_limite_a', 'sugg-npo-rua-limite-a');
+            setupStreetAutocomplete('npo_rua_limite_b', 'sugg-npo-rua-limite-b');
+        });
+
+        // Autenticação & Permissões
+        async function checkSession() {
+            if (!window.supabase) return;
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                await loadProfile(currentUser.id);
+                showLoggedState();
+            } else {
+                showUnloggedState();
+            }
+        }
+
+        async function loadProfile(userId) {
+            const { data, error } = await supabase.from('perfis_usuarios').select('*').eq('id', userId).single();
+            if (data) {
+                currentProfile = data;
+                // Papel inicial mapeado do nível de acesso
+                simulatedRole = data.nivel_acesso === 'admin' ? 'Gerência' : (data.nivel_acesso === 'diretor' ? 'Diretoria' : (data.nivel_acesso === 'coordenador' ? 'Gerência' : 'Técnico'));
+                
+                document.getElementById('logged-email').innerText = data.nome_completo || currentUser.email;
+                document.getElementById('role-selector').value = simulatedRole;
+                
+                // Admins e Diretores podem simular papéis
+                if (data.nivel_acesso === 'admin' || data.nivel_acesso === 'diretor') {
+                    document.getElementById('npo-sim-role-group').style.display = 'block';
+                }
+                
+                updateRoleBadge(simulatedRole);
+                await fetchData();
+            }
+        }
+
+        function updateRoleBadge(role) {
+            const badge = document.getElementById('role-badge');
+            const btnNovo = document.getElementById('btn-novo');
+            const btnSave = document.getElementById('btn-save');
+            
+            const hasWriteAccess = ['Técnico', 'Gerência', 'Diretoria'].includes(role);
+            
+            let color = 'var(--amc-text-muted)', icon = 'fa-user';
+            if (role === 'Diretoria' || role === 'Gerência') { 
+                color = 'var(--amc-secondary)'; 
+                icon = 'fa-user-shield'; 
+            } else if (role === 'Técnico') { 
+                color = 'var(--amc-npo)'; 
+                icon = 'fa-user-gear'; 
+            }
+            
+            badge.style.border = `1px solid ${color}`;
+            badge.style.color = color;
+            badge.innerHTML = `<i class="fa ${icon}"></i> <span>Operador: ${role}</span>`;
+            
+            btnNovo.style.display = hasWriteAccess ? 'inline-flex' : 'none';
+            if (btnSave) btnSave.disabled = !hasWriteAccess;
+        }
+
+        async function changeSimulatedRole(newRole) {
+            simulatedRole = newRole;
+            updateRoleBadge(newRole);
+            showToast('Papel Alterado', `Simulando agora como: ${newRole}`, 'info');
+        }
+
+        function showLoggedState() {
+            // Logado com sucesso
+        }
+
+        function showUnloggedState() {
+            const badge = document.getElementById('role-badge');
+            badge.style.border = '1px solid var(--amc-red)';
+            badge.style.color = 'var(--amc-red)';
+            badge.innerHTML = `<i class="fa fa-exclamation-triangle"></i> <span>Acesso Restrito</span>`;
+            renderTable([]);
+        }
+
+        async function logout() {
+            await realizarLogout();
+        }
+
+        // Carregar Dados
+        async function fetchData() {
+            await Promise.all([
+                fetchDemandas(),
+                fetchNpoProjects(),
+                fetchTechnicians()
+            ]);
+        }
+
+        async function fetchDemandas() {
+            // Carrega as demandas aprovadas da Triagem
+            const { data, error } = await supabase
+                .from('demandas_pai')
+                .select(`id, protocolo_oficial, tipo_solicitacao, solicitante_oficial, latitude, longitude,
+                         cat_bairros (nome_bairro, cat_regionais(nome_regional)),
+                         ruas_fortaleza:id_rua (nome)`)
+                .order('protocolo_oficial', { ascending: true });
+            
+            if (error) {
+                showToast('Erro', 'Falha ao carregar demandas: ' + error.message, 'error');
+                return;
+            }
+            
+            allDemandas = data || [];
+            
+            // Popula os seletores de demandas no modal
+            const selDemanda = document.getElementById('select-demanda');
+            const selContemplado = document.getElementById('npo-projeto-contemplado');
+            
+            selDemanda.innerHTML = '<option value="" disabled selected>Selecione uma demanda...</option>';
+            selContemplado.innerHTML = '<option value="">Selecione o processo...</option>';
+            
+            allDemandas.forEach(d => {
+                const rua = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+                const bairro = d.cat_bairros ? d.cat_bairros.nome_bairro : '';
+                const label = `${d.protocolo_oficial} — ${rua || bairro || d.tipo_solicitacao}`;
+                
+                const opt1 = document.createElement('option');
+                opt1.value = d.id;
+                opt1.textContent = label;
+                selDemanda.appendChild(opt1);
+                
+                const opt2 = document.createElement('option');
+                opt2.value = d.id;
+                opt2.textContent = label;
+                selContemplado.appendChild(opt2);
+            });
+        }
+
+        async function fetchTechnicians() {
+            // Carrega os perfis cadastrados no NPO
+            const { data, error } = await supabase
+                .from('perfis_usuarios')
+                .select('nome_completo')
+                .eq('nucleo_lotacao', 'NPO')
+                .order('nome_completo', { ascending: true });
+            
+            if (error) {
+                console.error("Falha ao carregar técnicos:", error);
+                return;
+            }
+            
+            allTechnicians = data || [];
+            const sel = document.getElementById('npo-tecnico-responsavel');
+            sel.innerHTML = '<option value="">Selecione...</option>';
+            
+            allTechnicians.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.nome_completo;
+                opt.textContent = t.nome_completo;
+                sel.appendChild(opt);
+            });
+        }
+
+        async function fetchNpoProjects() {
+            // Busca projetos NPO e junta com demandas
+            const { data, error } = await supabase
+                .from('projetos_npo')
+                .select(`*, demandas_pai:id_demanda_pai (
+                    id, protocolo_oficial, tipo_solicitacao, solicitante_oficial, latitude, longitude,
+                    nucleos_atribuidos, prioridade_diretoria, prioridade_nome, id_demanda_principal,
+                    cat_bairros (nome_bairro, cat_regionais(nome_regional)),
+                    ruas_fortaleza:id_rua (nome)
+                )`)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                showToast('Erro', 'Falha ao buscar projetos: ' + error.message, 'error');
+                return;
+            }
+
+            allNpoProjects = data || [];
+            applyFilters();
+        }
+
+        // Filtros e Renderização
+        function applyFilters() {
+            const search = document.getElementById('filter-search').value.toLowerCase().trim();
+            const status = document.getElementById('filter-status').value;
+            const area = document.getElementById('filter-area').value;
+            const tipo = document.getElementById('filter-tipo').value;
+
+            filteredNpoProjects = allNpoProjects.filter(p => {
+                const d = p.demandas_pai;
+                const protocolo = d ? (d.protocolo_oficial || '').toLowerCase() : '';
+                const projeto = (p.numero_projeto || '').toLowerCase();
+                let local = d && d.ruas_fortaleza ? (d.ruas_fortaleza.nome || '').toLowerCase() : '';
+                if (p.tipo_localizacao === 'Cruzamento' && p.rua_cruzamento) {
+                    local += ' esq. ' + p.rua_cruzamento.toLowerCase();
+                } else if (p.tipo_localizacao === 'Trecho' && p.rua_limite_a && p.rua_limite_b) {
+                    local += ' entre ' + p.rua_limite_a.toLowerCase() + ' e ' + p.rua_limite_b.toLowerCase();
+                }
+                const bairro = d && d.cat_bairros ? (d.cat_bairros.nome_bairro || '').toLowerCase() : '';
+                
+                // Match texto
+                const matchesSearch = !search || protocolo.includes(search) || projeto.includes(search) || local.includes(search) || bairro.includes(search);
+                
+                // Match status
+                const matchesStatus = !status || p.status_npo === status;
+                
+                // Match area
+                const matchesArea = !area || p.divisao_area === area;
+                
+                // Match tipo
+                const matchesTipo = !tipo || (p.tipos_projeto && p.tipos_projeto.includes(tipo));
+
+                return matchesSearch && matchesStatus && matchesArea && matchesTipo;
+            });
+
+            renderTable(filteredNpoProjects);
+        }
+
+        function renderTable(projects) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            if (!projects.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum projeto NPO localizado.</td></tr>';
+                return;
+            }
+
+            projects.forEach(p => {
+                const d = p.demandas_pai;
+                const protocolo = d ? d.protocolo_oficial : '—';
+                const projeto = p.numero_projeto || '—';
+                const area = p.divisao_area || '—';
+                const rua = d && d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+                const bairro = d && d.cat_bairros ? d.cat_bairros.nome_bairro : '';
+                let local = rua ? `${rua}, ${bairro}` : (bairro || '—');
+                if (p.tipo_localizacao === 'Cruzamento' && p.rua_cruzamento) {
+                    local = `${rua} esq. ${p.rua_cruzamento} (${bairro})`;
+                } else if (p.tipo_localizacao === 'Trecho' && p.rua_limite_a && p.rua_limite_b) {
+                    local = `${rua} (entre ${p.rua_limite_a} e ${p.rua_limite_b}) (${bairro})`;
+                }
+                const tecnico = p.tecnico_responsavel || '—';
+                
+                const statusClass = getStatusBadgeClass(p.status_npo);
+                
+                const tipos = Array.isArray(p.tipos_projeto) ? p.tipos_projeto.join(', ') : '—';
+
+                const nucleos = d && d.nucleos_atribuidos ? d.nucleos_atribuidos : [];
+                let nucleosBadges = '';
+                if (nucleos.length > 0) {
+                    nucleosBadges = nucleos.map(n => `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(248, 183, 0, 0.15); color: var(--amc-primary); border: 1px solid rgba(248, 183, 0, 0.3); font-weight: bold; border-radius: 4px;">${n}</span>`).join('');
+                } else {
+                    nucleosBadges = `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(255,255,255,0.05); color: var(--amc-text-muted); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">NPO (Legado)</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = d && d.prioridade_diretoria === true ? 'priority-row' : '';
+                tr.onclick = () => openNpoModal(p.id);
+                tr.innerHTML = `
+                    <td style="font-family:'Oswald',sans-serif;color:var(--amc-npo);font-weight:400; display:flex; align-items:center; gap:6px;">
+                        ${d && d.prioridade_diretoria === true ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Prioridade: ${d.prioridade_nome || 'Sim'}"></i>` : ''}
+                        ${protocolo}
+                        ${d && d.id_demanda_principal ? `<span class="badge-aggr" title="Processo Agregado a outro processo">A</span>` : ''}
+                    </td>
+                    <td style="font-weight:500;">${projeto}</td>
+                    <td><span class="badge b-generic">${area}</span></td>
+                    <td style="font-size:13px;">${local}</td>
+                    <td>${tecnico}</td>
+                    <td style="font-size:12px;">${tipos}</td>
+                    <td><div style="display:flex; flex-wrap:wrap; gap:2px;">${nucleosBadges}</div></td>
+                    <td><span class="badge ${statusClass}">${p.status_npo}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function getStatusBadgeClass(s) {
+            return {
+                'Aguardando Recebimento': 'b-aguardando',
+                'Recebido': 'b-recebido',
+                'Em Análise': 'b-analise',
+                'Deferido': 'b-deferido',
+                'Indeferido': 'b-indeferido',
+                'Sem Projeto': 'b-semprojeto',
+                'Contemplado': 'b-contemplado',
+                'Concluído': 'b-concluido'
+            }[s] || 'b-generic';
+        }
+
+        // Modal Open / Reset
+        async function openNpoModal(recordId) {
+            const isNew = !recordId;
+            vagasDiversasData = { implantar: {}, renovar: {}, apagar: {} };
+
+            if (document.getElementById('npo-priority-banner')) {
+                document.getElementById('npo-priority-banner').style.display = 'none';
+            }
+
+            // Reset inputs comuns
+            ['npo-record-id', 'npo-demanda-id', 'npo-url-projeto-pdf', 'npo-numero-processo', 'npo-numero-projeto', 
+             'npo-bairro', 'npo-regional', 'npo-data-recebimento', 'npo-local', 'npo_tipo_localizacao',
+             'npo_rua_cruzamento', 'npo_rua_limite_a', 'npo_rua_limite_b', 'npo-latitude', 
+             'npo-longitude', 'npo-observacoes', 'npo-projeto-contemplado',
+             'npo-parecer-npo', 'npo-projeto-npo', 'npo-projeto-npo-titulo', 'npo-projeto-npo-numero'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            toggleNpoLocalizacaoInputs();
+
+            // Reset Dados Gerais da Demanda
+            ['info-solicitante', 'info-tipo', 'info-bairro-reg', 'info-endereco-detalhado'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = '—';
+            });
+
+            // Reset checkboxes de tipos
+            ['npo-tipo-sinalizacao', 'npo-tipo-recape', 'npo-tipo-tapa-buraco'].forEach(id => {
+                document.getElementById(id).checked = false;
+            });
+
+            selectStatusNpoButton('Recebido');
+            document.getElementById('npo-divisao-area').value = 'NPO1';
+            document.getElementById('npo-tecnico-responsavel').value = '';
+
+            // Reset do Projeto Geométrico
+            document.getElementById('npo-geom-recapeamento').value = '';
+            document.getElementById('npo-geom-numero-projeto').value = '';
+            document.getElementById('group-geom-data-recapeamento').style.display = 'none';
+            document.getElementById('npo-geom-data-recapeamento').value = '';
+            ['npo-geom-travessia-elevada', 'npo-geom-plato', 'npo-geom-lombada-fisica', 'npo-geom-retirada-lombada'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            // Reset Cruzamento
+            ['npo-cruz-sinalizacao-hv', 'npo-cruz-horizontal', 'npo-cruz-vertical', 'npo-cruz-horizontal-tachao', 
+             'npo-cruz-horiz-vert-tachao', 'npo-cruz-implantar-semaforo', 'npo-cruz-renovar-semaforo', 'npo-cruz-desativar-semaforo'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            // Reset Sinalização e Melhorias (Quantity Inputs)
+            document.querySelectorAll('.form-grid-qty input[type="number"]').forEach(input => input.value = '');
+            document.getElementById('npo-equipamento').value = '';
+
+            // Reset Vagas Zona Azul
+            ['npo-vza-imp-za', 'npo-vza-imp-def', 'npo-vza-imp-ido', 'npo-vza-imp-cd',
+             'npo-vza-rem-za', 'npo-vza-rem-def', 'npo-vza-rem-ido', 'npo-vza-rem-cd',
+             'npo-vza-apa-za', 'npo-vza-apa-def', 'npo-vza-apa-ido', 'npo-vza-apa-cd'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            // Reset Quantitativos Implantar
+            ['npo-qi-hz-mecanica', 'npo-qi-hz-mecanica-term', 'npo-qi-hz-manual-term', 'npo-qi-hz-plastico-frio', 'npo-qi-hz-manual',
+             'npo-qi-sonorizador', 'npo-qi-placa', 'npo-qi-passagem-iluminada', 'npo-qi-pelicula', 'npo-qi-coluna', 'npo-qi-coluna-cilindrica', 
+             'npo-qi-gradil', 'npo-qi-balizador', 'npo-qi-zebras', 'npo-qi-tacha-mono', 'npo-qi-tacha-bi', 'npo-qi-gelito'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            // Reset Quantitativos Retirar
+            ['npo-qr-balizador', 'npo-qr-gelito', 'npo-qr-tacha', 'npo-qr-tachao', 'npo-qr-coluna', 'npo-qr-placa', 
+             'npo-qr-sinalizacao-hz', 'npo-qr-extensao'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            // Reset data status atual
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('npo-data-status-atual').value = today;
+
+            // Reset Accordions
+            document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+
+            hideFileLinkRow('parecer_npo');
+            hideFileLinkRow('projeto_npo');
+
+            // Toggle visibilidade demanda
+            document.getElementById('demanda-group').style.display = isNew ? 'block' : 'none';
+            document.getElementById('select-demanda').value = '';
+            document.getElementById('demanda-info').style.display = 'none';
+
+            if (isNew) {
+                document.getElementById('modal-title').textContent = 'Novo Projeto NPO';
+                updateAreaTag('NPO1');
+                
+                // Pré-seleciona técnico logado
+                if (currentProfile) {
+                    document.getElementById('npo-tecnico-responsavel').value = currentProfile.nome_completo || '';
+                }
+                
+                renderVagasDiversasInputs();
+                onStatusNpoChange();
+                setModalMode('edit');
+                const btnV = document.getElementById('btn-verify-local');
+                if (btnV) btnV.style.display = 'none';
+            } else {
+                const p = allNpoProjects.find(x => x.id === recordId);
+                if (!p) return;
+
+                if (p.demandas_pai && p.demandas_pai.prioridade_diretoria === true) {
+                    const banner = document.getElementById('npo-priority-banner');
+                    if (banner) {
+                        banner.innerHTML = `
+                            <div class="priority-banner" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                <i class="fa fa-triangle-exclamation" style="font-size: 14px;"></i>
+                                <span><strong>Prioridade Institucional da Diretoria:</strong> Sim</span>
+                            </div>
+                        `;
+                        banner.style.display = 'block';
+                    }
+                }
+
+                // Banner de agregação
+                const aggrBanner = document.getElementById('npo-aggr-banner');
+                if (aggrBanner) aggrBanner.style.display = 'none';
+
+                // Verifica se este processo é agregado a outro (filho)
+                if (p.demandas_pai && p.demandas_pai.id_demanda_principal) {
+                    // Busca o protocolo do processo pai
+                    supabase.from('demandas_pai')
+                        .select('protocolo_oficial')
+                        .eq('id', p.demandas_pai.id_demanda_principal)
+                        .single()
+                        .then(({ data: paiData }) => {
+                            if (paiData && aggrBanner) {
+                                document.getElementById('npo-aggr-banner-title').textContent = 'Este processo está agregado ao seguinte processo:';
+                                document.getElementById('npo-aggr-banner-text').innerHTML = `<strong style="color:#fde68a;">${paiData.protocolo_oficial}</strong><br><span style="font-size:11px;">O status deve ser gerenciado manualmente pelo técnico responsável.</span>`;
+                                aggrBanner.style.display = 'flex';
+                            }
+                        });
+                }
+
+                // Verifica se este processo tem filhos agregados
+                supabase.from('demandas_pai')
+                    .select('protocolo_oficial')
+                    .eq('id_demanda_principal', p.id_demanda_pai)
+                    .then(({ data: filhosData }) => {
+                        if (filhosData && filhosData.length > 0 && aggrBanner) {
+                            const filhos = filhosData.map(f => `<strong style="color:#fde68a;">${f.protocolo_oficial}</strong>`).join(', ');
+                            document.getElementById('npo-aggr-banner-title').textContent = 'Processos agregados a este:';
+                            document.getElementById('npo-aggr-banner-text').innerHTML = `${filhos}<br><span style="font-size:11px;">Os técnicos responsáveis devem verificar e atualizar os status manualmente.</span>`;
+                            aggrBanner.style.display = 'flex';
+                        }
+                    });
+
+                document.getElementById('npo-record-id').value = p.id;
+                document.getElementById('npo-demanda-id').value = p.id_demanda_pai;
+                
+                document.getElementById('npo-numero-projeto').value = p.numero_projeto || '';
+                document.getElementById('npo-divisao-area').value = p.divisao_area || 'NPO1';
+                document.getElementById('npo-tecnico-responsavel').value = p.tecnico_responsavel || '';
+                document.getElementById('npo_tipo_localizacao').value = p.tipo_localizacao || '';
+                document.getElementById('npo_rua_cruzamento').value = p.rua_cruzamento || '';
+                document.getElementById('npo_rua_limite_a').value = p.rua_limite_a || '';
+                document.getElementById('npo_rua_limite_b').value = p.rua_limite_b || '';
+                toggleNpoLocalizacaoInputs();
+                document.getElementById('npo-observacoes').value = p.parecer_tecnico || '';
+                const statusNpo = p.status_npo || 'Recebido';
+                selectStatusNpoButton(statusNpo);
+                
+                // Transição automática: Aguardando Recebimento -> Recebido ao abrir pela primeira vez
+                if (statusNpo === 'Aguardando Recebimento') {
+                    supabase.from('projetos_npo')
+                        .update({ status_npo: 'Recebido' })
+                        .eq('id', p.id)
+                        .then(({ error }) => {
+                            if (!error) {
+                                p.status_npo = 'Recebido';
+                                selectStatusNpoButton('Recebido');
+                                fetchNpoProjects();
+                            }
+                        });
+                }
+
+                if (p.data_status_atual) {
+                    document.getElementById('npo-data-status-atual').value = new Date(p.data_status_atual).toISOString().split('T')[0];
+                }
+                if (p.id_projeto_contemplado) {
+                    document.getElementById('npo-projeto-contemplado').value = p.id_projeto_contemplado;
+                }
+
+                // Checkboxes de tipos
+                if (Array.isArray(p.tipos_projeto)) {
+                    p.tipos_projeto.forEach(t => {
+                        if (t === 'Sinalização') document.getElementById('npo-tipo-sinalizacao').checked = true;
+                        if (t === 'Recape') document.getElementById('npo-tipo-recape').checked = true;
+                        if (t === 'Tapa Buraco') document.getElementById('npo-tipo-tapa-buraco').checked = true;
+                    });
+                }
+
+                // Arquivos e metadados específicos NPO
+                document.getElementById('npo-parecer-npo').value = p.parecer_npo || '';
+                document.getElementById('npo-projeto-npo').value = p.projeto_npo || '';
+                document.getElementById('npo-projeto-npo-titulo').value = p.projeto_npo_titulo || '';
+                document.getElementById('npo-projeto-npo-numero').value = p.projeto_npo_numero || '';
+
+                if (p.parecer_npo) showFileLinkRow('parecer_npo', p.parecer_npo);
+                if (p.projeto_npo) showFileLinkRow('projeto_npo', p.projeto_npo);
+
+                // Fallback legado para url_projeto_pdf
+                if (p.url_projeto_pdf) {
+                    document.getElementById('npo-url-projeto-pdf').value = p.url_projeto_pdf;
+                }
+
+                // Dados da Demanda Pai
+                const d = p.demandas_pai;
+                if (d) {
+                    document.getElementById('npo-numero-processo').value = d.protocolo_oficial || '—';
+                    document.getElementById('npo-bairro').value = d.cat_bairros?.nome_bairro || 'Sem Bairro';
+                    document.getElementById('npo-regional').value = d.cat_bairros?.cat_regionais?.nome_regional || 'Sem Regional';
+                    document.getElementById('npo-local').value = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+                    document.getElementById('npo-latitude').value = p.latitude ?? d.latitude ?? '';
+                    document.getElementById('npo-longitude').value = p.longitude ?? d.longitude ?? '';
+                    
+                    if (p.data_recebimento) {
+                        document.getElementById('npo-data-recebimento').value = new Date(p.data_recebimento).toLocaleDateString('pt-BR');
+                    }
+
+                    document.getElementById('modal-title').textContent = `Processo: ${d.protocolo_oficial || 'N/A'}`;
+
+                    // Popula os cards de Dados Gerais da Demanda
+                    const solicitanteEl = document.getElementById('info-solicitante');
+                    if (solicitanteEl) solicitanteEl.innerText = d.solicitante_oficial || '—';
+                    
+                    const tipoEl = document.getElementById('info-tipo');
+                    if (tipoEl) tipoEl.innerText = d.tipo_solicitacao || '—';
+                    
+                    const bairroRegEl = document.getElementById('info-bairro-reg');
+                    if (bairroRegEl) {
+                        const bName = d.cat_bairros?.nome_bairro || 'Sem Bairro';
+                        const rName = d.cat_bairros?.cat_regionais?.nome_regional || 'Sem Regional';
+                        bairroRegEl.innerText = `${bName} / ${rName}`;
+                    }
+                    
+                    const endEl = document.getElementById('info-endereco-detalhado');
+                    if (endEl) {
+                        const rua = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+                        const endDet = d.endereco || '';
+                        endEl.innerText = endDet || rua || '—';
+                    }
+                }
+
+                // Detalhes quantitativos do JSONB
+                const det = p.detalhes_projeto || {};
+                
+                // Projeto Geométrico
+                const geom = det.geometrico || {};
+                document.getElementById('npo-geom-recapeamento').value = geom.recapeamento || '';
+                document.getElementById('npo-geom-numero-projeto').value = geom.numero_projeto || '';
+                if (geom.recapeamento === 'Sim') {
+                    document.getElementById('group-geom-data-recapeamento').style.display = 'block';
+                    document.getElementById('npo-geom-data-recapeamento').value = geom.data_recapeamento || '';
+                }
+                document.getElementById('npo-geom-travessia-elevada').value = geom.travessia_elevada || '';
+                document.getElementById('npo-geom-plato').value = geom.plato || '';
+                document.getElementById('npo-geom-lombada-fisica').value = geom.lombada_fisica || '';
+                document.getElementById('npo-geom-retirada-lombada').value = geom.retirada_lombada || '';
+
+                // Cruzamento
+                const cruz = det.cruzamento || {};
+                document.getElementById('npo-cruz-sinalizacao-hv').value = cruz.quant_sinalizacao_hz_vt || '';
+                document.getElementById('npo-cruz-horizontal').value = cruz.horizontal || '';
+                document.getElementById('npo-cruz-vertical').value = cruz.vertical || '';
+                document.getElementById('npo-cruz-horizontal-tachao').value = cruz.horizontal_tachao || '';
+                document.getElementById('npo-cruz-horiz-vert-tachao').value = cruz.horiz_vert_tachao || '';
+                document.getElementById('npo-cruz-implantar-semaforo').value = cruz.implantar_semaforo || '';
+                document.getElementById('npo-cruz-renovar-semaforo').value = cruz.renovar_semaforo || '';
+                document.getElementById('npo-cruz-desativar-semaforo').value = cruz.desativar_semaforo || '';
+
+                // Melhorias Urbanas
+                const sin = det.sinalizacao || {};
+                document.getElementById('npo-qty-sentido-unico-inversao').value = sin.sentido_unico_inversao || '';
+                document.getElementById('npo-qty-sentido-duplo').value = sin.sentido_duplo || '';
+                document.getElementById('npo-qty-inversao-preferencial').value = sin.inversao_preferencial || '';
+                document.getElementById('npo-qty-travessia-pedestre').value = sin.travessia_pedestre || '';
+                document.getElementById('npo-qty-travessia-colorida').value = sin.travessia_colorida || '';
+                document.getElementById('npo-qty-faixa-x').value = sin.faixa_x || '';
+                document.getElementById('npo-qty-faixa-longa').value = sin.faixa_longa || '';
+                document.getElementById('npo-qty-projeto-escola').value = sin.projeto_escola || '';
+                document.getElementById('npo-qty-esquina-segura').value = sin.esquina_segura || '';
+                document.getElementById('npo-qty-esquina-segura-renovacao').value = sin.esquina_segura_renovacao || '';
+                document.getElementById('npo-qty-calcada-verde').value = sin.calcada_verde || '';
+                document.getElementById('npo-qty-calcada-viva').value = sin.calcada_viva || '';
+                document.getElementById('npo-qty-travessia-elevada-renovar').value = sin.travessia_elevada_renovar || '';
+                document.getElementById('npo-qty-lombada-fisica-renovar').value = sin.lombada_fisica_renovar || '';
+                document.getElementById('npo-qty-video').value = sin.video || '';
+                document.getElementById('npo-qty-fiscalizacao-eletronica').value = sin.fiscalizacao_eletronica || '';
+                document.getElementById('npo-qty-yellow-box').value = sin.yellow_box || '';
+                document.getElementById('npo-qty-semaforo-colorido').value = sin.semaforo_colorido || '';
+                document.getElementById('npo-qty-mot-box').value = sin.mot_box || '';
+                document.getElementById('npo-qty-estacionamento-bicicleta').value = sin.estacionamento_bicicleta || '';
+                document.getElementById('npo-qty-paraciclo').value = sin.paraciclo || '';
+                document.getElementById('npo-qty-ciclo').value = sin.ciclo || '';
+                document.getElementById('npo-qty-motofaixa-faixa-azul').value = sin.motofaixa_faixa_azul || '';
+                document.getElementById('npo-qty-faixa-exclusiva').value = sin.faixa_exclusiva || '';
+                document.getElementById('npo-qty-area-transito-calmo').value = sin.area_transito_calmo || '';
+                document.getElementById('npo-qty-transito-compartilhado').value = sin.transito_compartilhado || '';
+                document.getElementById('npo-qty-rotatoria').value = sin.rotatoria || '';
+                document.getElementById('npo-qty-praca-viva').value = sin.praca_viva || '';
+                document.getElementById('npo-qty-vlt').value = sin.vlt || '';
+                document.getElementById('npo-equipamento').value = sin.equipamento || '';
+
+                // Vagas Zona Azul
+                const vza = det.vagas_zona_azul || {};
+                const vzaImp = vza.implantar || {};
+                document.getElementById('npo-vza-imp-za').value = vzaImp.za || '';
+                document.getElementById('npo-vza-imp-def').value = vzaImp.def || '';
+                document.getElementById('npo-vza-imp-ido').value = vzaImp.ido || '';
+                document.getElementById('npo-vza-imp-cd').value = vzaImp.cd || '';
+                
+                const vzaRem = vza.remover || {};
+                document.getElementById('npo-vza-rem-za').value = vzaRem.za || '';
+                document.getElementById('npo-vza-rem-def').value = vzaRem.def || '';
+                document.getElementById('npo-vza-rem-ido').value = vzaRem.ido || '';
+                document.getElementById('npo-vza-rem-cd').value = vzaRem.cd || '';
+                
+                const vzaApa = vza.apagar || {};
+                document.getElementById('npo-vza-apa-za').value = vzaApa.za || '';
+                document.getElementById('npo-vza-apa-def').value = vzaApa.def || '';
+                document.getElementById('npo-vza-apa-ido').value = vzaApa.ido || '';
+                document.getElementById('npo-vza-apa-cd').value = vzaApa.cd || '';
+
+                // Vagas Diversas
+                vagasDiversasData = det.vagas_diversas || { implantar: {}, renovar: {}, apagar: {} };
+                renderVagasDiversasInputs();
+
+                // Quantitativos Implantar
+                const qi = det.quantitativo_implantar || {};
+                document.getElementById('npo-qi-hz-mecanica').value = qi.hz_mecanica || '';
+                document.getElementById('npo-qi-hz-mecanica-term').value = qi.hz_mecanica_term || '';
+                document.getElementById('npo-qi-hz-manual-term').value = qi.hz_manual_term || '';
+                document.getElementById('npo-qi-hz-plastico-frio').value = qi.hz_plastico_frio || '';
+                document.getElementById('npo-qi-hz-manual').value = qi.hz_manual || '';
+                document.getElementById('npo-qi-sonorizador').value = qi.sonorizador || '';
+                document.getElementById('npo-qi-placa').value = qi.placa || '';
+                document.getElementById('npo-qi-passagem-iluminada').value = qi.passagem_iluminada || '';
+                document.getElementById('npo-qi-pelicula').value = qi.pelicula || '';
+                document.getElementById('npo-qi-coluna').value = qi.coluna || '';
+                document.getElementById('npo-qi-coluna-cilindrica').value = qi.coluna_cilindrica || '';
+                document.getElementById('npo-qi-gradil').value = qi.gradil || '';
+                document.getElementById('npo-qi-balizador').value = qi.balizador || '';
+                document.getElementById('npo-qi-zebras').value = qi.zebras || '';
+                document.getElementById('npo-qi-tacha-mono').value = qi.tacha_mono || '';
+                document.getElementById('npo-qi-tacha-bi').value = qi.tacha_bi || '';
+                document.getElementById('npo-qi-gelito').value = qi.gelito || '';
+
+                // Quantitativos Retirar
+                const qr = det.quantitativo_retirar || {};
+                document.getElementById('npo-qr-balizador').value = qr.balizador || '';
+                document.getElementById('npo-qr-gelito').value = qr.gelito || '';
+                document.getElementById('npo-qr-tacha').value = qr.tacha || '';
+                document.getElementById('npo-qr-tachao').value = qr.tachao || '';
+                document.getElementById('npo-qr-coluna').value = qr.coluna || '';
+                document.getElementById('npo-qr-placa').value = qr.placa || '';
+                document.getElementById('npo-qr-sinalizacao-hz').value = qr.sinalizacao_hz || '';
+                document.getElementById('npo-qr-extensao').value = qr.extensao || '';
+
+                updateAreaTag(p.divisao_area);
+                onStatusNpoChange();
+
+                // Botão Verificar Processos no Local — injeta no subheader se não existir
+                const d2 = p.demandas_pai;
+                let btnVerify = document.getElementById('btn-verify-local');
+                if (!btnVerify) {
+                    btnVerify = document.createElement('button');
+                    btnVerify.id = 'btn-verify-local';
+                    btnVerify.innerHTML = '<i class="fa fa-magnifying-glass-location"></i> Verificar no Local';
+                    const modalHeader = document.getElementById('modal-sub-header');
+                    if (modalHeader) modalHeader.appendChild(btnVerify);
+                }
+                btnVerify.onclick = () => openAggrModal(
+                    p.id_demanda_pai,
+                    d2 ? d2.protocolo_oficial : '',
+                    d2 && d2.cat_bairros ? d2.cat_bairros.nome_bairro : '',
+                    d2 ? (d2.endereco || (d2.ruas_fortaleza ? d2.ruas_fortaleza.nome : '')) : '',
+                    d2 && d2.cat_bairros && d2.cat_bairros.cat_regionais ? d2.cat_bairros.cat_regionais.nome_regional : ''
+                );
+                btnVerify.style.display = 'inline-flex';
+
+                setModalMode('view');
+            }
+
+            document.getElementById('npo-modal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('npo-modal').classList.remove('show');
+        }
+
+        // Alterar Modo de Exibição
+        function setModalMode(mode) {
+            const modal = document.getElementById('npo-modal');
+            const btnEdit = document.getElementById('btn-edit-mode');
+            const btnSave = document.getElementById('btn-save');
+            const btnCancel = document.getElementById('btn-cancel');
+
+            // Limpa marcações anteriores de visualização
+            document.querySelectorAll('.view-value').forEach(el => el.remove());
+            document.querySelectorAll('.form-group').forEach(f => f.classList.remove('field-empty'));
+            document.querySelectorAll('.accordion-section').forEach(s => s.classList.remove('sec-empty'));
+            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('sec-empty'));
+
+            if (mode === 'view') {
+                modal.classList.add('modal-view-mode');
+                if (btnEdit) btnEdit.style.display = 'inline-flex';
+                if (btnSave) btnSave.style.display = 'none';
+                if (btnCancel) btnCancel.textContent = 'Fechar';
+                
+                // Desativa botões de status NPO
+                document.querySelectorAll('#status-npo-buttons .btn-status-toggle').forEach(b => {
+                    b.setAttribute('disabled', 'true');
+                });
+
+                document.getElementById('npo_tipo_localizacao').disabled = true;
+                document.getElementById('npo_rua_cruzamento').disabled = true;
+                document.getElementById('npo_rua_limite_a').disabled = true;
+                document.getElementById('npo_rua_limite_b').disabled = true;
+
+                // Injeta textos informativos nos campos em modo leitura
+                const inputs = modal.querySelectorAll('input:not([type="hidden"]):not([type="file"]), select, textarea');
+                inputs.forEach(input => {
+                    const group = input.closest('.form-group');
+                    if (!group) return;
+
+                    let val = '';
+                    if (input.type === 'checkbox') {
+                        // Trata checkboxes
+                        return; // Ocultado por CSS direto
+                    } else {
+                        val = input.value ? input.value.trim() : '';
+                    }
+
+                    if (!val || val === '0' || val === '0.00' || val === '0.0') {
+                        group.classList.add('field-empty');
+                    } else {
+                        const span = document.createElement('span');
+                        span.className = 'view-value';
+                        span.textContent = val;
+                        input.parentNode.appendChild(span);
+                    }
+                });
+
+                // Injeta tipos selecionados
+                const checkboxesGroup = modal.querySelector('.form-row-checkboxes');
+                if (checkboxesGroup) {
+                    const group = checkboxesGroup.closest('.form-group');
+                    const selected = getSelectedTypes();
+                    if (!selected.length) {
+                        if (group) group.classList.add('field-empty');
+                    } else {
+                        const span = document.createElement('span');
+                        span.className = 'view-value';
+                        span.textContent = selected.join(', ');
+                        checkboxesGroup.parentNode.appendChild(span);
+                    }
+                }
+
+                // Trata acordeões vazios
+                document.querySelectorAll('.accordion-section').forEach(sec => {
+                    const content = sec.querySelector('.accordion-content');
+                    if (content) {
+                        const totalFields = content.querySelectorAll('.form-group').length;
+                        const emptyFields = content.querySelectorAll('.form-group.field-empty').length;
+
+                        // Se tiver tabela de vagas especiais, testa se a tabela está vazia
+                        if (sec.querySelector('#npo-sec-vagas-div')) {
+                            let hasData = false;
+                            VAGAS_DIVERSAS_KEYS.forEach(k => {
+                                if (vagasDiversasData.implantar[k.key] || vagasDiversasData.renovar[k.key] || vagasDiversasData.apagar[k.key]) {
+                                    hasData = true;
+                                }
+                            });
+                            if (!hasData) {
+                                sec.classList.add('sec-empty');
+                            } else {
+                                sec.classList.remove('sec-empty');
+                                content.style.display = 'flex';
+                                sec.querySelector('.accordion-header').classList.add('active');
+                            }
+                            return;
+                        }
+
+                        if (totalFields > 0 && totalFields === emptyFields) {
+                            sec.classList.add('sec-empty');
+                        } else {
+                            sec.classList.remove('sec-empty');
+                            content.style.display = 'flex';
+                            sec.querySelector('.accordion-header').classList.add('active');
+                        }
+                    }
+                });
+
+            } else {
+                modal.classList.remove('modal-view-mode');
+                if (btnEdit) btnEdit.style.display = 'none';
+                if (btnSave) btnSave.style.display = 'inline-flex';
+                if (btnCancel) btnCancel.textContent = 'Cancelar';
+                
+                // Ativa botões de status NPO
+                document.querySelectorAll('#status-npo-buttons .btn-status-toggle').forEach(b => {
+                    b.removeAttribute('disabled');
+                });
+
+                document.getElementById('npo_tipo_localizacao').disabled = false;
+                document.getElementById('npo_rua_cruzamento').disabled = false;
+                document.getElementById('npo_rua_limite_a').disabled = false;
+                document.getElementById('npo_rua_limite_b').disabled = false;
+                
+                // Garante que acordeões se comportem normalmente na edição
+                document.querySelectorAll('.accordion-content').forEach(c => c.style.display = 'none');
+                document.querySelectorAll('.accordion-header').forEach(h => h.classList.remove('active'));
+            }
+        }
+
+        // Lógica de Preenchimento da Demanda
+        async function onDemandaSelected(id) {
+            document.getElementById('npo-demanda-id').value = id;
+            const d = allDemandas.find(x => x.id === id);
+            if (!d) return;
+
+            document.getElementById('npo-numero-processo').value = d.protocolo_oficial || '';
+            document.getElementById('npo-bairro').value = d.cat_bairros?.nome_bairro || 'Sem Bairro';
+            document.getElementById('npo-regional').value = d.cat_bairros?.cat_regionais?.nome_regional || 'Sem Regional';
+            document.getElementById('npo-local').value = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+            document.getElementById('npo-latitude').value = d.latitude || '';
+            document.getElementById('npo-longitude').value = d.longitude || '';
+            document.getElementById('npo-data-recebimento').value = new Date().toLocaleDateString('pt-BR');
+
+            const rua = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+            const bairro = d.cat_bairros ? d.cat_bairros.nome_bairro : '';
+            const txt = `${d.protocolo_oficial} — ${d.tipo_solicitacao} — ${rua ? rua + ', ' + bairro : bairro}`;
+            
+            document.getElementById('demanda-info-text').textContent = txt;
+            document.getElementById('demanda-info').style.display = 'block';
+
+            document.getElementById('modal-title').textContent = `Processo: ${d.protocolo_oficial || 'N/A'}`;
+
+            // Popula os cards de Dados Gerais da Demanda
+            const solicitanteEl = document.getElementById('info-solicitante');
+            if (solicitanteEl) solicitanteEl.innerText = d.solicitante_oficial || '—';
+            
+            const tipoEl = document.getElementById('info-tipo');
+            if (tipoEl) tipoEl.innerText = d.tipo_solicitacao || '—';
+            
+            const bairroRegEl = document.getElementById('info-bairro-reg');
+            if (bairroRegEl) {
+                const bName = d.cat_bairros?.nome_bairro || 'Sem Bairro';
+                const rName = d.cat_bairros?.cat_regionais?.nome_regional || 'Sem Regional';
+                bairroRegEl.innerText = `${bName} / ${rName}`;
+            }
+            
+            const endEl = document.getElementById('info-endereco-detalhado');
+            if (endEl) {
+                const ruaVal = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+                const endDet = d.endereco || '';
+                endEl.innerText = endDet || ruaVal || '—';
+            }
+        }
+
+        function toggleNpoLocalizacaoInputs() {
+            const val = document.getElementById('npo_tipo_localizacao').value;
+            const fieldsCruzamento = document.getElementById('npo-fields-cruzamento');
+            const fieldsTrecho = document.getElementById('npo-fields-trecho');
+
+            if (val === 'Cruzamento') {
+                fieldsCruzamento.style.display = 'block';
+                fieldsTrecho.style.display = 'none';
+            } else if (val === 'Trecho') {
+                fieldsCruzamento.style.display = 'none';
+                fieldsTrecho.style.display = 'block';
+            } else {
+                fieldsCruzamento.style.display = 'none';
+                fieldsTrecho.style.display = 'none';
+            }
+        }
+
+        // Tags do Modal
+        function updateAreaTag(area) {
+            const el = document.getElementById('modal-tag-area');
+            if (el) el.innerHTML = `<i class="fa fa-map"></i> ${area}`;
+        }
+
+        // Lógica dos Tipos (Checkboxes)
+        let selectedStatusNpo = 'Aguardando Recebimento';
+        function selectStatusNpoButton(status) {
+            selectedStatusNpo = status;
+            document.getElementById('npo-status').value = status;
+            document.querySelectorAll('#status-npo-buttons .btn-status-toggle').forEach(btn => {
+                if (btn.getAttribute('data-status') === status) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            // Atualiza o badge do header
+            const badge = document.getElementById('npo-status-badge');
+            if (badge) {
+                const badgeClass = getStatusBadgeClass(status);
+                badge.className = `badge ${badgeClass}`;
+                badge.textContent = status.toUpperCase();
+            }
+
+            if (typeof onStatusNpoChange === 'function') {
+                onStatusNpoChange();
+            }
+        }
+
+        function getSelectedTypes() {
+            const types = [];
+            if (document.getElementById('npo-tipo-sinalizacao').checked) types.push('Sinalização');
+            if (document.getElementById('npo-tipo-recape').checked) types.push('Recape');
+            if (document.getElementById('npo-tipo-tapa-buraco').checked) types.push('Tapa Buraco');
+            return types;
+        }
+
+        // Mudança Dinâmica de Status
+        function onStatusNpoChange() {
+            const status = document.getElementById('npo-status').value;
+            const contempladoGroup = document.getElementById('group-contemplado');
+            const dataStatusInput = document.getElementById('npo-data-status-atual');
+            
+            // Exibe seletor contemplado apenas se necessário
+            contempladoGroup.style.display = (status === 'Contemplado') ? 'block' : 'none';
+
+            // Data status atual preenche automaticamente
+            const today = new Date().toISOString().split('T')[0];
+            dataStatusInput.value = today;
+        }
+
+        // Acordeão
+        function toggleAccordion(id) {
+            const content = document.getElementById(id);
+            const header = content.previousElementSibling;
+            const isVisible = content.style.display === 'flex';
+            
+            content.style.display = isVisible ? 'none' : 'flex';
+            header.classList.toggle('active', !isVisible);
+        }
+
+        // Vagas Diversas
+        function saveVagasDiversasCurrentState() {
+            VAGAS_DIVERSAS_KEYS.forEach(item => {
+                const impEl = document.getElementById(`npo-vd-imp-${item.key}`);
+                const renEl = document.getElementById(`npo-vd-ren-${item.key}`);
+                const apaEl = document.getElementById(`npo-vd-apa-${item.key}`);
+                
+                vagasDiversasData.implantar[item.key] = impEl ? (parseInt(impEl.value) || 0) : 0;
+                vagasDiversasData.renovar[item.key] = renEl ? (parseInt(renEl.value) || 0) : 0;
+                vagasDiversasData.apagar[item.key] = apaEl ? (parseInt(apaEl.value) || 0) : 0;
+            });
+        }
+
+        function renderVagasDiversasInputs() {
+            const tbody = document.getElementById('vagas-diversas-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            VAGAS_DIVERSAS_KEYS.forEach(item => {
+                const valImp = vagasDiversasData.implantar?.[item.key] || 0;
+                const valRen = vagasDiversasData.renovar?.[item.key] || 0;
+                const valApa = vagasDiversasData.apagar?.[item.key] || 0;
+                
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid rgba(255,255,255,.03)';
+                tr.innerHTML = `
+                    <td style="padding:6px 4px; color:rgba(255,255,255,0.85);">${item.label}</td>
+                    <td style="padding:6px 4px; text-align:center;">
+                        <input type="number" id="npo-vd-imp-${item.key}" class="form-input" min="0" value="${valImp || ''}" placeholder="0">
+                    </td>
+                    <td style="padding:6px 4px; text-align:center;">
+                        <input type="number" id="npo-vd-ren-${item.key}" class="form-input" min="0" value="${valRen || ''}" placeholder="0">
+                    </td>
+                    <td style="padding:6px 4px; text-align:center;">
+                        <input type="number" id="npo-vd-apa-${item.key}" class="form-input" min="0" value="${valApa || ''}" placeholder="0">
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Upload de Arquivos Específicos
+        async function uploadFileSpecific(input, fieldName) {
+            if (!input.files || !input.files[0]) return;
+            if (!currentUser) { showToast('Aviso', 'Faça login para realizar uploads.', 'error'); return; }
+
+            const file = input.files[0];
+            if (file.size > 52428800) { showToast('Erro', 'O PDF excede o limite de 50MB.', 'error'); return; }
+
+            const prefix = fieldName.split('_')[1]; // e.g. "npo"
+            const demandaId = document.getElementById(`${prefix}-demanda-id`).value;
+            if (!demandaId) { showToast('Aviso', 'Selecione a demanda antes do upload.', 'error'); return; }
+
+            const htmlField = fieldName.replace('_', '-');
+            const progBar = document.getElementById(`prog-${htmlField}`);
+            const progFill = document.getElementById(`prog-${htmlField}-fill`);
+            const zone = document.getElementById(`zone-${htmlField}`);
+
+            progBar.style.display = 'block';
+            zone.classList.add('uploading');
+            progFill.style.width = '30%';
+
+            const ext = file.name.split('.').pop() || 'pdf';
+            const path = `${prefix}_documentos/${demandaId}/${fieldName}_${Date.now()}.${ext}`;
+
+            const { data, error } = await supabase.storage
+                .from(BUCKET)
+                .upload(path, file, { upsert: true, contentType: 'application/pdf' });
+
+            if (error) {
+                showToast('Erro no Upload', error.message, 'error');
+                progBar.style.display = 'none';
+                zone.classList.remove('uploading');
+                return;
+            }
+
+            progFill.style.width = '100%';
+            setTimeout(() => {
+                progBar.style.display = 'none';
+                progFill.style.width = '0%';
+            }, 600);
+            
+            zone.classList.remove('uploading');
+
+            const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+
+            document.getElementById(`${prefix}-${htmlField}`).value = publicUrl;
+            showFileLinkRow(fieldName, publicUrl);
+            showToast('Sucesso', 'Arquivo anexado!', 'success');
+        }
+
+        function showFileLinkRow(fieldName, url) {
+            const htmlField = fieldName.replace('_', '-');
+            document.getElementById(`${htmlField}-link-row`).style.display = 'block';
+            document.getElementById(`${htmlField}-link`).href = url;
+            document.getElementById(`zone-${htmlField}`).style.display = 'none';
+        }
+
+        function hideFileLinkRow(fieldName) {
+            const htmlField = fieldName.replace('_', '-');
+            document.getElementById(`${htmlField}-link-row`).style.display = 'none';
+            document.getElementById(`zone-${htmlField}`).style.display = 'block';
+        }
+
+        function removeFileSpecific(fieldName) {
+            const prefix = fieldName.split('_')[1];
+            const htmlField = fieldName.replace('_', '-');
+            document.getElementById(`${prefix}-${htmlField}`).value = '';
+            hideFileLinkRow(fieldName);
+            showToast('Removido', 'Arquivo desanexado.', 'info');
+        }
+
+        // Salvar Projeto
+        async function saveNpoProject() {
+            if (!currentUser) { showToast('Aviso', 'Faça login para salvar o projeto.', 'error'); return; }
+            
+            const hasWriteAccess = ['Técnico', 'Gerência', 'Diretoria'].includes(simulatedRole);
+            if (!hasWriteAccess) { showToast('Acesso Negado', 'Você não possui permissão de escrita.', 'error'); return; }
+
+            const recordId = document.getElementById('npo-record-id').value;
+            const demandaId = document.getElementById('npo-demanda-id').value;
+            if (!demandaId) { showToast('Aviso', 'Associe o projeto a uma demanda pai.', 'error'); return; }
+
+            const numProjeto = document.getElementById('npo-numero-projeto').value.trim();
+            if (!numProjeto) { showToast('Atenção', 'O número do projeto é obrigatório.', 'error'); return; }
+
+            const statusVal = document.getElementById('npo-status').value;
+            const idContemplado = document.getElementById('npo-projeto-contemplado').value;
+            if (statusVal === 'Contemplado' && !idContemplado) {
+                showToast('Atenção', 'Selecione o processo de destino do contemplado.', 'error');
+                return;
+            }
+
+            // Atualiza vagas especiais antes de salvar
+            saveVagasDiversasCurrentState();
+
+            // Montagem do JSONB com as referências do NCE
+            const detalhes = {
+                geometrico: {
+                    recapeamento: document.getElementById('npo-geom-recapeamento').value,
+                    data_recapeamento: document.getElementById('npo-geom-data-recapeamento').value || null,
+                    numero_projeto: document.getElementById('npo-geom-numero-projeto').value.trim(),
+                    travessia_elevada: parseInt(document.getElementById('npo-geom-travessia-elevada').value) || 0,
+                    plato: parseInt(document.getElementById('npo-geom-plato').value) || 0,
+                    lombada_fisica: parseInt(document.getElementById('npo-geom-lombada-fisica').value) || 0,
+                    retirada_lombada: parseInt(document.getElementById('npo-geom-retirada-lombada').value) || 0
+                },
+                cruzamento: {
+                    quant_sinalizacao_hz_vt: parseInt(document.getElementById('npo-cruz-sinalizacao-hv').value) || 0,
+                    horizontal: parseInt(document.getElementById('npo-cruz-horizontal').value) || 0,
+                    vertical: parseInt(document.getElementById('npo-cruz-vertical').value) || 0,
+                    horizontal_tachao: parseInt(document.getElementById('npo-cruz-horizontal-tachao').value) || 0,
+                    horiz_vert_tachao: parseInt(document.getElementById('npo-cruz-horiz-vert-tachao').value) || 0,
+                    implantar_semaforo: parseInt(document.getElementById('npo-cruz-implantar-semaforo').value) || 0,
+                    renovar_semaforo: parseInt(document.getElementById('npo-cruz-renovar-semaforo').value) || 0,
+                    desativar_semaforo: parseInt(document.getElementById('npo-cruz-desativar-semaforo').value) || 0
+                },
+                sinalizacao: {
+                    sentido_unico_inversao: parseInt(document.getElementById('npo-qty-sentido-unico-inversao').value) || 0,
+                    sentido_duplo: parseInt(document.getElementById('npo-qty-sentido-duplo').value) || 0,
+                    inversao_preferencial: parseInt(document.getElementById('npo-qty-inversao-preferencial').value) || 0,
+                    travessia_pedestre: parseInt(document.getElementById('npo-qty-travessia-pedestre').value) || 0,
+                    travessia_colorida: parseInt(document.getElementById('npo-qty-travessia-colorida').value) || 0,
+                    faixa_x: parseInt(document.getElementById('npo-qty-faixa-x').value) || 0,
+                    faixa_longa: parseInt(document.getElementById('npo-qty-faixa-longa').value) || 0,
+                    projeto_escola: parseInt(document.getElementById('npo-qty-projeto-escola').value) || 0,
+                    esquina_segura: parseInt(document.getElementById('npo-qty-esquina-segura').value) || 0,
+                    esquina_segura_renovacao: parseInt(document.getElementById('npo-qty-esquina-segura-renovacao').value) || 0,
+                    calcada_verde: parseInt(document.getElementById('npo-qty-calcada-verde').value) || 0,
+                    calcada_viva: parseInt(document.getElementById('npo-qty-calcada-viva').value) || 0,
+                    travessia_elevada_renovar: parseInt(document.getElementById('npo-qty-travessia-elevada-renovar').value) || 0,
+                    lombada_fisica_renovar: parseInt(document.getElementById('npo-qty-lombada-fisica-renovar').value) || 0,
+                    video: parseInt(document.getElementById('npo-qty-video').value) || 0,
+                    fiscalizacao_eletronica: parseInt(document.getElementById('npo-qty-fiscalizacao-eletronica').value) || 0,
+                    yellow_box: parseInt(document.getElementById('npo-qty-yellow-box').value) || 0,
+                    semaforo_colorido: parseInt(document.getElementById('npo-qty-semaforo-colorido').value) || 0,
+                    mot_box: parseInt(document.getElementById('npo-qty-mot-box').value) || 0,
+                    estacionamento_bicicleta: parseInt(document.getElementById('npo-qty-estacionamento-bicicleta').value) || 0,
+                    paraciclo: parseInt(document.getElementById('npo-qty-paraciclo').value) || 0,
+                    ciclo: parseInt(document.getElementById('npo-qty-ciclo').value) || 0,
+                    motofaixa_faixa_azul: parseInt(document.getElementById('npo-qty-motofaixa-faixa-azul').value) || 0,
+                    faixa_exclusiva: parseInt(document.getElementById('npo-qty-faixa-exclusiva').value) || 0,
+                    area_transito_calmo: parseInt(document.getElementById('npo-qty-area-transito-calmo').value) || 0,
+                    transito_compartilhado: parseInt(document.getElementById('npo-qty-transito-compartilhado').value) || 0,
+                    rotatoria: parseInt(document.getElementById('npo-qty-rotatoria').value) || 0,
+                    praca_viva: parseInt(document.getElementById('npo-qty-praca-viva').value) || 0,
+                    vlt: parseInt(document.getElementById('npo-qty-vlt').value) || 0,
+                    equipamento: document.getElementById('npo-equipamento').value.trim()
+                },
+                vagas_zona_azul: {
+                    implantar: {
+                        za: parseInt(document.getElementById('npo-vza-imp-za').value) || 0,
+                        def: parseInt(document.getElementById('npo-vza-imp-def').value) || 0,
+                        ido: parseInt(document.getElementById('npo-vza-imp-ido').value) || 0,
+                        cd: parseInt(document.getElementById('npo-vza-imp-cd').value) || 0
+                    },
+                    remover: {
+                        za: parseInt(document.getElementById('npo-vza-rem-za').value) || 0,
+                        def: parseInt(document.getElementById('npo-vza-rem-def').value) || 0,
+                        ido: parseInt(document.getElementById('npo-vza-rem-ido').value) || 0,
+                        cd: parseInt(document.getElementById('npo-vza-rem-cd').value) || 0
+                    },
+                    apagar: {
+                        za: parseInt(document.getElementById('npo-vza-apa-za').value) || 0,
+                        def: parseInt(document.getElementById('npo-vza-apa-def').value) || 0,
+                        ido: parseInt(document.getElementById('npo-vza-apa-ido').value) || 0,
+                        cd: parseInt(document.getElementById('npo-vza-apa-cd').value) || 0
+                    }
+                },
+                vagas_diversas: vagasDiversasData,
+                quantitativo_implantar: {
+                    hz_mecanica: parseFloat(document.getElementById('npo-qi-hz-mecanica').value) || 0,
+                    hz_mecanica_term: parseFloat(document.getElementById('npo-qi-hz-mecanica-term').value) || 0,
+                    hz_manual_term: parseFloat(document.getElementById('npo-qi-hz-manual-term').value) || 0,
+                    hz_plastico_frio: parseFloat(document.getElementById('npo-qi-hz-plastico-frio').value) || 0,
+                    hz_manual: parseFloat(document.getElementById('npo-qi-hz-manual').value) || 0,
+                    sonorizador: parseInt(document.getElementById('npo-qi-sonorizador').value) || 0,
+                    placa: parseInt(document.getElementById('npo-qi-placa').value) || 0,
+                    passagem_iluminada: parseInt(document.getElementById('npo-qi-passagem-iluminada').value) || 0,
+                    pelicula: parseFloat(document.getElementById('npo-qi-pelicula').value) || 0,
+                    coluna: parseInt(document.getElementById('npo-qi-coluna').value) || 0,
+                    coluna_cilindrica: parseInt(document.getElementById('npo-qi-coluna-cilindrica').value) || 0,
+                    gradil: parseFloat(document.getElementById('npo-qi-gradil').value) || 0,
+                    balizador: parseInt(document.getElementById('npo-qi-balizador').value) || 0,
+                    zebras: parseInt(document.getElementById('npo-qi-zebras').value) || 0,
+                    tacha_mono: parseInt(document.getElementById('npo-qi-tacha-mono').value) || 0,
+                    tacha_bi: parseInt(document.getElementById('npo-qi-tacha-bi').value) || 0,
+                    gelito: parseInt(document.getElementById('npo-qi-gelito').value) || 0
+                },
+                quantitativo_retirar: {
+                    balizador: parseInt(document.getElementById('npo-qr-balizador').value) || 0,
+                    gelito: parseInt(document.getElementById('npo-qr-gelito').value) || 0,
+                    tacha: parseInt(document.getElementById('npo-qr-tacha').value) || 0,
+                    tachao: parseInt(document.getElementById('npo-qr-tachao').value) || 0,
+                    coluna: parseInt(document.getElementById('npo-qr-coluna').value) || 0,
+                    placa: parseInt(document.getElementById('npo-qr-placa').value) || 0,
+                    sinalizacao_hz: parseFloat(document.getElementById('npo-qr-sinalizacao-hz').value) || 0,
+                    extensao: parseFloat(document.getElementById('npo-qr-extensao').value) || 0
+                }
+            };
+
+            const tipoLocVal = document.getElementById('npo_tipo_localizacao').value || null;
+            const ruaCruzVal = document.getElementById('npo_rua_cruzamento').value.trim() || null;
+            const ruaLimAVal = document.getElementById('npo_rua_limite_a').value.trim() || null;
+            const ruaLimBVal = document.getElementById('npo_rua_limite_b').value.trim() || null;
+
+            let trechoConcat = null;
+            if (tipoLocVal === 'Cruzamento' && ruaCruzVal) {
+                trechoConcat = `cruzamento com ${ruaCruzVal}`;
+            } else if (tipoLocVal === 'Trecho' && ruaLimAVal && ruaLimBVal) {
+                trechoConcat = `entre ${ruaLimAVal} e ${ruaLimBVal}`;
+            }
+
+            const payload = {
+                id_demanda_pai: demandaId,
+                numero_projeto: document.getElementById('npo-projeto-npo-numero').value.trim() || numProjeto,
+                divisao_area: document.getElementById('npo-divisao-area').value,
+                tecnico_responsavel: document.getElementById('npo-tecnico-responsavel').value || null,
+                status_npo: statusVal,
+                trecho: trechoConcat,
+                tipo_localizacao: tipoLocVal,
+                rua_cruzamento: ruaCruzVal,
+                rua_limite_a: ruaLimAVal,
+                rua_limite_b: ruaLimBVal,
+                latitude: parseFloat(document.getElementById('npo-latitude').value) || null,
+                longitude: parseFloat(document.getElementById('npo-longitude').value) || null,
+                data_status_atual: document.getElementById('npo-data-status-atual').value || new Date().toISOString(),
+                id_projeto_contemplado: statusVal === 'Contemplado' ? idContemplado : null,
+                url_projeto_pdf: document.getElementById('npo-projeto-npo').value || document.getElementById('npo-url-projeto-pdf').value || null,
+                tipos_projeto: getSelectedTypes(),
+                parecer_tecnico: document.getElementById('npo-observacoes').value.trim() || null,
+                detalhes_projeto: detalhes,
+                parecer_npo: document.getElementById('npo-parecer-npo').value || null,
+                projeto_npo: document.getElementById('npo-projeto-npo').value || null,
+                projeto_npo_titulo: document.getElementById('npo-projeto-npo-titulo').value.trim() || null,
+                projeto_npo_numero: document.getElementById('npo-projeto-npo-numero').value.trim() || null,
+                quant_sinalizacao_horizontal_m2: parseFloat(document.getElementById('npo-qi-hz-mecanica').value || 0) +
+                                                 parseFloat(document.getElementById('npo-qi-hz-mecanica-term').value || 0) +
+                                                 parseFloat(document.getElementById('npo-qi-hz-manual-term').value || 0) +
+                                                 parseFloat(document.getElementById('npo-qi-hz-plastico-frio').value || 0) +
+                                                 parseFloat(document.getElementById('npo-qi-hz-manual').value || 0),
+                quant_sinalizacao_vertical_unid: parseInt(document.getElementById('npo-qi-placa').value || 0)
+            };
+
+            let error;
+            if (recordId) {
+                const res = await supabase.from('projetos_npo').update(payload).eq('id', recordId);
+                error = res.error;
+            } else {
+                const res = await supabase.from('projetos_npo').insert(payload);
+                error = res.error;
+            }
+
+            if (error) {
+                showToast('Erro ao Salvar', error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Projeto salvo com sucesso!', 'success');
+                closeModal();
+                await fetchNpoProjects();
+            }
+        }
+
+        // Toast Helper
+        function showToast(title, msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            
+            toast.className = `toast toast-${type} show`;
+            document.getElementById('toast-title').textContent = title;
+            document.getElementById('toast-message').textContent = msg;
+
+            let iconClass = 'fa-info-circle';
+            if (type === 'success') iconClass = 'fa-check-circle';
+            if (type === 'error') iconClass = 'fa-times-circle';
+            icon.className = `fa ${iconClass}`;
+
+            setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // ─── AGGREGATION FUNCTIONS ───
+        function toggleAggrFilter(field) {
+            const checkbox = document.getElementById(`aggr-use-${field}`);
+            const input = document.getElementById(`aggr-filter-${field}`);
+            if (checkbox && input) {
+                input.disabled = !checkbox.checked;
+            }
+        }
+
+        function openAggrModal(demandaId, protocolo, bairro, endereco, regional) {
+            document.getElementById('aggr-current-demanda-id').value = demandaId || '';
+            document.getElementById('aggr-current-protocolo').value = protocolo || '';
+            document.getElementById('aggr-modal-sub').textContent =
+                `Processo atual: ${protocolo || '—'} · Pesquise outros processos que já contemplem este local ou região.`;
+            
+            ['bairro', 'regional', 'endereco'].forEach(f => {
+                const cb = document.getElementById(`aggr-use-${f}`);
+                const inp = document.getElementById(`aggr-filter-${f}`);
+                if (cb) cb.checked = true;
+                if (inp) inp.disabled = false;
+            });
+
+            document.getElementById('aggr-filter-bairro').value = bairro || '';
+            document.getElementById('aggr-filter-regional').value = regional || '';
+            document.getElementById('aggr-filter-endereco').value = endereco || '';
+            document.getElementById('aggr-results-area').innerHTML =
+                '<div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Ajuste os filtros e clique em Pesquisar.</div>';
+            document.getElementById('aggr-modal').classList.add('show');
+        }
+
+        function closeAggrModal() {
+            document.getElementById('aggr-modal').classList.remove('show');
+        }
+
+        async function searchSimilarDemandas() {
+            const currentId = document.getElementById('aggr-current-demanda-id').value;
+            const useBairro = document.getElementById('aggr-use-bairro').checked;
+            const useEndereco = document.getElementById('aggr-use-endereco').checked;
+            const useRegional = document.getElementById('aggr-use-regional').checked;
+
+            const bairro = document.getElementById('aggr-filter-bairro').value.trim();
+            const endereco = document.getElementById('aggr-filter-endereco').value.trim();
+            const regional = document.getElementById('aggr-filter-regional').value.trim();
+
+            document.getElementById('aggr-results-area').innerHTML =
+                '<div class="aggr-empty"><i class="fa fa-spinner fa-spin" style="margin-right:6px;"></i>Buscando...</div>';
+
+            let query = supabase
+                .from('demandas_pai')
+                .select(`
+                    id, protocolo_oficial, tipo_solicitacao, solicitante_oficial, endereco,
+                    nucleos_atribuidos, id_demanda_principal,
+                    cat_bairros (nome_bairro, cat_regionais (nome_regional)),
+                    ruas_fortaleza:id_rua (nome),
+                    projetos_npo!projetos_npo_id_demanda_pai_fkey (status_npo),
+                    execucao_nce!execucao_nce_id_demanda_pai_fkey (status_nce),
+                    execucao_nco!execucao_nco_id_demanda_pai_fkey (status_nco),
+                    projetos_npe!projetos_npe_id_demanda_pai_fkey (status_npe),
+                    analise_npa!analise_npa_id_demanda_pai_fkey (status_npa),
+                    projetos_ngc!projetos_ngc_id_demanda_pai_fkey (status_ngc)
+                `);
+
+            if (useBairro && bairro) {
+                // Join via cat_bairros nome_bairro — filter using ilike on endereco + separate bairro
+                query = query.ilike('cat_bairros.nome_bairro', `%${bairro}%`);
+            }
+            if (useEndereco && endereco) {
+                query = query.or(`endereco.ilike.%${endereco}%,ruas_fortaleza.nome.ilike.%${endereco}%`);
+            }
+
+            const { data, error } = await query.order('created_at', { ascending: false }).limit(50);
+
+            if (error) {
+                document.getElementById('aggr-results-area').innerHTML =
+                    `<div class="aggr-empty" style="color:#f87171;"><i class="fa fa-triangle-exclamation" style="margin-right:6px;"></i>Erro na busca: ${escapeHtml(error.message)}</div>`;
+                return;
+            }
+
+            // Filtra o processo atual dos resultados e aplica filtro por regional em memória
+            let results = (data || []).filter(r => r.id !== currentId);
+            if (useRegional && regional) {
+                results = results.filter(r => {
+                    const rReg = r.cat_bairros?.cat_regionais?.nome_regional || '';
+                    return rReg.toLowerCase().includes(regional.toLowerCase());
+                });
+            }
+
+            if (results.length === 0) {
+                document.getElementById('aggr-results-area').innerHTML =
+                    '<div class="aggr-empty"><i class="fa fa-check-circle" style="color:#4ade80;margin-right:6px;"></i>Nenhum processo similar encontrado para os filtros informados.</div>';
+                return;
+            }
+
+            let html = `<table id="aggr-results-table">
+                <thead><tr>
+                    <th>Processo</th>
+                    <th>Endereço</th>
+                    <th>Bairro</th>
+                    <th>Solicitante</th>
+                    <th>Núcleo / Status</th>
+                    <th>Ação</th>
+                </tr></thead><tbody>`;
+
+            results.forEach(r => {
+                const bairroNome = r.cat_bairros ? r.cat_bairros.nome_bairro : '—';
+                const ruaNome = r.ruas_fortaleza ? r.ruas_fortaleza.nome : '';
+                const endNome = r.endereco || ruaNome || '—';
+                const solicitante = r.solicitante_oficial || '—';
+                const nucleos = r.nucleos_atribuidos && r.nucleos_atribuidos.length > 0
+                    ? r.nucleos_atribuidos.join(', ')
+                    : '—';
+
+                // Coletar status por núcleo
+                let statusHtml = '';
+                if (r.projetos_npo && r.projetos_npo.length > 0)
+                    statusHtml += `<span style="font-size:10px;padding:1px 5px;background:rgba(248,183,0,.12);color:#f8b700;border-radius:4px;margin:1px;">NPO: ${r.projetos_npo[0].status_npo}</span>`;
+                if (r.execucao_nce && r.execucao_nce.length > 0)
+                    statusHtml += `<span style="font-size:10px;padding:1px 5px;background:rgba(34,197,94,.12);color:#4ade80;border-radius:4px;margin:1px;">NCE: ${r.execucao_nce[0].status_nce}</span>`;
+                if (r.execucao_nco && r.execucao_nco.length > 0)
+                    statusHtml += `<span style="font-size:10px;padding:1px 5px;background:rgba(99,102,241,.12);color:#818cf8;border-radius:4px;margin:1px;">NCO: ${r.execucao_nco[0].status_nco}</span>`;
+                if (r.projetos_npe && r.projetos_npe.length > 0)
+                    statusHtml += `<span style="font-size:10px;padding:1px 5px;background:rgba(16,185,129,.12);color:#10b981;border-radius:4px;margin:1px;">NPE: ${r.projetos_npe[0].status_npe}</span>`;
+                if (r.analise_npa && r.analise_npa.length > 0)
+                    statusHtml += `<span style="font-size:10px;padding:1px 5px;background:rgba(59,130,246,.12);color:#3b82f6;border-radius:4px;margin:1px;">NPA: ${r.analise_npa[0].status_npa}</span>`;
+                if (r.projetos_ngc && r.projetos_ngc.length > 0)
+                    statusHtml += `<span style="font-size:10px;padding:1px 5px;background:rgba(236,72,153,.12);color:#ec4899;border-radius:4px;margin:1px;">NGC: ${r.projetos_ngc[0].status_ngc}</span>`;
+                if (!statusHtml) statusHtml = `<span style="font-size:10px;color:var(--amc-text-muted);">${nucleos}</span>`;
+
+                const aggrBadge = r.id_demanda_principal ? `<span class="badge-aggr" title="Já agregado">A</span>` : '';
+
+                html += `<tr>
+                    <td style="font-family:'Oswald',sans-serif;color:var(--amc-npo);">${escapeHtml(r.protocolo_oficial)}${aggrBadge}</td>
+                    <td>${escapeHtml(endNome)}</td>
+                    <td>${escapeHtml(bairroNome)}</td>
+                    <td>${escapeHtml(solicitante)}</td>
+                    <td><div style="display:flex;flex-wrap:wrap;gap:2px;">${statusHtml}</div></td>
+                    <td>
+                        <button class="aggr-action-btn" onclick="confirmAggr('${currentId}', '${r.id}', '${escapeHtml(r.protocolo_oficial)}')"
+                            title="Agregar o processo atual a este processo">
+                            <i class="fa fa-link"></i> Agregar
+                        </button>
+                    </td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('aggr-results-area').innerHTML = html;
+        }
+
+        async function confirmAggr(idAtual, idPrincipal, protocoloPrincipal) {
+            const protocoloAtual = document.getElementById('aggr-current-protocolo').value;
+            if (!confirm(`Confirma a agregação?\n\nO processo "${protocoloAtual}" será vinculado ao processo "${protocoloPrincipal}" como processo agregado.\n\nEsta ação não altera os status automaticamente — o técnico deve gerenciá-los manualmente.`)) return;
+
+            const { error } = await supabase
+                .from('demandas_pai')
+                .update({ id_demanda_principal: idPrincipal })
+                .eq('id', idAtual);
+
+            if (error) {
+                showToast('Erro', 'Falha ao agregar processo: ' + error.message, 'error');
+                return;
+            }
+
+            showToast('Sucesso', `Processo ${protocoloAtual} agregado a ${protocoloPrincipal} com sucesso!`, 'success');
+            closeAggrModal();
+            await fetchProjects(); // recarrega tabela para exibir badge A
+            // Reabre o modal para mostrar o banner atualizado
+            const projeto = allNpoProjects.find(p => p.id_demanda_pai === idAtual);
+            if (projeto) openNpoModal(projeto.id);
+        }
+
+        function setupStreetAutocomplete(inputId, suggestionsId, hiddenId = null) {
+            const input = document.getElementById(inputId);
+            const suggestionsContainer = document.getElementById(suggestionsId);
+            let timeoutId = null;
+
+            input.addEventListener('input', () => {
+                clearTimeout(timeoutId);
+                const query = input.value.trim();
+                
+                if (hiddenId) {
+                    document.getElementById(hiddenId).value = '';
+                }
+
+                if (query.length < 3) {
+                    suggestionsContainer.innerHTML = '';
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+
+                timeoutId = setTimeout(async () => {
+                    const { data, error } = await supabase
+                        .from('autocomplete_ruas')
+                        .select('id, nome, tipo_via')
+                        .ilike('nome', `%${query}%`)
+                        .limit(5);
+
+                    if (error || !data || data.length === 0) {
+                        suggestionsContainer.innerHTML = '';
+                        suggestionsContainer.style.display = 'none';
+                        return;
+                    }
+
+                    suggestionsContainer.innerHTML = '';
+                    data.forEach(match => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.style.padding = '10px 15px';
+                        div.style.cursor = 'pointer';
+                        div.style.fontSize = '13px';
+                        div.style.color = 'var(--amc-text-muted)';
+                        div.style.transition = 'all 0.2s';
+                        div.innerText = match.nome;
+                        
+                        div.addEventListener('mouseenter', () => {
+                            div.style.background = 'rgba(248, 183, 0, 0.15)';
+                            div.style.color = '#fff';
+                        });
+                        div.addEventListener('mouseleave', () => {
+                            div.style.background = 'transparent';
+                            div.style.color = 'var(--amc-text-muted)';
+                        });
+
+                        div.addEventListener('click', () => {
+                            input.value = match.nome;
+                            if (hiddenId) {
+                                document.getElementById(hiddenId).value = match.id;
+                            }
+                            suggestionsContainer.style.display = 'none';
+                        });
+                        suggestionsContainer.appendChild(div);
+                    });
+                    suggestionsContainer.style.display = 'block';
+                }, 300);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

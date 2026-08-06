@@ -1,0 +1,2991 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Planejamento e Análise (NPA)</title>
+    
+    <!-- Scripts Externos & Fontes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+
+    <style>
+        :root {
+            /* AMC Colors */
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+            --amc-red-glow: rgba(241, 90, 34, 0.4);
+            --amc-blue-glow: rgba(48, 133, 214, 0.4);
+            --amc-green-glow: rgba(16, 185, 129, 0.4);
+            --amc-npa-glow: rgba(147, 51, 234, 0.4);
+            --amc-npa: #a855f7; /* Purple */
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Estilo de Vidro (Glassmorphism) --- */
+        .glass {
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ds-card {
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Sidebar Lateral --- */
+        aside {
+            width: 320px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 16px;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .menu-link:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+            transform: translateX(4px);
+        }
+
+        .menu-link.active {
+            color: var(--amc-primary);
+            background: rgba(248, 183, 0, 0.08);
+            border: 1px solid rgba(248, 183, 0, 0.15);
+            box-shadow: 0 0 15px rgba(248, 183, 0, 0.1);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            margin-left: 320px;
+            padding: 3rem;
+            flex-grow: 1;
+            min-height: 100vh;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 10;
+        }
+
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 80% 10%, rgba(168, 85, 247, 0.05) 0%, transparent 60%);
+            z-index: -3;
+            pointer-events: none;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--amc-npa-glow);
+            filter: blur(120px);
+            border-radius: 50%;
+            z-index: -2;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        /* Header superior */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .header-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin: 0;
+        }
+
+        .header-sub {
+            color: var(--amc-text-muted);
+            margin: 0.25rem 0 0 0;
+            font-size: 14px;
+        }
+
+        .role-badge {
+            font-size: 13px;
+            color: var(--amc-text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 99px;
+        }
+
+        /* --- Tabela de Demandas --- */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 1.25rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(10, 10, 12, 0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--amc-text-muted);
+            font-weight: 600;
+            padding: 18px 24px;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        td {
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.85);
+            transition: all 0.2s;
+        }
+
+        tr {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        tr:hover td {
+            background: rgba(248, 183, 0, 0.02);
+            color: #fff;
+        }
+
+        tr:hover {
+            box-shadow: inset 4px 0 0 var(--amc-primary);
+        }
+
+        /* Badges de Status */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .status-recebido {
+            background: rgba(156, 163, 175, 0.1);
+            color: #d1d5db;
+            border: 1px solid rgba(156, 163, 175, 0.2);
+        }
+
+        .status-analise {
+            background: rgba(48, 133, 214, 0.1);
+            color: var(--amc-accent);
+            border: 1px solid rgba(48, 133, 214, 0.2);
+        }
+
+        .status-concluido {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .status-deferido {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .status-indeferido {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .status-aguardando {
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        .btn-status-toggle {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.03);
+            color: var(--amc-text-muted);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-status-toggle:hover:not([disabled]) {
+            border-color: var(--amc-npa);
+            color: #fff;
+            background: rgba(147, 51, 234, 0.1);
+        }
+        .btn-status-toggle.active {
+            background: var(--amc-npa);
+            color: #fff;
+            border-color: var(--amc-npa);
+            box-shadow: 0 4px 12px var(--amc-npa-glow);
+        }
+        .btn-status-toggle[disabled] {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .priority-indicator {
+            color: var(--amc-secondary);
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from { text-shadow: 0 0 2px var(--amc-red-glow); }
+            to { text-shadow: 0 0 10px var(--amc-secondary); }
+        }
+
+        /* --- Modal de Detalhes (Antigo Drawer) --- */
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .drawer {
+            width: 700px;
+            max-width: 90%;
+            max-height: 90vh;
+            background: rgba(10, 10, 12, 0.96);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            border-radius: 1.5rem;
+            z-index: 1001;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Modal Overlay --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .drawer-header {
+            padding: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drawer-close {
+            background: none;
+            border: none;
+            color: var(--amc-text-muted);
+            font-size: 1.75rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .drawer-close:hover {
+            color: #fff;
+        }
+
+        .drawer-content {
+            padding: 2rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .drawer-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- Detalhes & Formulários --- */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-item {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+
+        .info-item.full-width {
+            grid-column: span 2;
+        }
+
+        .info-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--amc-text-muted);
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .info-val {
+            font-size: 14px;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .form-section-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 300;
+            color: var(--amc-npa);
+            margin: 1.5rem 0 1rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(168, 85, 247, 0.15);
+            padding-bottom: 6px;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--amc-text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-input:focus {
+            border-color: var(--amc-npa);
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.15);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        select option, option {
+            background-color: #0A0A0C !important;
+            color: #ffffff !important;
+        }
+        .priority-row {
+            border-left: 4px solid #ef4444 !important;
+            background: rgba(239, 68, 68, 0.04) !important;
+        }
+        .priority-row:hover {
+            background: rgba(239, 68, 68, 0.08) !important;
+        }
+
+        .form-input:disabled {
+            background: transparent;
+            border-color: transparent;
+            padding-left: 0;
+            cursor: default;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+
+        /* Painel Lateral - Botões */
+        .btn-action {
+            padding: 10px 20px;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .btn-edit-mode {
+            background: var(--amc-npa);
+            color: #fff;
+            box-shadow: 0 4px 12px var(--amc-npa-glow);
+        }
+
+        .btn-edit-mode:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 18px var(--amc-npa-glow);
+        }
+
+        .btn-save {
+            background: var(--amc-primary);
+            color: #000;
+            box-shadow: 0 4px 12px var(--amc-glow);
+        }
+
+        .btn-save:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 18px var(--amc-glow);
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: #ef4444;
+            color: #f87171;
+        }
+
+        /* --- Auth Panel na Sidebar --- */
+        .auth-panel {
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .auth-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amc-npa);
+            margin-bottom: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Toast Alert */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: -400px;
+            width: 350px;
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 1200;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        .toast.show { right: 24px; }
+        .toast-success { background: rgba(10, 30, 10, 0.95); border: 1px solid #10b981; }
+        .toast-error { background: rgba(30, 10, 10, 0.95); border: 1px solid #ef4444; }
+        .toast-info { background: rgba(10, 10, 20, 0.95); border: 1px solid var(--amc-npa); }
+
+        .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--amc-text-muted);
+            font-size: 15px;
+        }
+    
+        /* --- Sidebar Menu List Scrollbar (Checkpoint 4) --- */
+        .menu-list {
+            overflow-y: auto !important;
+            max-height: calc(100vh - 220px) !important;
+        }
+        .menu-list::-webkit-scrollbar {
+            width: 4px !important;
+            display: block !important;
+        }
+        .menu-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-radius: 4px !important;
+        }
+        .menu-list::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+
+        /* ─── UPLOAD ÁREA ─── */
+        .upload-zone {
+            border: 2px dashed rgba(168, 85, 247, .25);
+            border-radius: 12px; padding: 1.25rem;
+            text-align: center; cursor: pointer;
+            transition: all .25s; background: rgba(168, 85, 247, .03);
+            position: relative; overflow: hidden;
+        }
+        .upload-zone:hover { border-color: var(--amc-npa); background: rgba(168, 85, 247, .07); }
+        .upload-zone.uploading { border-color: var(--amc-primary); }
+        .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+        .upload-icon { font-size: 1.5rem; color: var(--amc-npa); margin-bottom: 6px; }
+        .upload-text { font-size: 12px; color: var(--amc-text-muted); }
+        .upload-text strong { color: var(--amc-npa); }
+
+        .doc-link-row {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 8px; padding: 8px 12px; border-radius: 8px;
+            background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2);
+            font-size: 12px;
+        }
+        .doc-link-row a { color: #34d399; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .doc-link-row a:hover { text-decoration: underline; }
+
+        .upload-progress {
+            height: 3px; border-radius: 99px;
+            background: rgba(255,255,255,.06); margin-top: 6px; overflow: hidden; display: none;
+        }
+        .upload-progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--amc-npa), var(--amc-primary));
+            border-radius: 99px; transition: width .3s;
+        }
+        .upload-zone.disabled {
+            pointer-events: none !important;
+            opacity: 0.5;
+        }
+        /* --- AGGREGATION --- */
+        .aggr-banner { display: flex; align-items: flex-start; gap: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 12px 16px; margin-bottom: 1rem; font-size: 13px; color: #fbbf24; }
+        .aggr-banner i { font-size: 16px; margin-top:1px; flex-shrink:0; }
+        .aggr-banner strong { color: #fde68a; display: block; margin-bottom: 3px; }
+        .badge-aggr { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b; font-size: 10px; font-weight: 900; margin-left: 5px; flex-shrink: 0; vertical-align: middle; }
+        #aggr-modal { position: fixed; inset: 0; z-index: 1200; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s; }
+        #aggr-modal.show { opacity: 1; pointer-events: auto; }
+        #aggr-modal .aggr-inner { background: #0d0d10; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; width: 900px; max-width: 96vw; max-height: 85vh; overflow-y: auto; padding: 2rem; }
+        #aggr-modal h4 { color: #f59e0b; font-family: 'Oswald', sans-serif; font-size: 1.2rem; margin: 0 0 4px; }
+        #aggr-modal .aggr-sub { color: var(--amc-text-muted); font-size: 12px; margin: 0 0 1.5rem; }
+        .aggr-filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; margin-bottom: 1.5rem; }
+        .aggr-filter-row .aggr-search-btn { padding: 10px 20px; background: #f59e0b; color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px; }
+        #aggr-results-table { width: 100%; border-collapse: collapse; }
+        #aggr-results-table th { text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--amc-text-muted); border-bottom: 1px solid rgba(255,255,255,.07); }
+        #aggr-results-table td { padding: 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); }
+        .aggr-action-btn { padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; border: 1px solid rgba(245,158,11,.5); background: rgba(245,158,11,.1); color: #f59e0b; }
+        .aggr-action-btn:hover { background: rgba(245,158,11,.25); }
+        .aggr-empty { text-align: center; padding: 2rem; color: var(--amc-text-muted); font-size: 13px; }
+        #btn-verify-local { padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 8px; border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.08); color: #f59e0b; display: inline-flex; align-items: center; gap: 6px; }
+    </style>
+
+    </style>
+</head>
+<body>
+
+    <div class="hero-bg"></div>
+    <div class="hero-glow" style="top: 25%; right: 15%;"></div>
+
+    <!-- Sidebar Lateral -->
+    <aside class="glass">
+        <div>
+            <!-- Logo AMC -->
+            <div class="logo-container">
+            <i class="fa fa-car-side fa-xl" style="color:var(--amc-accent, #3085d6);"></i>
+            <span class="logo-text">AMC — Engenharia</span>
+        </div>
+        <ul class="menu-list">
+            <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link "><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+            <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+            <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link "><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+            <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link "><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+            <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+            <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link active"><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+            <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link "><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+            <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link "><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+            <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link "><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+            <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link "><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+            <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link "><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+        </ul>
+        </div>
+
+        <!-- Painel de Login e Simulação de Perfis -->
+        <div class="auth-panel glass-dark">
+            <div class="auth-title">
+                <i class="fa fa-user-shield"></i>
+                <span>NPA — Planejamento</span>
+            </div>
+            
+            <div id="auth-unlogged">
+                <div class="form-group">
+                    <input type="email" id="auth-email" placeholder="E-mail" class="form-input" style="padding: 10px 14px; font-size: 12px; margin-bottom: 8px;">
+                    <input type="password" id="auth-password" placeholder="Senha" class="form-input" style="padding: 10px 14px; font-size: 12px;">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-amc btn-primary-amc" style="padding: 8px; font-size: 11px; flex: 1; border-radius: 8px; background: var(--amc-npa); color:#fff;" onclick="login()">Entrar</button>
+                    <button class="btn-amc btn-outline-amc" style="padding: 8px; font-size: 11px; flex: 1; border-radius: 8px;" onclick="register()">Registrar</button>
+                </div>
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 12px 0;">
+                <button class="btn-amc btn-outline-amc" style="padding: 6px 12px; font-size: 10px; width: 100%; border-radius: 8px;" onclick="simulateQuickLogin()">
+                    Simular Técnico NPA
+                </button>
+            </div>
+
+            <div id="auth-logged" style="display: none;">
+                <p id="logged-email" style="font-size: 12px; margin: 0 0 10px 0; color: #fff; word-break: break-all; font-weight: 500;"></p>
+                
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-size: 9px;">Simular Papel (Role)</label>
+                    <select id="role-selector" class="form-input" style="padding: 8px 12px; font-size: 12px; background: #0A0A0C;" onchange="changeRole(this.value)">
+                        <option value="Público">Público</option>
+                        <option value="Técnico">Técnico</option>
+                        <option value="Gerência">Gerência</option>
+                        <option value="Diretoria">Diretoria</option>
+                    </select>
+                </div>
+                <button class="btn-amc btn-outline-amc" style="padding: 8px; font-size: 11px; color: var(--amc-secondary); width: 100%; border-radius: 8px;" onclick="logout()">Desconectar</button>
+            </div>
+        </div>
+    </aside>
+    <!-- Aggr Search Modal -->
+    <div id="aggr-modal"><div class="aggr-inner">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+            <div><h4><i class="fa fa-magnifying-glass-location"></i> Verificar Processos no Local</h4><p class="aggr-sub" id="aggr-modal-sub"></p></div>
+            <button class="modal-close" onclick="closeAggrModal()">&#x2715;</button>
+        </div>
+        <div class="aggr-filter-row">
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Bairro</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-bairro" checked onchange="toggleAggrFilter('bairro')" style="accent-color: var(--amc-npa); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-bairro" class="form-input" placeholder="Ex: Aldeota">
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Regional</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-regional" checked onchange="toggleAggrFilter('regional')" style="accent-color: var(--amc-npa); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-regional" class="form-input" placeholder="Ex: Regional II">
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Endereço / Rua</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-endereco" checked onchange="toggleAggrFilter('endereco')" style="accent-color: var(--amc-npa); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-endereco" class="form-input" placeholder="Ex: Av. Santos Dumont">
+            </div>
+            <button class="aggr-search-btn" onclick="searchSimilarDemandas()"><i class="fa fa-search"></i> Pesquisar</button>
+        </div>
+        <div id="aggr-results-area"><div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Use os filtros acima para buscar processos relacionados.</div></div>
+        <input type="hidden" id="aggr-current-demanda-id"><input type="hidden" id="aggr-current-protocolo">
+    </div></div>
+
+    <!-- Main Section -->
+    <main>
+        <div class="dashboard-header">
+            <div>
+                <h1 class="header-title">Planejamento & Análise <span style="color: var(--amc-npa); font-weight: 700;">NPA</span></h1>
+                <p class="header-sub">Análise técnica de solicitações viárias e tempos de resposta</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="role-badge glass-dark" id="role-badge">
+                    <i class="fa fa-info-circle"></i>
+                    <span>Conectando ao banco...</span>
+                </div>
+                <button class="btn-amc btn-primary-amc" onclick="openCreateDemandModal()" id="btn-nova-demanda" style="background: var(--amc-npa); color: #fff; box-shadow: 0 4px 15px var(--amc-npa-glow); padding: 8px 16px; border-radius: 99px; font-weight: 700; text-transform: uppercase; font-size: 12px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa fa-plus"></i> Nova Demanda
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabela principal -->
+        <div class="table-container">
+            <table id="npa-table">
+                <thead>
+                    <tr>
+                        <th style="width: 15%">Processo</th>
+                        <th style="width: 10%">Ano</th>
+                        <th style="width: 15%">Tipo de Solicitação</th>
+                        <th style="width: 30%">Endereço / Bairro</th>
+                        <th style="width: 15%">Designação</th>
+                        <th style="width: 15%">Status NPA</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fa fa-spinner fa-spin fa-lg" style="margin-right: 8px;"></i> Carregando processos...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal de Criação de Demanda -->
+    <div id="create-demand-modal" class="modal-overlay" style="z-index: 1050; display: none; justify-content: center; align-items: center;">
+        <div class="modal-content glass" style="max-width: 900px; width: 95%; padding: 2rem; border-radius: 1.5rem; background: rgba(10, 10, 12, 0.96); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; display: flex; flex-direction: column; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px;">
+                <h3 style="font-family: 'Oswald', sans-serif; font-size: 1.5rem; font-weight: 300; margin: 0; color: var(--amc-npa); text-transform: uppercase; letter-spacing: 0.05em;">Nova Demanda & Análise Técnica</h3>
+                <button class="drawer-close" onclick="closeCreateDemandModal()" style="font-size: 1.5rem; background:none; border:none; color:var(--amc-text-muted); cursor:pointer;">&times;</button>
+            </div>
+            
+            <form id="create-demand-form" onsubmit="submitNewDemand(event)" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <!-- Coluna da Esquerda: Dados Gerais da Demanda -->
+                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <p class="form-section-title" style="margin-top: 0;"><i class="fa fa-file-invoice"></i> Dados Gerais da Demanda</p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="new_protocolo_oficial" class="form-label">Protocolo Oficial</label>
+                                <input type="text" id="new_protocolo_oficial" class="form-input" placeholder="Ex: 5842/2026">
+                            </div>
+                            <div class="form-group">
+                                <label for="new_tipo_solicitacao" class="form-label">Tipo de Solicitação</label>
+                                <div style="display: flex; gap: 8px; width: 100%;">
+                                    <select id="new_tipo_solicitacao" class="form-input" style="background:#0A0A0C; flex: 1;" required>
+                                        <option value="" disabled selected>Carregando...</option>
+                                    </select>
+                                    <button type="button" id="btn-add-tipo" class="btn-amc btn-outline-amc" style="display: none; padding: 0 14px; width: auto; height: 42px; border-radius: 8px; flex-shrink: 0;" onclick="adicionarNovoTipo()">
+                                        <i class="fa fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 4fr 6fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="new_solicitante_cpf_cnpj" class="form-label">CPF / CNPJ do Solicitante</label>
+                                <input type="text" id="new_solicitante_cpf_cnpj" class="form-input" placeholder="Digite CPF ou CNPJ" maxlength="18">
+                            </div>
+                            <div class="form-group">
+                                <label for="new_solicitante_oficial" class="form-label">Solicitante Oficial (Público)</label>
+                                <input type="text" id="new_solicitante_oficial" class="form-input" placeholder="Ex: Cidadão, Vereador, Órgão" required>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group" style="position: relative;">
+                                <label for="new_bairro_input" class="form-label">Bairro (Autocomplete)</label>
+                                <input type="text" id="new_bairro_input" class="form-input" placeholder="Digite para buscar..." autocomplete="off" required>
+                                <div id="new_suggestions" class="autocomplete-suggestions" style="top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100; display: none; position: absolute; margin-top: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);"></div>
+                                <input type="hidden" id="new_id_bairro">
+                            </div>
+                            <div class="form-group">
+                                <label for="new_regional_input" class="form-label">Regional</label>
+                                <input type="text" id="new_regional_input" class="form-input" placeholder="Regional" readonly disabled>
+                            </div>
+                        </div>
+
+                        <!-- Endereço -->
+                        <div class="form-group">
+                            <label for="new_endereco" class="form-label">Endereço / Logradouro</label>
+                            <input type="text" id="new_endereco" class="form-input" placeholder="Ex: Av. Pontes Vieira, 1200" required>
+                        </div>
+
+                        <!-- Nova Rua Principal (Autocomplete) -->
+                        <div class="form-group" style="position: relative;">
+                            <label for="new_rua_principal" class="form-label">Rua Principal (Autocomplete)</label>
+                            <input type="text" id="new_rua_principal" class="form-input" placeholder="Digite para buscar a rua principal..." autocomplete="off" required>
+                            <div id="new_sugg_rua_principal" class="autocomplete-suggestions street-suggestions" style="top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100; display: none; position: absolute; margin-top: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);"></div>
+                            <input type="hidden" id="new_id_rua">
+                        </div>
+
+                        <!-- Atribuição de Núcleos Responsáveis -->
+                        <div class="form-group">
+                            <label class="form-label" style="margin-bottom: 8px; display: block; font-size: 13px;">Atribuição de Núcleos Responsáveis</label>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                                <label style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                                    <input type="checkbox" name="new_nucleo_destino" value="NPA" style="width: 14px; height: 14px; accent-color: var(--amc-secondary); cursor: pointer;">
+                                    <span style="font-size: 11px; font-weight: 500; color: #fff;">NPA</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                                    <input type="checkbox" name="new_nucleo_destino" value="NPE" style="width: 14px; height: 14px; accent-color: var(--amc-secondary); cursor: pointer;">
+                                    <span style="font-size: 11px; font-weight: 500; color: #fff;">NPE</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                                    <input type="checkbox" name="new_nucleo_destino" value="NCO" style="width: 14px; height: 14px; accent-color: var(--amc-secondary); cursor: pointer;">
+                                    <span style="font-size: 11px; font-weight: 500; color: #fff;">NCO</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                                    <input type="checkbox" name="new_nucleo_destino" value="NCE" style="width: 14px; height: 14px; accent-color: var(--amc-secondary); cursor: pointer;">
+                                    <span style="font-size: 11px; font-weight: 500; color: #fff;">NCE</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                                    <input type="checkbox" name="new_nucleo_destino" value="NPO" style="width: 14px; height: 14px; accent-color: var(--amc-secondary); cursor: pointer;">
+                                    <span style="font-size: 11px; font-weight: 500; color: #fff;">NPO</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                                    <input type="checkbox" name="new_nucleo_destino" value="NGC" style="width: 14px; height: 14px; accent-color: var(--amc-secondary); cursor: pointer;">
+                                    <span style="font-size: 11px; font-weight: 500; color: #fff;">NGC</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.01); cursor: pointer;" onclick="toggleNewPrioridade()">
+                            <input type="checkbox" id="new_prioridade_diretoria" style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--amc-secondary);">
+                            <span style="font-size: 13px; font-weight: 500; color: var(--amc-text-muted);">Prioridade Institucional (Diretoria)</span>
+                        </div>
+                    </div>
+
+                    <!-- Coluna da Direita: Análise Técnica (NPA) -->
+                    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                        <p class="form-section-title" style="margin-top: 0;"><i class="fa fa-brain"></i> Análise Técnica (NPA)</p>
+                        
+                        <div class="form-group">
+                            <label for="new_tipo_localizacao" class="form-label">Tipo de Localização</label>
+                            <select id="new_tipo_localizacao" class="form-input" style="background:#0A0A0C;" onchange="toggleNewLocalizacaoInputs()">
+                                <option value="">Não definido</option>
+                                <option value="Cruzamento">Cruzamento</option>
+                                <option value="Trecho">Trecho</option>
+                            </select>
+                        </div>
+
+                        <!-- Campo de Cruzamento (Rua Cruzamento) -->
+                        <div id="new-fields-cruzamento" style="display: none;">
+                            <div class="form-group" style="position: relative;">
+                                <label for="new_rua_cruzamento" class="form-label">Rua Cruzamento</label>
+                                <input type="text" id="new_rua_cruzamento" class="form-input" placeholder="Nome da rua de cruzamento" autocomplete="off">
+                                <div class="autocomplete-suggestions street-suggestions" id="new_sugg_rua_cruzamento" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Campos de Trecho (Limite A e Limite B) -->
+                        <div id="new-fields-trecho" style="display: none;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group" style="position: relative;">
+                                    <label for="new_rua_limite_a" class="form-label">Entre (Limite A)</label>
+                                    <input type="text" id="new_rua_limite_a" class="form-input" placeholder="Primeira rua limite" autocomplete="off">
+                                    <div class="autocomplete-suggestions street-suggestions" id="new_sugg_rua_limite_a" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                                </div>
+                                <div class="form-group" style="position: relative;">
+                                    <label for="new_rua_limite_b" class="form-label">E (Limite B)</label>
+                                    <input type="text" id="new_rua_limite_b" class="form-input" placeholder="Segunda rua limite" autocomplete="off">
+                                    <div class="autocomplete-suggestions street-suggestions" id="new_sugg_rua_limite_b" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="new_ano_processo" class="form-label">Ano do Processo</label>
+                                <input type="number" id="new_ano_processo" class="form-input" placeholder="Ex: 2026" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new_tecnico_responsavel" class="form-label">Técnico Responsável</label>
+                                <input type="text" id="new_tecnico_responsavel" class="form-input" placeholder="Nome do técnico">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label for="new_data_inicial" class="form-label">Data Inicial</label>
+                                <input type="date" id="new_data_inicial" class="form-input" onchange="calculateNewResponseTime()">
+                            </div>
+                            <div class="form-group">
+                                <label for="new_data_conclusao" class="form-label">Data de Conclusão</label>
+                                <input type="date" id="new_data_conclusao" class="form-input" onchange="calculateNewResponseTime()">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Tempo de Resposta</label>
+                                <input type="text" id="new_tempo_resposta" class="form-input" style="border:none; background:transparent; padding-left:0; font-weight:700; color:var(--amc-npa);" readonly value="—">
+                            </div>
+                            <div class="form-group">
+                                <label for="new_numero_parecer" class="form-label">Número do Parecer</label>
+                                <input type="text" id="new_numero_parecer" class="form-input" placeholder="Ex: PAR 043/2026">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="new_tempo_medida_mitigadora" class="form-label">Prazo para Medida Mitigadora</label>
+                            <input type="text" id="new_tempo_medida_mitigadora" class="form-input" placeholder="Ex: 30 dias">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="new_observacoes" class="form-label">Observações</label>
+                            <textarea id="new_observacoes" class="form-input" style="height: 60px; resize: vertical;" placeholder="Notas técnicas e observações de campo"></textarea>
+                        </div>
+
+                        <!-- Documentação Técnica (Nova Demanda) -->
+                        <p class="form-section-title" style="margin-top: 1.5rem;"><i class="fa fa-file-pdf"></i> Documentação Técnica</p>
+
+                        <!-- Parecer Técnico (NPA) -->
+                        <div class="form-group">
+                            <label class="form-label">Parecer Técnico Final AMC (PDF)</label>
+                            <div class="upload-zone" id="new_zone-parecer" onclick="document.getElementById('new_file-parecer').click()">
+                                <input type="file" id="new_file-parecer" accept="application/pdf" onchange="uploadDocument(this, 'parecer', true)">
+                                <div class="upload-icon"><i class="fa fa-stamp"></i></div>
+                                <div class="upload-text">Clique ou arraste para <strong>anexar o Parecer AMC</strong></div>
+                                <div class="upload-text" style="font-size:10px;margin-top:2px;">Apenas PDF • Máx. 50MB</div>
+                                <div class="upload-progress" id="new_prog-parecer"><div class="upload-progress-fill" id="new_prog-parecer-fill"></div></div>
+                            </div>
+                            <div id="new_parecer-link-row" style="display:none;">
+                                <div class="doc-link-row">
+                                    <a id="new_parecer-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i><span>Ver Parecer Técnico AMC</span></a>
+                                    <button type="button" class="btn-danger" onclick="removeDoc('parecer', true)"><i class="fa fa-trash"></i> Remover</button>
+                                </div>
+                            </div>
+                            <input type="hidden" id="new_npa-url-parecer">
+                        </div>
+
+                        <!-- Projeto NPA (PDF, Nome, Número) -->
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label class="form-label">Projeto NPA (PDF)</label>
+                            <div class="upload-zone" id="new_zone-projeto" onclick="document.getElementById('new_file-projeto').click()">
+                                <input type="file" id="new_file-projeto" accept="application/pdf" onchange="uploadDocument(this, 'projeto', true)">
+                                <div class="upload-icon"><i class="fa fa-file-invoice"></i></div>
+                                <div class="upload-text">Clique ou arraste para <strong>anexar o Projeto NPA</strong></div>
+                                <div class="upload-text" style="font-size:10px;margin-top:2px;">Apenas PDF • Máx. 50MB</div>
+                                <div class="upload-progress" id="new_prog-projeto"><div class="upload-progress-fill" id="new_prog-projeto-fill"></div></div>
+                            </div>
+                            <div id="new_projeto-link-row" style="display:none;">
+                                <div class="doc-link-row">
+                                    <a id="new_projeto-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i><span>Ver Projeto NPA anexado</span></a>
+                                    <button type="button" class="btn-danger" onclick="removeDoc('projeto', true)"><i class="fa fa-trash"></i> Remover</button>
+                                </div>
+                            </div>
+                            <input type="hidden" id="new_npa-url-projeto">
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem; margin-bottom: 1rem;">
+                            <div class="form-group">
+                                <label for="new_projeto_npa_nome" class="form-label">Nome do Projeto NPA</label>
+                                <input type="text" id="new_projeto_npa_nome" class="form-input" placeholder="Ex: Projeto de Geometria Aldeota">
+                            </div>
+                            <div class="form-group">
+                                <label for="new_projeto_npa_numero" class="form-label">Número do Projeto NPA</label>
+                                <input type="text" id="new_projeto_npa_numero" class="form-input" placeholder="Ex: PRJ-NPA-123/2026">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Painel Alerta Inline: Resolução de Rua Principal -->
+                <div id="street-resolution-alert" class="glass-dark" style="display: none; padding: 15px; border-radius: 12px; border: 1px solid var(--amc-npa); background: rgba(147, 51, 234, 0.05); margin-top: 0.5rem; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: var(--amc-primary); font-weight: 600; font-size: 14px;">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <span>Resolução de Rua Requerida</span>
+                    </div>
+                    <p id="street-resolution-message" style="margin: 0; font-size: 13px; color: var(--amc-text-light);"></p>
+                    <div id="street-resolution-options" style="display: flex; flex-direction: column; gap: 8px; margin: 5px 0;">
+                        <!-- Injetado dinamicamente -->
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 5px;">
+                        <button type="button" class="btn-action btn-cancel" style="padding: 6px 12px; font-size: 12px;" onclick="cancelStreetResolution()">Escolher Outra</button>
+                        <button type="button" class="btn-action" style="padding: 6px 12px; font-size: 12px; background: var(--amc-secondary); color: #fff;" id="btn-confirm-street-resolution">Cadastrar Nova Rua</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 1rem;">
+                    <button type="button" class="btn-action btn-cancel" onclick="closeCreateDemandModal()">Cancelar</button>
+                    <button type="submit" class="btn-action btn-save" style="background: var(--amc-npa); color: #fff; box-shadow: 0 4px 12px var(--amc-npa-glow);">Cadastrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes Overlay -->
+    <div id="drawer-overlay" class="drawer-overlay" onclick="if (event.target === this) closeDrawer()">
+        <!-- Modal de Detalhes -->
+        <div id="drawer" class="drawer">
+            <div class="drawer-header">
+                <div>
+                    <h3 id="drawer-protocol" style="font-family: 'Oswald', sans-serif; font-size: 1.3rem; font-weight: 400; margin: 0; color: #fff;">—</h3>
+                    <span id="drawer-status-badge" style="margin-top: 6px;"></span>
+                </div>
+                <button class="drawer-close" onclick="closeDrawer()">&times;</button>
+            </div>
+
+        <div class="drawer-content">
+            <!-- Banner de Prioridade DITRAN -->
+            <div id="npa-priority-banner" style="display:none;"></div>
+            <div id="npa-aggr-banner" class="aggr-banner" style="display:none;">
+                <i class="fa fa-link"></i>
+                <div><strong id="npa-aggr-banner-title">Processo Agregado</strong><div id="npa-aggr-banner-text" style="color:rgba(253,230,138,.75);font-size:12px;"></div></div>
+            </div>
+
+            <input type="hidden" id="edit-demanda-id">
+            <input type="hidden" id="edit-npa-id">
+
+            <!-- Informações Gerais (Leitura) -->
+            <p class="form-section-title"><i class="fa fa-file-invoice"></i> Dados Gerais da Demanda</p>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Solicitante</div>
+                    <div class="info-val" id="info-solicitante">—</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Tipo Solicitação</div>
+                    <div class="info-val" id="info-tipo">—</div>
+                </div>
+                <div class="info-item full-width">
+                    <div class="info-label">Bairro / Regional</div>
+                    <div class="info-val" id="info-bairro-reg">—</div>
+                </div>
+                <div class="info-item full-width">
+                    <div class="info-label">Endereço Técnico (Trecho / Cruzamento)</div>
+                    <div class="info-val" id="info-endereco-detalhado" style="color: var(--amc-primary); font-weight: 600;">—</div>
+                </div>
+            </div>
+
+            <!-- Dados Específicos NPA (Editáveis) -->
+            <form id="npa-form" onsubmit="saveNpaForm(event)">
+                <!-- Latitude e Longitude (Editáveis no NPA) -->
+                <div class="info-grid" style="margin-bottom: 1.25rem;">
+                    <div class="form-group">
+                        <label for="npa_latitude" class="form-label">Latitude</label>
+                        <input type="number" id="npa_latitude" class="form-input" step="any" placeholder="Ex: -3.7319" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="npa_longitude" class="form-label">Longitude</label>
+                        <input type="number" id="npa_longitude" class="form-input" step="any" placeholder="Ex: -38.5267" disabled>
+                    </div>
+                </div>
+
+                <!-- Status NPA (Botões de Seleção) -->
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label class="form-label">Status NPA</label>
+                    <div id="status-npa-buttons" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="btn-status-toggle" data-status="Recebido" disabled>Recebido</button>
+                        <button type="button" class="btn-status-toggle" data-status="Em Análise" disabled>Em Análise</button>
+                        <button type="button" class="btn-status-toggle" data-status="Deferido" disabled>Deferido</button>
+                        <button type="button" class="btn-status-toggle" data-status="Indeferido" disabled>Indeferido</button>
+                        <button type="button" class="btn-status-toggle" data-status="Concluído" disabled>Concluído</button>
+                    </div>
+                    <input type="hidden" id="status_npa" value="Aguardando Recebimento">
+                </div>
+
+                <div class="form-group" style="margin-top: 0.5rem;">
+                    <label for="tipo_localizacao" class="form-label">Tipo de Localização</label>
+                    <select id="tipo_localizacao" class="form-input" style="background:#0A0A0C;" onchange="toggleLocalizacaoInputs()" disabled>
+                        <option value="">Não definido</option>
+                        <option value="Cruzamento">Cruzamento</option>
+                        <option value="Trecho">Trecho</option>
+                    </select>
+                </div>
+
+                <!-- Campo de Cruzamento (Rua Cruzamento) -->
+                <div id="fields-cruzamento" style="display: none; margin-bottom: 1.25rem;">
+                    <div class="form-group" style="position: relative; margin-bottom: 0;">
+                        <label for="rua_cruzamento" class="form-label">Rua Cruzamento</label>
+                        <input type="text" id="rua_cruzamento" class="form-input rua-autocomplete" placeholder="Nome da rua de cruzamento" autocomplete="off" disabled>
+                        <div class="autocomplete-suggestions street-suggestions" id="sugg-rua-cruzamento" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                    </div>
+                </div>
+
+                <!-- Campos de Trecho (Limite A e Limite B) -->
+                <div id="fields-trecho" style="display: none; margin-bottom: 1.25rem;">
+                    <div class="info-grid" style="margin-bottom: 0;">
+                        <div class="form-group" style="position: relative; margin-bottom: 0;">
+                            <label for="rua_limite_a" class="form-label">Entre (Limite A)</label>
+                            <input type="text" id="rua_limite_a" class="form-input rua-autocomplete" placeholder="Primeira rua limite" autocomplete="off" disabled>
+                            <div class="autocomplete-suggestions street-suggestions" id="sugg-rua-limite-a" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                        </div>
+                        <div class="form-group" style="position: relative; margin-bottom: 0;">
+                            <label for="rua_limite_b" class="form-label">E (Limite B)</label>
+                            <input type="text" id="rua_limite_b" class="form-input rua-autocomplete" placeholder="Segunda rua limite" autocomplete="off" disabled>
+                            <div class="autocomplete-suggestions street-suggestions" id="sugg-rua-limite-b" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); border-radius: 0.75rem; max-height: 150px; overflow-y: auto; z-index: 1100;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dados Específicos NPA (Editáveis) -->
+                <p class="form-section-title"><i class="fa fa-brain"></i> Análise Técnica (NPA)</p>
+                
+                <div class="form-group">
+                    <label for="ano_processo" class="form-label">Ano do Processo</label>
+                    <input type="number" id="ano_processo" class="form-input" placeholder="Ex: 2026" required disabled>
+                </div>
+
+                <div class="form-group">
+                    <label for="tecnico_responsavel" class="form-label">Técnico Responsável</label>
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <select id="tecnico_responsavel" class="form-input" style="flex: 1; background: #0A0A0C;" disabled required>
+                            <option value="">Selecione...</option>
+                        </select>
+                        <button type="button" id="btn-add-tecnico" class="btn-amc btn-outline-amc" style="padding: 0 14px; width: auto; height: 42px; border-radius: 8px; flex-shrink: 0;" onclick="adicionarNovoTecnico()" disabled>
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="form-group">
+                        <label for="data_inicial" class="form-label">Data Inicial</label>
+                        <input type="date" id="data_inicial" class="form-input" onchange="calculateResponseTime()" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="data_conclusao" class="form-label">Data de Conclusão</label>
+                        <input type="date" id="data_conclusao" class="form-input" onchange="calculateResponseTime()" disabled>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="form-group">
+                        <label class="form-label">Tempo de Resposta</label>
+                        <input type="text" id="tempo_resposta" class="form-input" style="border:none; background:transparent; padding-left:0; font-weight:700; color:var(--amc-npa);" readonly disabled value="—">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tempo_medida_mitigadora" class="form-label">Prazo para Medida Mitigadora</label>
+                    <input type="text" id="tempo_medida_mitigadora" class="form-input" placeholder="Ex: 30 dias" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label for="observacoes" class="form-label">Observações</label>
+                    <textarea id="observacoes" class="form-input" style="height: 70px; resize: vertical;" placeholder="Notas técnicas e observações de campo" disabled></textarea>
+                </div>
+
+                <!-- Documentação Técnica (NPA) -->
+                <p class="form-section-title" style="margin-top: 1.5rem;"><i class="fa fa-file-pdf"></i> Documentação Técnica</p>
+
+                <!-- Parecer Técnico (NPA) -->
+                <div class="form-group">
+                    <label class="form-label">Parecer Técnico Final AMC (PDF)</label>
+                    <div class="upload-zone disabled" id="zone-parecer" onclick="document.getElementById('file-parecer').click()">
+                        <input type="file" id="file-parecer" accept="application/pdf" onchange="uploadDocument(this, 'parecer')">
+                        <div class="upload-icon"><i class="fa fa-stamp"></i></div>
+                        <div class="upload-text">Clique ou arraste para <strong>anexar o Parecer AMC</strong></div>
+                        <div class="upload-text" style="font-size:10px;margin-top:2px;">Apenas PDF • Máx. 50MB</div>
+                        <div class="upload-progress" id="prog-parecer"><div class="upload-progress-fill" id="prog-parecer-fill"></div></div>
+                    </div>
+                    <div id="parecer-link-row" style="display:none;">
+                        <div class="doc-link-row">
+                            <a id="parecer-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i><span>Ver Parecer Técnico AMC</span></a>
+                            <button type="button" class="btn-danger" style="display:none;" onclick="removeDoc('parecer')"><i class="fa fa-trash"></i> Remover</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="npa-url-parecer">
+                </div>
+
+                <div class="form-group" style="margin-top: 1rem; margin-bottom: 1rem;">
+                    <label for="numero_parecer" class="form-label">Número do Parecer</label>
+                    <input type="text" id="numero_parecer" class="form-input" placeholder="Ex: PAR 043/2026" disabled>
+                </div>
+
+                <!-- Projeto NPA (PDF, Nome, Número) -->
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label class="form-label">Projeto NPA (PDF)</label>
+                    <div class="upload-zone disabled" id="zone-projeto" onclick="document.getElementById('file-projeto').click()">
+                        <input type="file" id="file-projeto" accept="application/pdf" onchange="uploadDocument(this, 'projeto')">
+                        <div class="upload-icon"><i class="fa fa-file-invoice"></i></div>
+                        <div class="upload-text">Clique ou arraste para <strong>anexar o Projeto NPA</strong></div>
+                        <div class="upload-text" style="font-size:10px;margin-top:2px;">Apenas PDF • Máx. 50MB</div>
+                        <div class="upload-progress" id="prog-projeto"><div class="upload-progress-fill" id="prog-projeto-fill"></div></div>
+                    </div>
+                    <div id="projeto-link-row" style="display:none;">
+                        <div class="doc-link-row">
+                            <a id="projeto-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i><span>Ver Projeto NPA anexado</span></a>
+                            <button type="button" class="btn-danger" style="display:none;" onclick="removeDoc('projeto')"><i class="fa fa-trash"></i> Remover</button>
+                        </div>
+                    </div>
+                    <input type="hidden" id="npa-url-projeto">
+                </div>
+
+                <div class="info-grid" style="margin-top: 0.5rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label for="projeto_npa_nome" class="form-label">Nome do Projeto NPA</label>
+                        <input type="text" id="projeto_npa_nome" class="form-input" placeholder="Ex: Projeto de Geometria Aldeota" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="projeto_npa_numero" class="form-label">Número do Projeto NPA</label>
+                        <input type="text" id="projeto_npa_numero" class="form-input" placeholder="Ex: PRJ-NPA-123/2026" disabled>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+        <div class="drawer-footer" id="drawer-actions">
+            <!-- Renderizado dinamicamente com base no estado do drawer (Leitura/Edição) -->
+            <button class="btn-action btn-edit-mode" onclick="enableEditMode()" id="btn-edit-trigger">
+                <i class="fa fa-pencil"></i> Editar Análise
+            </button>
+        </div>
+    </div>
+</div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i id="toast-icon" class="fa fa-lg"></i>
+        <div>
+            <strong id="toast-title" style="display: block; font-size: 14px; margin-bottom: 2px; color: #fff;"></strong>
+            <span id="toast-message" style="font-size: 13px; color: var(--amc-text-muted);"></span>
+        </div>
+    </div>
+
+    <script>
+        // Supabase já inicializado pelo auth.js
+        let demandsData = [];
+        let bairrosData = [];
+        let currentUser = null;
+        let currentUserProfile = null;
+        let isEditMode = false;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            await fetchTiposSolicitacao();
+            await checkSession();
+            await fetchDemands();
+            await fetchBairros();
+            await fetchTechnicians();
+            setupAutocomplete();
+            setupCpfCnpjAutocomplete();
+            setupStatusNpaButtons();
+            // Autocompletes do Drawer de Edição
+            setupStreetAutocomplete('rua_cruzamento', 'sugg-rua-cruzamento');
+            setupStreetAutocomplete('rua_limite_a', 'sugg-rua-limite-a');
+            setupStreetAutocomplete('rua_limite_b', 'sugg-rua-limite-b');
+            
+            // Autocompletes do Modal de Criação
+            setupStreetAutocomplete('new_rua_principal', 'new_sugg_rua_principal', 'new_id_rua');
+            setupStreetAutocomplete('new_rua_cruzamento', 'new_sugg_rua_cruzamento');
+            setupStreetAutocomplete('new_rua_limite_a', 'new_sugg_rua_limite_a');
+            setupStreetAutocomplete('new_rua_limite_b', 'new_sugg_rua_limite_b');
+        });
+
+        // Monitor de Autenticação
+        async function checkSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                await loadUserProfile(currentUser.id);
+                showLoggedState();
+            } else {
+                showUnloggedState();
+            }
+        }
+
+        async function loadUserProfile(userId) {
+            const { data, error } = await supabase
+                .from('perfis_usuarios')
+                .select('*')
+                .eq('id', userId)
+                .single();
+            
+            if (data) {
+                const mappedRole = data.nivel_acesso === 'admin' ? 'Gerência' : (data.nivel_acesso === 'diretor' ? 'Diretoria' : (data.nivel_acesso === 'coordenador' ? 'Gerência' : 'Técnico'));
+                currentUserProfile = { ...data, role: mappedRole };
+                updateRoleBadge(mappedRole);
+                const roleSel = document.getElementById('role-selector');
+                if (roleSel) roleSel.value = mappedRole;
+
+                // Exibe botão de adicionar tipo se o usuário for do núcleo técnico autorizado
+                const nucleosAutorizados = ['NPA', 'NPE', 'NCO', 'NCE', 'NPO', 'NGC'];
+                const btnAddTipo = document.getElementById('btn-add-tipo');
+                if (btnAddTipo) {
+                    if (nucleosAutorizados.includes(data.nucleo_lotacao)) {
+                        btnAddTipo.style.display = 'inline-flex';
+                    } else {
+                        btnAddTipo.style.display = 'none';
+                    }
+                }
+            } else {
+                updateRoleBadge("Erro Perfil");
+            }
+        }
+
+        function updateRoleBadge(role) {
+            const badge = document.getElementById('role-badge');
+            let color = 'var(--amc-text-muted)';
+            let icon = 'fa-user';
+            
+            if (role === 'Diretoria' || role === 'Gerência') {
+                color = 'var(--amc-secondary)';
+                icon = 'fa-user-shield';
+            } else if (role === 'Técnico') {
+                color = 'var(--amc-npa)';
+                icon = 'fa-user-gear';
+            }
+
+            badge.style.border = `1px solid ${color}`;
+            badge.style.color = color;
+            badge.innerHTML = `<i class="fa ${icon}"></i> <span>Operador: ${role}</span>`;
+        }
+
+        function showLoggedState() {
+            document.getElementById('auth-unlogged').style.display = 'none';
+            document.getElementById('auth-logged').style.display = 'block';
+            document.getElementById('logged-email').innerText = currentUser.email;
+        }
+
+        function showUnloggedState() {
+            document.getElementById('auth-unlogged').style.display = 'block';
+            document.getElementById('auth-logged').style.display = 'none';
+            const badge = document.getElementById('role-badge');
+            badge.style.border = '1px solid #ef4444';
+            badge.style.color = '#ef4444';
+            badge.innerHTML = `<i class="fa fa-exclamation-triangle"></i> <span>Acesso Restrito (Faça Login)</span>`;
+
+            // Oculta botão de adicionar tipo
+            const btnAddTipo = document.getElementById('btn-add-tipo');
+            if (btnAddTipo) btnAddTipo.style.display = 'none';
+        }
+
+        async function simulateQuickLogin() {
+            const testEmail = `teste@amc.fortaleza.ce.gov.br`;
+            const testPassword = 'SenhaTeste123!';
+
+            showToast('Aguarde', 'Autenticando usuário de teste...', 'info');
+
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: testEmail,
+                password: testPassword
+            });
+
+            if (error) {
+                showToast('Erro', 'Falha ao autenticar: ' + error.message, 'error');
+                return;
+            }
+
+            currentUser = data.user;
+            await checkSession();
+            showToast('Conectado', 'Técnico NPA autenticado com sucesso!', 'success');
+            await fetchDemands();
+        }
+
+        async function login() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return;
+
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                showToast('Erro de Login', error.message, 'error');
+            } else {
+                currentUser = data.user;
+                await checkSession();
+                showToast('Conectado', 'Acesso autorizado.', 'success');
+                await fetchDemands();
+            }
+        }
+
+        async function register() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return;
+
+            const { error } = await supabase.auth.signUp({ email, password });
+            if (error) {
+                showToast('Erro de Registro', error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Verifique seu e-mail para confirmação.', 'success');
+            }
+        }
+
+        async function logout() {
+            await realizarLogout();
+        }
+
+        async function changeRole(newRole) {
+            if (!currentUser) return;
+            const accessLevel = newRole === 'Diretoria' ? 'diretor' : (newRole === 'Gerência' ? 'admin' : 'operacional');
+            const { error } = await supabase
+                .from('perfis_usuarios')
+                .update({ nivel_acesso: accessLevel })
+                .eq('id', currentUser.id);
+
+            if (error) {
+                showToast('Erro RLS', 'Erro: ' + error.message, 'error');
+            } else {
+                await loadUserProfile(currentUser.id);
+                showToast('Role Alterada', `Perfil alterado para: ${newRole}`, 'success');
+                await fetchDemands();
+            }
+        }
+
+        // Buscar Demandas no Banco
+        async function fetchDemands() {
+            const { data, error } = await supabase
+                .from('demandas_pai')
+                .select(`
+                    id,
+                    protocolo_oficial,
+                    solicitante_oficial,
+                    tipo_solicitacao,
+                    prioridade_diretoria,
+                    prioridade_nome,
+                    latitude,
+                    longitude,
+                    id_bairro,
+                    id_rua,
+                    endereco,
+                    nucleos_atribuidos,
+                    id_demanda_principal,
+                    ruas_fortaleza (
+                        nome
+                    ),
+                    cat_bairros (
+                        nome_bairro,
+                        cat_regionais (
+                            nome_regional
+                        )
+                    ),
+                    analise_npa (
+                        id,
+                        status_npa,
+                        tecnico_responsavel,
+                        ano_processo,
+                        data_inicial,
+                        data_conclusao,
+                        numero_parecer,
+                        tempo_medida_mitigadora,
+                        observacoes,
+                        tipo_localizacao,
+                        rua_principal,
+                        rua_cruzamento,
+                        rua_limite_a,
+                        rua_limite_b,
+                        url_parecer_pdf,
+                        url_projeto_pdf,
+                        projeto_npa_nome,
+                        projeto_npa_numero
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Erro ao buscar demandas:", error);
+                if (currentUser) {
+                    showToast('Erro Banco', 'Erro ao carregar dados: ' + error.message, 'error');
+                }
+                renderTable([]);
+            } else {
+                demandsData = data;
+                renderTable(data);
+            }
+        }
+
+        // Renderizar Tabela
+        function renderTable(demands) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            if (demands.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Nenhuma demanda localizada.</td></tr>`;
+                return;
+            }
+
+            demands.forEach(demand => {
+                let npa = null;
+                if (demand.analise_npa) {
+                    npa = Array.isArray(demand.analise_npa) ? demand.analise_npa[0] : demand.analise_npa;
+                }
+                
+                // Determina status do NPA
+                const statusNpa = npa ? (npa.status_npa || 'Aguardando Recebimento') : 'Aguardando Recebimento';
+                let statusClass = 'status-aguardando';
+                let statusText = statusNpa;
+                if (statusNpa === 'Recebido') {
+                    statusClass = 'status-recebido';
+                } else if (statusNpa === 'Em Análise') {
+                    statusClass = 'status-analise';
+                } else if (statusNpa === 'Deferido') {
+                    statusClass = 'status-deferido';
+                } else if (statusNpa === 'Indeferido') {
+                    statusClass = 'status-indeferido';
+                } else if (statusNpa === 'Concluído') {
+                    statusClass = 'status-concluido';
+                }
+
+                // Determina ano
+                const ano = npa?.ano_processo || '—';
+
+                // Bairro / Regional
+                const bairro = demand.cat_bairros?.nome_bairro || 'Sem bairro';
+                const regional = demand.cat_bairros?.cat_regionais?.nome_regional || '—';
+                
+                // Endereço formatado (NPA) ou Geral
+                const ruaDemanda = demand.ruas_fortaleza?.nome || '';
+                let endereco = demand.endereco ? demand.endereco : `${bairro} (Reg. ${regional})`;
+                if (!demand.endereco && ruaDemanda) {
+                    endereco = `${ruaDemanda} — ${bairro}`;
+                }
+
+                if (npa) {
+                    if (npa.tipo_localizacao === 'Cruzamento' && npa.rua_cruzamento) {
+                        endereco = `${ruaDemanda || 'Rua não identificada'} esq. ${npa.rua_cruzamento} (${bairro})`;
+                    } else if (npa.tipo_localizacao === 'Trecho' && npa.rua_limite_a && npa.rua_limite_b) {
+                        endereco = `${ruaDemanda || 'Rua não identificada'} (entre ${npa.rua_limite_a} e ${npa.rua_limite_b}) (${bairro})`;
+                    }
+                }
+
+                const nucleos = demand.nucleos_atribuidos ? demand.nucleos_atribuidos : [];
+                let nucleosBadges = '';
+                if (nucleos.length > 0) {
+                    nucleosBadges = nucleos.map(n => `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(248, 183, 0, 0.15); color: var(--amc-primary); border: 1px solid rgba(248, 183, 0, 0.3); font-weight: bold; border-radius: 4px;">${n}</span>`).join('');
+                } else {
+                    nucleosBadges = `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(255,255,255,0.05); color: var(--amc-text-muted); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">NPO (Legado)</span>`;
+                }
+
+                // Prioridade
+                const prioridade = demand.prioridade_diretoria 
+                    ? `<i class="fa fa-triangle-exclamation priority-indicator" title="Prioridade Institucional"></i> ` 
+                    : '';
+
+                const tr = document.createElement('tr');
+                tr.className = demand.prioridade_diretoria === true ? 'priority-row' : '';
+                tr.setAttribute('onclick', `openDrawer('${demand.id}')`);
+                tr.innerHTML = `
+                    <td style="font-family:'Oswald',sans-serif;font-weight:400; display:flex; align-items:center; gap:6px;">
+                        ${demand.prioridade_diretoria === true ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Prioridade: ${demand.prioridade_nome || 'Sim'}"></i>` : ''}
+                        ${demand.protocolo_oficial || 'PROT-GERADO'}
+                        ${demand.id_demanda_principal ? `<span class="badge-aggr" title="Processo Agregado">A</span>` : ''}
+                    </td>
+                    <td>${ano}</td>
+                    <td>${demand.tipo_solicitacao}</td>
+                    <td>${endereco}</td>
+                    <td><div style="display:flex; flex-wrap:wrap; gap:2px;">${nucleosBadges}</div></td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Lógica do Drawer (Painel Lateral) ---
+        function openDrawer(id) {
+            const demand = demandsData.find(d => d.id === id);
+            if (!demand) return;
+
+            document.getElementById('npa-priority-banner').style.display = 'none';
+            isEditMode = false;
+            
+            let npa = null;
+            if (demand.analise_npa) {
+                npa = Array.isArray(demand.analise_npa) ? demand.analise_npa[0] : demand.analise_npa;
+            }
+
+            // Injeta IDs nos campos ocultos
+            document.getElementById('edit-demanda-id').value = demand.id;
+            document.getElementById('edit-npa-id').value = npa?.id || '';
+
+            if (demand.prioridade_diretoria === true) {
+                const banner = document.getElementById('npa-priority-banner');
+                banner.innerHTML = `
+                    <div class="priority-banner" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                        <i class="fa fa-triangle-exclamation" style="font-size: 14px;"></i>
+                        <span><strong>Prioridade Institucional da Diretoria:</strong> Sim</span>
+                    </div>
+                `;
+                banner.style.display = 'block';
+            }
+            // Banner de Agregação
+            const aggrBnpa = document.getElementById('npa-aggr-banner');
+            if (aggrBnpa) aggrBnpa.style.display = 'none';
+            if (demand.id_demanda_principal) {
+                supabase.from('demandas_pai').select('protocolo_oficial').eq('id', demand.id_demanda_principal).single().then(({ data: pd }) => { if (pd && aggrBnpa) { document.getElementById('npa-aggr-banner-title').textContent = 'Este processo está agregado ao seguinte processo:'; document.getElementById('npa-aggr-banner-text').innerHTML = `<strong style="color:#fde68a;">${pd.protocolo_oficial}</strong><br><span style="font-size:11px;">O status deve ser gerenciado manualmente.</span>`; aggrBnpa.style.display = 'flex'; } });
+            }
+            supabase.from('demandas_pai').select('protocolo_oficial').eq('id_demanda_principal', demand.id).then(({ data: fd }) => { if (fd && fd.length > 0 && aggrBnpa && aggrBnpa.style.display === 'none') { document.getElementById('npa-aggr-banner-title').textContent = 'Processos agregados a este:'; document.getElementById('npa-aggr-banner-text').innerHTML = fd.map(f => `<strong style="color:#fde68a;">${f.protocolo_oficial}</strong>`).join(', ') + '<br><span style="font-size:11px;">Verifique e atualize os status manualmente.</span>'; aggrBnpa.style.display = 'flex'; } });
+
+            // Btn Verificar no Local
+            let btnVNpa = document.getElementById('btn-verify-local');
+            if (!btnVNpa) { btnVNpa = document.createElement('button'); btnVNpa.id = 'btn-verify-local'; btnVNpa.innerHTML = '<i class="fa fa-magnifying-glass-location"></i> Verificar no Local'; const mh = document.querySelector('#drawer-overlay .drawer-header > div'); if (mh) mh.appendChild(btnVNpa); }
+            const ruaNpa = demand.ruas_fortaleza ? demand.ruas_fortaleza.nome : ''; const bairroNpa = demand.cat_bairros ? demand.cat_bairros.nome_bairro : '';
+            btnVNpa.onclick = () => openAggrModal(demand.id, demand.protocolo_oficial, bairroNpa, demand.endereco || ruaNpa, demand.cat_bairros && demand.cat_bairros.cat_regionais ? demand.cat_bairros.cat_regionais.nome_regional : '');
+            btnVNpa.style.display = 'inline-flex';
+
+            document.getElementById('drawer-protocol').innerText = `Processo: ${demand.protocolo_oficial || 'N/A'}`;
+            document.getElementById('info-solicitante').innerText = demand.solicitante_oficial || '—';
+            document.getElementById('info-tipo').innerText = demand.tipo_solicitacao || '—';
+            
+            document.getElementById('npa_latitude').value = demand.latitude || '';
+            document.getElementById('npa_longitude').value = demand.longitude || '';
+
+            const ruaDemanda = demand.ruas_fortaleza?.nome || '';
+            const bairro = demand.cat_bairros?.nome_bairro || '';
+            let enderecoFormatado = demand.endereco || (ruaDemanda ? `${ruaDemanda} — ${bairro}` : 'Não identificado');
+            if (npa) {
+                if (npa.tipo_localizacao === 'Cruzamento' && npa.rua_cruzamento) {
+                    enderecoFormatado = `${ruaDemanda || 'Rua não identificada'} esq. ${npa.rua_cruzamento} (${bairro})`;
+                } else if (npa.tipo_localizacao === 'Trecho' && npa.rua_limite_a && npa.rua_limite_b) {
+                    enderecoFormatado = `${ruaDemanda || 'Rua não identificada'} (entre ${npa.rua_limite_a} e ${npa.rua_limite_b}) (${bairro})`;
+                }
+            }
+            document.getElementById('info-endereco-detalhado').innerText = enderecoFormatado;
+
+            const badge = document.getElementById('drawer-status-badge');
+            badge.className = 'status-badge';
+            const statusNpa = npa ? (npa.status_npa || 'Aguardando Recebimento') : 'Aguardando Recebimento';
+            let badgeClass = 'status-aguardando';
+            if (statusNpa === 'Recebido') badgeClass = 'status-recebido';
+            else if (statusNpa === 'Em Análise') badgeClass = 'status-analise';
+            else if (statusNpa === 'Deferido') badgeClass = 'status-deferido';
+            else if (statusNpa === 'Indeferido') badgeClass = 'status-indeferido';
+            else if (statusNpa === 'Concluído') badgeClass = 'status-concluido';
+            
+            badge.classList.add(badgeClass);
+            badge.innerText = statusNpa;
+
+            if (statusNpa === 'Aguardando Recebimento' && npa) {
+                supabase.from('analise_npa')
+                    .update({ status_npa: 'Recebido' })
+                    .eq('id', npa.id)
+                    .then(({ error }) => {
+                        if (!error) {
+                            npa.status_npa = 'Recebido';
+                            badge.className = 'status-badge status-recebido';
+                            badge.innerText = 'Recebido';
+                            selectStatusNpaButton('Recebido');
+                            fetchDemands();
+                        }
+                    });
+            } else {
+                selectStatusNpaButton(statusNpa);
+            }
+
+            populateTechnicianSelect(npa?.tecnico_responsavel || '');
+            document.getElementById('ano_processo').value = npa?.ano_processo || '';
+            document.getElementById('data_inicial').value = npa?.data_inicial ? npa.data_inicial.substring(0,10) : '';
+            document.getElementById('data_conclusao').value = npa?.data_conclusao ? npa.data_conclusao.substring(0,10) : '';
+            document.getElementById('numero_parecer').value = npa?.numero_parecer || '';
+            document.getElementById('tempo_medida_mitigadora').value = npa?.tempo_medida_mitigadora || '';
+            document.getElementById('observacoes').value = npa?.observacoes || '';
+
+            document.getElementById('tipo_localizacao').value = npa?.tipo_localizacao || '';
+            toggleLocalizacaoInputs();
+
+            document.getElementById('rua_cruzamento').value = npa?.rua_cruzamento || '';
+            document.getElementById('rua_limite_a').value = npa?.rua_limite_a || '';
+            document.getElementById('rua_limite_b').value = npa?.rua_limite_b || '';
+
+            document.getElementById('npa-url-parecer').value = npa?.parecer_npa || npa?.url_parecer_pdf || '';
+            document.getElementById('npa-url-projeto').value = npa?.projeto_npa || npa?.url_projeto_pdf || '';
+            document.getElementById('projeto_npa_nome').value = npa?.projeto_npa_titulo || npa?.projeto_npa_nome || '';
+            document.getElementById('projeto_npa_numero').value = npa?.projeto_npa_numero || '';
+
+            hideDocRow('parecer', false);
+            hideDocRow('projeto', false);
+
+            const urlParecerVal = npa?.parecer_npa || npa?.url_parecer_pdf;
+            const urlProjetoVal = npa?.projeto_npa || npa?.url_projeto_pdf;
+            if (urlParecerVal) {
+                showDocRow('parecer', urlParecerVal, false);
+            }
+            if (urlProjetoVal) {
+                showDocRow('projeto', urlProjetoVal, false);
+            }
+
+            calculateResponseTime();
+
+            disableInputs();
+            document.getElementById('drawer-overlay').style.display = 'flex';
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawer-overlay').style.display = 'none';
+            isEditMode = false;
+        }
+
+        function disableInputs() {
+            const inputs = document.querySelectorAll('#npa-form .form-input');
+            inputs.forEach(i => {
+                i.setAttribute('disabled', 'true');
+            });
+            document.querySelectorAll('#npa-form .upload-zone').forEach(z => {
+                z.classList.add('disabled');
+            });
+            document.querySelectorAll('#npa-form .doc-link-row .btn-danger').forEach(b => {
+                b.style.display = 'none';
+            });
+            document.querySelectorAll('.btn-status-toggle').forEach(b => {
+                b.setAttribute('disabled', 'true');
+            });
+            const btnAddTecnico = document.getElementById('btn-add-tecnico');
+            if (btnAddTecnico) btnAddTecnico.setAttribute('disabled', 'true');
+            renderDrawerActions();
+        }
+
+        function enableInputs() {
+            if (!currentUserProfile || (currentUserProfile.nucleo_lotacao !== 'NPA' && currentUserProfile.nivel_acesso !== 'admin' && currentUserProfile.nivel_acesso !== 'diretor')) {
+                showToast('Erro RLS', 'Você não tem permissão para editar dados do NPA.', 'error');
+                return;
+            }
+
+            const inputs = document.querySelectorAll('#npa-form .form-input');
+            inputs.forEach(i => {
+                i.removeAttribute('disabled');
+            });
+            document.querySelectorAll('#npa-form .upload-zone').forEach(z => {
+                z.classList.remove('disabled');
+            });
+            document.querySelectorAll('#npa-form .doc-link-row .btn-danger').forEach(b => {
+                b.style.display = 'inline-flex';
+            });
+            document.querySelectorAll('.btn-status-toggle').forEach(b => {
+                b.removeAttribute('disabled');
+            });
+            const btnAddTecnico = document.getElementById('btn-add-tecnico');
+            if (btnAddTecnico) btnAddTecnico.removeAttribute('disabled');
+            renderDrawerActions();
+        }
+
+        function renderDrawerActions() {
+            const footer = document.getElementById('drawer-actions');
+            if (isEditMode) {
+                footer.innerHTML = `
+                    <button class="btn-action btn-cancel" onclick="cancelEditMode()">
+                        <i class="fa fa-times"></i> Cancelar
+                    </button>
+                    <button class="btn-action btn-save" onclick="saveNpaFormReal()">
+                        <i class="fa fa-floppy-disk"></i> Salvar
+                    </button>
+                `;
+            } else {
+                footer.innerHTML = `
+                    <button class="btn-action btn-edit-mode" onclick="enableEditMode()" id="btn-edit-trigger">
+                        <i class="fa fa-pencil"></i> Editar Análise
+                    </button>
+                `;
+            }
+        }
+
+        function enableEditMode() {
+            isEditMode = true;
+            enableInputs();
+        }
+
+        function cancelEditMode() {
+            isEditMode = false;
+            const demandaId = document.getElementById('edit-demanda-id').value;
+            openDrawer(demandaId);
+        }
+
+        function calculateResponseTime() {
+            const dataIniVal = document.getElementById('data_inicial').value;
+            const dataFimVal = document.getElementById('data_conclusao').value;
+            const respField = document.getElementById('tempo_resposta');
+
+            if (!dataIniVal) {
+                respField.value = '—';
+                return;
+            }
+
+            const ini = new Date(dataIniVal);
+            const fim = dataFimVal ? new Date(dataFimVal) : new Date();
+
+            const diffTime = Math.abs(fim - ini);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            respField.value = `${diffDays} dia(s)`;
+        }
+
+        function saveNpaForm(e) {
+            e.preventDefault();
+            saveNpaFormReal();
+        }
+
+        async function saveNpaFormReal() {
+            const demandaId = document.getElementById('edit-demanda-id').value;
+            const npaId = document.getElementById('edit-npa-id').value;
+
+            const ano = parseInt(document.getElementById('ano_processo').value) || null;
+            const tecnico = document.getElementById('tecnico_responsavel').value.trim();
+            const dataIni = document.getElementById('data_inicial').value || null;
+            const dataFim = document.getElementById('data_conclusao').value || null;
+            const parecer = document.getElementById('numero_parecer').value.trim();
+            const mitigadora = document.getElementById('tempo_medida_mitigadora').value.trim();
+            const obs = document.getElementById('observacoes').value.trim();
+
+            const tipoLoc = document.getElementById('tipo_localizacao').value || null;
+            const demand = demandsData.find(d => d.id === demandaId);
+            const ruaPri = demand?.ruas_fortaleza?.nome || null;
+            let ruaCruz = null;
+            let ruaLimA = null;
+            let ruaLimB = null;
+
+            if (tipoLoc === 'Cruzamento') {
+                ruaCruz = document.getElementById('rua_cruzamento').value.trim() || null;
+            } else if (tipoLoc === 'Trecho') {
+                ruaLimA = document.getElementById('rua_limite_a').value.trim() || null;
+                ruaLimB = document.getElementById('rua_limite_b').value.trim() || null;
+            }
+
+            const urlParecer = document.getElementById('npa-url-parecer').value || null;
+            const urlProjeto = document.getElementById('npa-url-projeto').value || null;
+            const projetoNome = document.getElementById('projeto_npa_nome').value.trim() || null;
+            const projetoNumero = document.getElementById('projeto_npa_numero').value.trim() || null;
+
+            const lat = parseFloat(document.getElementById('npa_latitude').value) || null;
+            const lng = parseFloat(document.getElementById('npa_longitude').value) || null;
+            const statusNpa = document.getElementById('status_npa').value;
+
+            showToast('Aguarde', 'Salvando dados no banco de dados...', 'info');
+
+            const { error: errDem } = await supabase
+                .from('demandas_pai')
+                .update({ latitude: lat, longitude: lng })
+                .eq('id', demandaId);
+            
+            if (errDem) {
+                showToast('Erro Banco', 'Não foi possível salvar coordenadas: ' + errDem.message, 'error');
+                return;
+            }
+
+            const payload = {
+                id_demanda_pai: demandaId,
+                tecnico_responsavel: tecnico || null,
+                status_npa: statusNpa,
+                ano_processo: ano,
+                data_inicial: dataIni,
+                data_conclusao: dataFim,
+                numero_parecer: parecer || null,
+                tempo_medida_mitigadora: mitigadora || null,
+                observacoes: obs || null,
+                tipo_localizacao: tipoLoc,
+                rua_principal: ruaPri,
+                rua_cruzamento: ruaCruz,
+                rua_limite_a: ruaLimA,
+                rua_limite_b: ruaLimB,
+                url_parecer_pdf: urlParecer,
+                url_projeto_pdf: urlProjeto,
+                projeto_npa_nome: projetoNome,
+                projeto_npa_numero: projetoNumero,
+                parecer_npa: urlParecer,
+                projeto_npa: urlProjeto,
+                projeto_npa_titulo: projetoNome,
+                projeto_npa_numero: projetoNumero
+            };
+
+            if (npaId) {
+                payload.id = npaId;
+            }
+
+            const { error } = await supabase
+                .from('analise_npa')
+                .upsert(payload, { onConflict: 'id_demanda_pai' });
+
+            if (error) {
+                showToast('Erro Banco', 'Não foi possível salvar: ' + error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Análise técnica gravada com sucesso!', 'success');
+                isEditMode = false;
+                disableInputs();
+                await fetchDemands();
+                // Reabre o drawer para carregar a versão salva com o novo ID do registro se for inserção
+                openDrawer(demandaId);
+            }
+        }
+
+        // Aggregation
+        function toggleAggrFilter(field) {
+            const checkbox = document.getElementById(`aggr-use-${field}`);
+            const input = document.getElementById(`aggr-filter-${field}`);
+            if (checkbox && input) {
+                input.disabled = !checkbox.checked;
+            }
+        }
+
+        function openAggrModal(demandaId, protocolo, bairro, endereco, regional) {
+            document.getElementById('aggr-current-demanda-id').value = demandaId || '';
+            document.getElementById('aggr-current-protocolo').value = protocolo || '';
+            document.getElementById('aggr-modal-sub').textContent = `Processo atual: ${protocolo || '—'} · Pesquise outros processos que já contemplem este local.`;
+            
+            ['bairro', 'regional', 'endereco'].forEach(f => {
+                const cb = document.getElementById(`aggr-use-${f}`);
+                const inp = document.getElementById(`aggr-filter-${f}`);
+                if (cb) cb.checked = true;
+                if (inp) inp.disabled = false;
+            });
+
+            document.getElementById('aggr-filter-bairro').value = bairro || '';
+            document.getElementById('aggr-filter-regional').value = regional || '';
+            document.getElementById('aggr-filter-endereco').value = endereco || '';
+            document.getElementById('aggr-results-area').innerHTML = '<div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Ajuste os filtros e clique em Pesquisar.</div>';
+            document.getElementById('aggr-modal').classList.add('show');
+        }
+        function closeAggrModal() { document.getElementById('aggr-modal').classList.remove('show'); }
+        function escapeHtml(t) { if (!t) return ''; const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}; return t.replace(/[&<>"']/g,c=>m[c]); }
+        async function searchSimilarDemandas() {
+            const cId = document.getElementById('aggr-current-demanda-id').value;
+            const useBairro = document.getElementById('aggr-use-bairro').checked;
+            const useEndereco = document.getElementById('aggr-use-endereco').checked;
+            const useRegional = document.getElementById('aggr-use-regional').checked;
+
+            const bairro = document.getElementById('aggr-filter-bairro').value.trim();
+            const endereco = document.getElementById('aggr-filter-endereco').value.trim();
+            const regional = document.getElementById('aggr-filter-regional').value.trim();
+            document.getElementById('aggr-results-area').innerHTML = '<div class="aggr-empty"><i class="fa fa-spinner fa-spin" style="margin-right:6px;"></i>Buscando...</div>';
+            let q = supabase.from('demandas_pai').select(`id,protocolo_oficial,tipo_solicitacao,solicitante_oficial,endereco,nucleos_atribuidos,id_demanda_principal,cat_bairros(nome_bairro,cat_regionais(nome_regional)),ruas_fortaleza:id_rua(nome),projetos_npo!projetos_npo_id_demanda_pai_fkey(status_npo),execucao_nce!execucao_nce_id_demanda_pai_fkey(status_nce),execucao_nco!execucao_nco_id_demanda_pai_fkey(status_nco),projetos_npe!projetos_npe_id_demanda_pai_fkey(status_npe),analise_npa!analise_npa_id_demanda_pai_fkey(status_npa),projetos_ngc!projetos_ngc_id_demanda_pai_fkey(status_ngc)`);
+            if (useBairro && bairro) q = q.ilike('cat_bairros.nome_bairro', `%${bairro}%`);
+            if (useEndereco && endereco) q = q.or(`endereco.ilike.%${endereco}%,ruas_fortaleza.nome.ilike.%${endereco}%`);
+            const { data, error } = await q.order('created_at', { ascending: false }).limit(50);
+            if(error){document.getElementById('aggr-results-area').innerHTML=`<div class="aggr-empty" style="color:#f87171;">Erro:${escapeHtml(error.message)}</div>`;return;}
+            
+            let results = (data || []).filter(r => r.id !== cId);
+            if (useRegional && regional) {
+                results = results.filter(r => {
+                    const rReg = r.cat_bairros?.cat_regionais?.nome_regional || '';
+                    return rReg.toLowerCase().includes(regional.toLowerCase());
+                });
+            }
+            if(!results.length){document.getElementById('aggr-results-area').innerHTML='<div class="aggr-empty"><i class="fa fa-check-circle" style="color:#4ade80;margin-right:6px;"></i>Nenhum processo similar encontrado.</div>';return;}
+            let html=`<table id="aggr-results-table"><thead><tr><th>Processo</th><th>Endereço</th><th>Bairro</th><th>Solicitante</th><th>Núcleo/Status</th><th>Ação</th></tr></thead><tbody>`;
+            results.forEach(r=>{
+                const bn=r.cat_bairros?r.cat_bairros.nome_bairro:'—';
+                const en=r.endereco||(r.ruas_fortaleza?r.ruas_fortaleza.nome:'')||'—';
+                let sh='';
+                if(r.projetos_npo&&r.projetos_npo[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(248,183,0,.12);color:#f8b700;border-radius:4px;">NPO:${r.projetos_npo[0].status_npo}</span>`;
+                if(r.execucao_nce&&r.execucao_nce[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(167,139,250,.12);color:#a78bfa;border-radius:4px;">NCE:${r.execucao_nce[0].status_nce}</span>`;
+                if(r.execucao_nco&&r.execucao_nco[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(99,102,241,.12);color:#818cf8;border-radius:4px;">NCO:${r.execucao_nco[0].status_nco}</span>`;
+                if(r.projetos_npe&&r.projetos_npe[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(16,185,129,.12);color:#10b981;border-radius:4px;margin:1px;">NPE:${r.projetos_npe[0].status_npe}</span>`;
+                if(r.analise_npa&&r.analise_npa[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(59,130,246,.12);color:#3b82f6;border-radius:4px;margin:1px;">NPA:${r.analise_npa[0].status_npa}</span>`;
+                if(r.projetos_ngc&&r.projetos_ngc[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(236,72,153,.12);color:#ec4899;border-radius:4px;margin:1px;">NGC:${r.projetos_ngc[0].status_ngc}</span>`;
+                if(!sh)sh=`<span style="font-size:10px;color:var(--amc-text-muted);">${(r.nucleos_atribuidos||[]).join(', ')||'—'}</span>`;
+                const ab=r.id_demanda_principal?`<span class="badge-aggr" title="Já agregado">A</span>`:'';
+                html+=`<tr><td style="font-family:'Oswald',sans-serif;color:var(--amc-npa);">${escapeHtml(r.protocolo_oficial)}${ab}</td><td>${escapeHtml(en)}</td><td>${escapeHtml(bn)}</td><td>${escapeHtml(r.solicitante_oficial||'—')}</td><td><div style="display:flex;flex-wrap:wrap;gap:2px;">${sh}</div></td><td><button class="aggr-action-btn" onclick="confirmAggr('${cId}','${r.id}','${escapeHtml(r.protocolo_oficial)}')"><i class="fa fa-link"></i> Agregar</button></td></tr>`;
+            });
+            html+='</tbody></table>'; document.getElementById('aggr-results-area').innerHTML=html;
+        }
+        async function confirmAggr(idAtual,idPrincipal,protPrincipal){const protAtual=document.getElementById('aggr-current-protocolo').value;if(!confirm(`Confirma a agregação?\nO processo "${protAtual}" será vinculado ao processo "${protPrincipal}".\nO status não será alterado automaticamente.`))return;const{error}=await supabase.from('demandas_pai').update({id_demanda_principal:idPrincipal}).eq('id',idAtual);if(error){showToast('Erro','Falha ao agregar: '+error.message,'error');return;}showToast('Sucesso',`${protAtual} agregado a ${protPrincipal}!`,'success');closeAggrModal();await fetchDemands();}
+
+        // Toast de Feedback
+        function showToast(title, message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastTitle.innerText = title;
+            toastMessage.innerText = message;
+            
+            toast.className = 'toast show';
+            toastIcon.className = 'fa fa-lg';
+
+            if (type === 'success') {
+                toast.classList.add('toast-success');
+                toastIcon.classList.add('fa-check-circle');
+                toastIcon.style.color = '#10b981';
+            } else if (type === 'error') {
+                toast.classList.add('toast-error');
+                toastIcon.classList.add('fa-times-circle');
+                toastIcon.style.color = '#ef4444';
+            } else {
+                toast.classList.add('toast-info');
+                toastIcon.classList.add('fa-info-circle');
+                toastIcon.style.color = 'var(--amc-npa)';
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        const BUCKET = 'npa-documentos';
+
+        // ─── Upload de Documentos NPA ───
+        async function uploadDocument(input, tipo, isNewDemand = false) {
+            if (!input.files || !input.files[0]) return;
+            if (!currentUser) { showToast('Aviso', 'Faça login para fazer upload.', 'error'); return; }
+
+            const file = input.files[0];
+            if (file.size > 52428800) { showToast('Erro', 'Arquivo excede 50MB.', 'error'); return; }
+
+            const prefix = isNewDemand ? 'new_' : '';
+            const demandaId = isNewDemand ? 'temp_' + Date.now() : document.getElementById('edit-demanda-id').value;
+            
+            if (!demandaId && !isNewDemand) { showToast('Aviso', 'Selecione a demanda antes de fazer upload.', 'error'); return; }
+
+            const progBar  = document.getElementById(`${prefix}prog-${tipo}`);
+            const progFill = document.getElementById(`${prefix}prog-${tipo}-fill`);
+            const zone     = document.getElementById(`${prefix}zone-${tipo}`);
+
+            progBar.style.display = 'block';
+            zone.classList.add('uploading');
+
+            progFill.style.width = '30%';
+
+            const ext = file.name.split('.').pop() || 'pdf';
+            const path = `${demandaId}/${tipo}_${Date.now()}.${ext}`;
+
+            const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: true, contentType: 'application/pdf' });
+
+            if (error) {
+                showToast('Erro de Upload', error.message, 'error');
+                progBar.style.display = 'none'; zone.classList.remove('uploading');
+                return;
+            }
+
+            progFill.style.width = '100%';
+            setTimeout(() => { progBar.style.display = 'none'; progFill.style.width = '0%'; }, 600);
+            zone.classList.remove('uploading');
+
+            const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+
+            let labelTipo = '';
+            if (tipo === 'projeto') {
+                document.getElementById(`${prefix}npa-url-projeto`).value = publicUrl;
+                showDocRow('projeto', publicUrl, isNewDemand);
+                labelTipo = 'Projeto NPA';
+            } else {
+                document.getElementById(`${prefix}npa-url-parecer`).value = publicUrl;
+                showDocRow('parecer', publicUrl, isNewDemand);
+                labelTipo = 'Parecer Técnico';
+            }
+
+            showToast('Upload Concluído', `${labelTipo} anexado com sucesso!`, 'success');
+            input.value = '';
+        }
+
+        function showDocRow(tipo, url, isNewDemand = false) {
+            const prefix = isNewDemand ? 'new_' : '';
+            const rowId = `${prefix}${tipo}-link-row`;
+            const linkId = `${prefix}${tipo}-link`;
+            document.getElementById(rowId).style.display = 'block';
+            document.getElementById(linkId).href = url;
+            document.getElementById(`${prefix}zone-${tipo}`).style.display = 'none';
+        }
+
+        function hideDocRow(tipo, isNewDemand = false) {
+            const prefix = isNewDemand ? 'new_' : '';
+            document.getElementById(`${prefix}${tipo}-link-row`).style.display = 'none';
+            document.getElementById(`${prefix}zone-${tipo}`).style.display = 'block';
+        }
+
+        function removeDoc(tipo, isNewDemand = false) {
+            const prefix = isNewDemand ? 'new_' : '';
+            if (tipo === 'projeto') {
+                document.getElementById(`${prefix}npa-url-projeto`).value = '';
+            } else {
+                document.getElementById(`${prefix}npa-url-parecer`).value = '';
+            }
+            hideDocRow(tipo, isNewDemand);
+        }
+
+        // --- Lógica de Criação de Demanda ---
+        function openCreateDemandModal() {
+            if (!currentUserProfile || (currentUserProfile.nucleo_lotacao !== 'NPA' && currentUserProfile.nivel_acesso !== 'admin' && currentUserProfile.nivel_acesso !== 'diretor')) {
+                showToast('Erro RLS', 'Apenas técnicos do NPA ou administradores podem criar demandas.', 'error');
+                return;
+            }
+            
+            // Reset do form de criação
+            document.getElementById('create-demand-form').reset();
+            document.getElementById('new_id_bairro').value = '';
+            document.getElementById('new_regional_input').value = '';
+            document.getElementById('new_id_rua').value = '';
+            
+            // Reset Documentos (Criar)
+            document.getElementById('new_npa-url-parecer').value = '';
+            document.getElementById('new_npa-url-projeto').value = '';
+            hideDocRow('parecer', true);
+            hideDocRow('projeto', true);
+
+            // Ocultar painéis adicionais
+            document.getElementById('new-fields-cruzamento').style.display = 'none';
+            document.getElementById('new-fields-trecho').style.display = 'none';
+            document.getElementById('street-resolution-alert').style.display = 'none';
+            
+            // Pre-preenchimento
+            const now = new Date();
+            document.getElementById('new_ano_processo').value = now.getFullYear();
+            document.getElementById('new_tecnico_responsavel').value = currentUserProfile?.nome_completo || '';
+            document.getElementById('new_data_inicial').value = now.toISOString().substring(0, 10);
+            document.getElementById('new_tempo_resposta').value = '—';
+            
+            document.getElementById('create-demand-modal').style.display = 'flex';
+        }
+
+        function closeCreateDemandModal() {
+            document.getElementById('create-demand-modal').style.display = 'none';
+        }
+
+        function toggleNewPrioridade() {
+            const checkbox = document.getElementById('new_prioridade_diretoria');
+            checkbox.checked = !checkbox.checked;
+        }
+
+        // Calcular Tempo de Resposta para Nova Demanda
+        function calculateNewResponseTime() {
+            const dataIniVal = document.getElementById('new_data_inicial').value;
+            const dataFimVal = document.getElementById('new_data_conclusao').value;
+            const respField = document.getElementById('new_tempo_resposta');
+
+            if (!dataIniVal) {
+                respField.value = '—';
+                return;
+            }
+
+            const ini = new Date(dataIniVal);
+            const fim = dataFimVal ? new Date(dataFimVal) : new Date();
+
+            const diffTime = Math.abs(fim - ini);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            respField.value = `${diffDays} dia(s)`;
+        }
+
+        // Alternar campos de localização para Nova Demanda
+        function toggleNewLocalizacaoInputs() {
+            const val = document.getElementById('new_tipo_localizacao').value;
+            const fieldsCruzamento = document.getElementById('new-fields-cruzamento');
+            const fieldsTrecho = document.getElementById('new-fields-trecho');
+
+            if (val === 'Cruzamento') {
+                fieldsCruzamento.style.display = 'block';
+                fieldsTrecho.style.display = 'none';
+            } else if (val === 'Trecho') {
+                fieldsCruzamento.style.display = 'none';
+                fieldsTrecho.style.display = 'block';
+            } else {
+                fieldsCruzamento.style.display = 'none';
+                fieldsTrecho.style.display = 'none';
+            }
+        }
+
+        // Função para normalizar nome de rua
+        function normalizeStreetName(name) {
+            if (!name) return '';
+            
+            // Remove espaços duplos
+            let normalized = name.trim().replace(/\s+/g, ' ');
+            
+            // Se começar com abreviações comuns, substitui por nome por extenso
+            const regexAv = /^(av\.?|avenida)\s+/i;
+            const regexRua = /^(r\.?|rua)\s+/i;
+            const regexTrav = /^(trav\.?|travessa)\s+/i;
+            const regexRod = /^(rod\.?|rodovia)\s+/i;
+
+            if (regexAv.test(normalized)) {
+                normalized = normalized.replace(regexAv, 'Avenida ');
+            } else if (regexRua.test(normalized)) {
+                normalized = normalized.replace(regexRua, 'Rua ');
+            } else if (regexTrav.test(normalized)) {
+                normalized = normalized.replace(regexTrav, 'Travessa ');
+            } else if (regexRod.test(normalized)) {
+                normalized = normalized.replace(regexRod, 'Rodovia ');
+            } else {
+                // Caso não comece com nenhuma, por padrão assume que é "Rua" se não tiver tipo definido
+                if (!/^(avenida|rua|travessa|rodovia|alameda|praça|beco|via)\s+/i.test(normalized)) {
+                    normalized = 'Rua ' + normalized;
+                }
+            }
+
+            // Converter para Title Case (primeira letra de cada palavra maiúscula, exceto preposições de, da, do, dos, das, e, em)
+            const prepositions = ['de', 'da', 'do', 'dos', 'das', 'e', 'em'];
+            normalized = normalized.split(' ').map((word, index) => {
+                if (index > 0 && prepositions.includes(word.toLowerCase())) {
+                    return word.toLowerCase();
+                }
+                return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            }).join(' ');
+
+            return normalized;
+        }
+
+        // Variável de controle para o fluxo de resolução de ruas
+        let streetResolutionCallback = null;
+
+        function cancelStreetResolution() {
+            document.getElementById('street-resolution-alert').style.display = 'none';
+            streetResolutionCallback = null;
+        }
+
+        async function fetchBairros() {
+            const { data, error } = await supabase
+                .from('cat_bairros')
+                .select('id, nome_bairro, cat_regionais(nome_regional)')
+                .order('nome_bairro');
+            
+            if (error) {
+                console.error("Erro ao carregar bairros:", error);
+            } else {
+                bairrosData = data;
+            }
+        }
+
+        let techniciansList = [];
+        async function fetchTechnicians() {
+            const { data: usersData } = await supabase
+                .from('perfis_usuarios')
+                .select('nome_completo')
+                .order('nome_completo');
+            
+            const { data: npaData } = await supabase
+                .from('analise_npa')
+                .select('tecnico_responsavel')
+                .not('tecnico_responsavel', 'is', null);
+
+            const names = new Set();
+            if (usersData) {
+                usersData.forEach(u => { if (u.nome_completo) names.add(u.nome_completo.trim()); });
+            }
+            if (npaData) {
+                npaData.forEach(n => { if (n.tecnico_responsavel) names.add(n.tecnico_responsavel.trim()); });
+            }
+            
+            techniciansList = Array.from(names).sort();
+            populateTechnicianSelect();
+        }
+
+        function populateTechnicianSelect(currentValue = '') {
+            const selectEl = document.getElementById('tecnico_responsavel');
+            if (!selectEl) return;
+            
+            const val = currentValue || selectEl.value;
+            selectEl.innerHTML = '<option value="">Selecione...</option>';
+            techniciansList.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                selectEl.appendChild(opt);
+            });
+            
+            if (val && !techniciansList.includes(val)) {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                selectEl.appendChild(opt);
+            }
+            selectEl.value = val || '';
+        }
+
+        function adicionarNovoTecnico() {
+            const novo = prompt("Digite o nome do novo técnico responsável:");
+            if (!novo || !novo.trim()) return;
+            const trimmed = novo.trim();
+            if (!techniciansList.includes(trimmed)) {
+                techniciansList.push(trimmed);
+                techniciansList.sort();
+            }
+            populateTechnicianSelect(trimmed);
+        }
+
+        let selectedStatusNpa = 'Aguardando Recebimento';
+        function selectStatusNpaButton(status) {
+            selectedStatusNpa = status;
+            document.getElementById('status_npa').value = status;
+            document.querySelectorAll('.btn-status-toggle').forEach(btn => {
+                if (btn.getAttribute('data-status') === status) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function setupStatusNpaButtons() {
+            document.querySelectorAll('.btn-status-toggle').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (btn.hasAttribute('disabled')) return;
+                    selectStatusNpaButton(btn.getAttribute('data-status'));
+                });
+            });
+        }
+
+        function setupAutocomplete() {
+            const input = document.getElementById('new_bairro_input');
+            const suggestionsContainer = document.getElementById('new_suggestions');
+
+            input.addEventListener('input', () => {
+                const query = input.value.toLowerCase().trim();
+                suggestionsContainer.innerHTML = '';
+                
+                if (!query) {
+                    suggestionsContainer.style.display = 'none';
+                    document.getElementById('new_id_bairro').value = '';
+                    document.getElementById('new_regional_input').value = '';
+                    return;
+                }
+
+                const matches = bairrosData.filter(b => b.nome_bairro.toLowerCase().includes(query));
+
+                if (matches.length === 0) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+
+                matches.slice(0, 5).forEach(match => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.style.padding = '10px 15px';
+                    div.style.cursor = 'pointer';
+                    div.style.fontSize = '13px';
+                    div.style.color = 'var(--amc-text-muted)';
+                    div.style.transition = 'all 0.2s';
+                    div.innerText = match.nome_bairro;
+                    
+                    div.addEventListener('mouseenter', () => {
+                        div.style.background = 'rgba(168, 85, 247, 0.15)';
+                        div.style.color = '#fff';
+                    });
+                    div.addEventListener('mouseleave', () => {
+                        div.style.background = 'transparent';
+                        div.style.color = 'var(--amc-text-muted)';
+                    });
+
+                    div.addEventListener('click', () => {
+                        input.value = match.nome_bairro;
+                        document.getElementById('new_id_bairro').value = match.id;
+                        document.getElementById('new_regional_input').value = match.cat_regionais.nome_regional;
+                        suggestionsContainer.style.display = 'none';
+                    });
+                    suggestionsContainer.appendChild(div);
+                });
+
+                suggestionsContainer.style.display = 'block';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+
+        // Formatador/Mascara de CPF e CNPJ
+        function formatCpfCnpj(value) {
+            const cleanValue = value.replace(/\D/g, '');
+            if (cleanValue.length <= 11) {
+                // CPF: 000.000.000-00
+                return cleanValue
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            } else {
+                // CNPJ: 00.000.000/0000-00
+                return cleanValue
+                    .replace(/(\d{2})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1/$2')
+                    .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+            }
+        }
+
+        // Configuração do input e busca automática de CPF/CNPJ (Modal de Criação)
+        function setupCpfCnpjAutocomplete() {
+            const cpfCnpjInput = document.getElementById('new_solicitante_cpf_cnpj');
+            if (!cpfCnpjInput) return;
+
+            cpfCnpjInput.addEventListener('input', async (e) => {
+                let value = e.target.value;
+                const cleanValue = value.replace(/\D/g, '').slice(0, 14); // limite de 14 digitos
+                
+                // Aplica a mascara
+                e.target.value = formatCpfCnpj(cleanValue);
+                
+                // Busca automática
+                if (cleanValue.length === 11 || cleanValue.length === 14) {
+                    const { data, error } = await supabase
+                        .from('demandas_pai')
+                        .select('solicitante_oficial')
+                        .eq('solicitante_cpf_cnpj', cleanValue)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    
+                    if (!error && data && data.length > 0) {
+                        const nameInput = document.getElementById('new_solicitante_oficial');
+                        nameInput.value = data[0].solicitante_oficial;
+                        
+                        // Feedback visual verde rápido
+                        nameInput.style.transition = 'background 0.3s';
+                        nameInput.style.background = 'rgba(16, 185, 129, 0.15)';
+                        setTimeout(() => {
+                            nameInput.style.background = '';
+                        }, 1000);
+                    }
+                }
+            });
+        }
+
+        async function submitNewDemand(e) {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                showToast('Erro de Permissão', 'Você precisa fazer login para inserir uma demanda.', 'error');
+                return;
+            }
+
+            const protocolo = document.getElementById('new_protocolo_oficial').value.trim();
+            const tipo = document.getElementById('new_tipo_solicitacao').value;
+            const solicitante = document.getElementById('new_solicitante_oficial').value.trim();
+            const rawCpfCnpj = document.getElementById('new_solicitante_cpf_cnpj').value.trim();
+            const cleanCpfCnpj = rawCpfCnpj.replace(/\D/g, '');
+            const idBairro = document.getElementById('new_id_bairro').value;
+            const prioridade = document.getElementById('new_prioridade_diretoria').checked;
+            const endereco = document.getElementById('new_endereco').value.trim();
+
+            const checkboxes = document.querySelectorAll('input[name="new_nucleo_destino"]:checked');
+            const nucleosAtribuidos = Array.from(checkboxes).map(cb => cb.value);
+            
+            // NPA Fields
+            const tipoLoc = document.getElementById('new_tipo_localizacao').value || null;
+            const anoProcesso = parseInt(document.getElementById('new_ano_processo').value) || null;
+            const tecnico = document.getElementById('new_tecnico_responsavel').value.trim() || null;
+            const dataIni = document.getElementById('new_data_inicial').value || null;
+            const dataFim = document.getElementById('new_data_conclusao').value || null;
+            const parecer = document.getElementById('new_numero_parecer').value.trim() || null;
+            const mitigadora = document.getElementById('new_tempo_medida_mitigadora').value.trim() || null;
+            const obs = document.getElementById('new_observacoes').value.trim() || null;
+
+            let ruaCruz = null;
+            let ruaLimA = null;
+            let ruaLimB = null;
+
+            if (tipoLoc === 'Cruzamento') {
+                ruaCruz = document.getElementById('new_rua_cruzamento').value.trim() || null;
+            } else if (tipoLoc === 'Trecho') {
+                ruaLimA = document.getElementById('new_rua_limite_a').value.trim() || null;
+                ruaLimB = document.getElementById('new_rua_limite_b').value.trim() || null;
+            }
+
+            const urlParecer = document.getElementById('new_npa-url-parecer').value || null;
+            const urlProjeto = document.getElementById('new_npa-url-projeto').value || null;
+            const projetoNome = document.getElementById('new_projeto_npa_nome').value.trim() || null;
+            const projetoNumero = document.getElementById('new_projeto_npa_numero').value.trim() || null;
+
+            if (!idBairro) {
+                showToast('Erro de Validação', 'Por favor, selecione um bairro válido da lista.', 'error');
+                return;
+            }
+
+            const rawRuaPrincipal = document.getElementById('new_rua_principal').value.trim();
+            if (!rawRuaPrincipal) {
+                showToast('Erro de Validação', 'Por favor, preencha a Rua Principal.', 'error');
+                return;
+            }
+
+            // Normalização do nome da rua principal
+            const normalizedRuaPrincipal = normalizeStreetName(rawRuaPrincipal);
+            document.getElementById('new_rua_principal').value = normalizedRuaPrincipal;
+
+            // Função interna para prosseguir com o salvamento da demanda e da análise NPA
+            async function proceedSave(idRua) {
+                showToast('Gravando', 'Cadastrando demanda no banco...', 'info');
+
+                const payload = {
+                    solicitante_oficial: solicitante,
+                    solicitante_cpf_cnpj: cleanCpfCnpj || null,
+                    tipo_solicitacao: tipo,
+                    id_bairro: idBairro,
+                    id_rua: idRua,
+                    prioridade_diretoria: prioridade,
+                    protocolo_oficial: protocolo || '',
+                    endereco: endereco || null,
+                    nucleos_atribuidos: nucleosAtribuidos.length > 0 ? nucleosAtribuidos : null
+                };
+
+                const { data: demandData, error: demandError } = await supabase
+                    .from('demandas_pai')
+                    .insert(payload)
+                    .select()
+                    .single();
+
+                if (demandError) {
+                    showToast('Erro de Inserção', 'Erro ao salvar demanda: ' + demandError.message, 'error');
+                    return;
+                }
+
+                // Inserção da análise técnica NPA
+                const payloadNpa = {
+                    id_demanda_pai: demandData.id,
+                    tecnico_responsavel: tecnico,
+                    ano_processo: anoProcesso,
+                    data_inicial: dataIni,
+                    data_conclusao: dataFim,
+                    numero_parecer: parecer,
+                    tempo_medida_mitigadora: mitigadora,
+                    observacoes: obs,
+                    tipo_localizacao: tipoLoc,
+                    rua_principal: normalizedRuaPrincipal,
+                    rua_cruzamento: ruaCruz,
+                    rua_limite_a: ruaLimA,
+                    rua_limite_b: ruaLimB,
+                    url_parecer_pdf: urlParecer,
+                    url_projeto_pdf: urlProjeto,
+                    projeto_npa_nome: projetoNome,
+                    projeto_npa_numero: projetoNumero,
+                    parecer_npa: urlParecer,
+                    projeto_npa: urlProjeto,
+                    projeto_npa_titulo: projetoNome,
+                    projeto_npa_numero: projetoNumero
+                };
+
+                const { error: npaError } = await supabase
+                    .from('analise_npa')
+                    .insert(payloadNpa);
+
+                if (npaError) {
+                    showToast('Erro de Inserção', 'Demanda criada, mas erro ao salvar análise técnica: ' + npaError.message, 'error');
+                } else {
+                    showToast('Sucesso', `Demanda ${demandData.protocolo_oficial || 'cadastrada'} com análise técnica com sucesso!`, 'success');
+                    closeCreateDemandModal();
+                    await fetchDemands();
+                }
+            }
+
+            // Função interna para cadastrar rua nova
+            async function registerNewStreet(streetName) {
+                showToast('Cadastrando Rua', `Cadastrando nova rua "${streetName}" no banco...`, 'info');
+                
+                // 1. Inserir em autocomplete_ruas e obter o ID gerado automaticamente pelo banco
+                const { data: autoData, error: insAutoError } = await supabase
+                    .from('autocomplete_ruas')
+                    .insert({ nome: streetName, tipo_via: 'residential' })
+                    .select()
+                    .single();
+
+                if (insAutoError) {
+                    showToast('Erro Inserção', 'Erro ao inserir rua em autocomplete_ruas: ' + insAutoError.message, 'error');
+                    return;
+                }
+
+                const newId = autoData.id;
+
+                // 2. Inserir em ruas_fortaleza usando o ID gerado
+                const { error: insFortError } = await supabase
+                    .from('ruas_fortaleza')
+                    .insert({ id_osm: newId, nome: streetName, tipo_via: 'residential' });
+
+                if (insFortError) {
+                    showToast('Erro Inserção', 'Erro ao inserir rua em ruas_fortaleza: ' + insFortError.message, 'error');
+                    return;
+                }
+
+                // 3. Prossegue salvando a demanda com o novo ID de rua
+                await proceedSave(newId);
+            }
+
+            // Lógica de verificação do ID da rua
+            let selectedStreetId = document.getElementById('new_id_rua').value;
+
+            if (selectedStreetId) {
+                // Usuário selecionou no autocomplete. Vamos apenas verificar se existe na ruas_fortaleza
+                selectedStreetId = parseInt(selectedStreetId);
+                const { data: existFort, error: errExist } = await supabase
+                    .from('ruas_fortaleza')
+                    .select('id_osm')
+                    .eq('id_osm', selectedStreetId)
+                    .limit(1);
+
+                if (!errExist && existFort && existFort.length > 0) {
+                    // Existe! Prossegue
+                    await proceedSave(selectedStreetId);
+                } else {
+                    // Não existe na ruas_fortaleza (sincronização)
+                    const { data: autocompleteData } = await supabase
+                        .from('autocomplete_ruas')
+                        .select('nome, tipo_via')
+                        .eq('id', selectedStreetId)
+                        .single();
+
+                    const streetName = autocompleteData?.nome || normalizedRuaPrincipal;
+                    const tipoVia = autocompleteData?.tipo_via || 'residential';
+
+                    const { error: insFortError } = await supabase
+                        .from('ruas_fortaleza')
+                        .insert({ id_osm: selectedStreetId, nome: streetName, tipo_via: tipoVia });
+
+                    if (insFortError) {
+                        showToast('Erro Inserção', 'Erro ao sincronizar rua principal com a base: ' + insFortError.message, 'error');
+                        return;
+                    }
+
+                    await proceedSave(selectedStreetId);
+                }
+            } else {
+                // Usuário digitou o nome e não selecionou no autocomplete.
+                // Verifica correspondência exata (case-insensitive) no autocomplete_ruas
+                const { data: exactMatch, error: errExact } = await supabase
+                    .from('autocomplete_ruas')
+                    .select('id, nome')
+                    .ilike('nome', normalizedRuaPrincipal)
+                    .limit(1);
+
+                if (!errExact && exactMatch && exactMatch.length > 0) {
+                    const matchedId = exactMatch[0].id;
+                    // Garante que exista na ruas_fortaleza
+                    const { data: existFort } = await supabase
+                        .from('ruas_fortaleza')
+                        .select('id_osm')
+                        .eq('id_osm', matchedId)
+                        .limit(1);
+
+                    if (!existFort || existFort.length === 0) {
+                        await supabase
+                            .from('ruas_fortaleza')
+                            .insert({ id_osm: matchedId, nome: exactMatch[0].nome, tipo_via: 'residential' });
+                    }
+                    await proceedSave(matchedId);
+                } else {
+                    // Busca por semelhantes
+                    const searchWords = normalizedRuaPrincipal.replace(/^(Rua|Avenida|Travessa|Rodovia)\s+/i, '').split(' ').filter(w => w.length > 3);
+                    let queryBuilder = supabase.from('autocomplete_ruas').select('id, nome, tipo_via');
+                    
+                    if (searchWords.length > 0) {
+                        queryBuilder = queryBuilder.ilike('nome', `%${searchWords[0]}%`);
+                    } else {
+                        queryBuilder = queryBuilder.ilike('nome', `%${normalizedRuaPrincipal}%`);
+                    }
+
+                    const { data: similarStreets, error: errSimilar } = await queryBuilder.limit(4);
+
+                    const alertDiv = document.getElementById('street-resolution-alert');
+                    const messageP = document.getElementById('street-resolution-message');
+                    const optionsDiv = document.getElementById('street-resolution-options');
+                    const confirmBtn = document.getElementById('btn-confirm-street-resolution');
+
+                    optionsDiv.innerHTML = '';
+                    alertDiv.style.display = 'flex';
+                    alertDiv.scrollIntoView({ behavior: 'smooth' });
+
+                    if (!errSimilar && similarStreets && similarStreets.length > 0) {
+                        messageP.innerText = `A rua "${normalizedRuaPrincipal}" não foi localizada. Encontramos as seguintes ruas semelhantes cadastradas no banco de dados. Por favor, escolha uma delas ou confirme o cadastro da nova rua:`;
+
+                        similarStreets.forEach((street, idx) => {
+                            const label = document.createElement('label');
+                            label.style.display = 'flex';
+                            label.style.alignItems = 'center';
+                            label.style.gap = '8px';
+                            label.style.fontSize = '13px';
+                            label.style.color = 'var(--amc-text-muted)';
+                            label.style.cursor = 'pointer';
+                            label.style.padding = '6px 10px';
+                            label.style.background = 'rgba(255,255,255,0.02)';
+                            label.style.borderRadius = '6px';
+                            label.style.transition = 'all 0.2s';
+                            
+                            label.addEventListener('mouseenter', () => label.style.background = 'rgba(255,255,255,0.05)');
+                            label.addEventListener('mouseleave', () => label.style.background = 'rgba(255,255,255,0.02)');
+
+                            const radio = document.createElement('input');
+                            radio.type = 'radio';
+                            radio.name = 'similar-street-choice';
+                            radio.value = street.id;
+                            radio.style.accentColor = 'var(--amc-npa)';
+                            if (idx === 0) radio.checked = true;
+
+                            const span = document.createElement('span');
+                            span.innerText = street.nome;
+
+                            label.appendChild(radio);
+                            label.appendChild(span);
+                            optionsDiv.appendChild(label);
+                        });
+
+                        confirmBtn.innerText = 'Cadastrar Nova Rua Mesmo Assim';
+                        
+                        streetResolutionCallback = async (choiceType) => {
+                            alertDiv.style.display = 'none';
+                            if (choiceType === 'new') {
+                                await registerNewStreet(normalizedRuaPrincipal);
+                            } else {
+                                const checkedRadio = document.querySelector('input[name="similar-street-choice"]:checked');
+                                if (checkedRadio) {
+                                    const matchedId = parseInt(checkedRadio.value);
+                                    const selectedName = checkedRadio.nextSibling.innerText;
+                                    // Garante que exista na ruas_fortaleza
+                                    const { data: existFort } = await supabase
+                                        .from('ruas_fortaleza')
+                                        .select('id_osm')
+                                        .eq('id_osm', matchedId)
+                                        .limit(1);
+
+                                    if (!existFort || existFort.length === 0) {
+                                        await supabase
+                                            .from('ruas_fortaleza')
+                                            .insert({ id_osm: matchedId, nome: selectedName, tipo_via: 'residential' });
+                                    }
+                                    document.getElementById('new_rua_principal').value = selectedName;
+                                    await proceedSave(matchedId);
+                                }
+                            }
+                        };
+                    } else {
+                        messageP.innerText = `A rua "${normalizedRuaPrincipal}" não foi localizada no banco de dados e não possui nenhuma rua com nome semelhante. Deseja cadastrar como uma nova rua?`;
+                        confirmBtn.innerText = 'Confirmar Cadastro';
+
+                        streetResolutionCallback = async () => {
+                            alertDiv.style.display = 'none';
+                            await registerNewStreet(normalizedRuaPrincipal);
+                        };
+                    }
+
+                    confirmBtn.onclick = () => {
+                        if (streetResolutionCallback) {
+                            streetResolutionCallback('new');
+                        }
+                    };
+
+                    if (similarStreets && similarStreets.length > 0) {
+                        const useSelectedBtn = document.createElement('button');
+                        useSelectedBtn.type = 'button';
+                        useSelectedBtn.className = 'btn-action';
+                        useSelectedBtn.style.padding = '6px 12px';
+                        useSelectedBtn.style.fontSize = '12px';
+                        useSelectedBtn.style.background = 'var(--amc-npa)';
+                        useSelectedBtn.style.color = '#fff';
+                        useSelectedBtn.id = 'btn-use-similar-street';
+                        useSelectedBtn.innerText = 'Usar Rua Selecionada';
+                        useSelectedBtn.onclick = () => {
+                            if (streetResolutionCallback) {
+                                streetResolutionCallback('existing');
+                            }
+                        };
+                        alertDiv.querySelector('div:last-child').appendChild(useSelectedBtn);
+                    }
+                }
+            }
+        }
+
+        function toggleLocalizacaoInputs() {
+            const val = document.getElementById('tipo_localizacao').value;
+            const fieldsCruzamento = document.getElementById('fields-cruzamento');
+            const fieldsTrecho = document.getElementById('fields-trecho');
+
+            if (val === 'Cruzamento') {
+                fieldsCruzamento.style.display = 'block';
+                fieldsTrecho.style.display = 'none';
+            } else if (val === 'Trecho') {
+                fieldsCruzamento.style.display = 'none';
+                fieldsTrecho.style.display = 'block';
+            } else {
+                fieldsCruzamento.style.display = 'none';
+                fieldsTrecho.style.display = 'none';
+            }
+        }
+
+        function setupStreetAutocomplete(inputId, suggestionsId, hiddenId = null) {
+            const input = document.getElementById(inputId);
+            const suggestionsContainer = document.getElementById(suggestionsId);
+            let timeoutId = null;
+
+            input.addEventListener('input', () => {
+                clearTimeout(timeoutId);
+                const query = input.value.trim();
+                
+                if (hiddenId) {
+                    document.getElementById(hiddenId).value = '';
+                }
+
+                if (query.length < 3) {
+                    suggestionsContainer.innerHTML = '';
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+
+                timeoutId = setTimeout(async () => {
+                    const { data, error } = await supabase
+                        .from('autocomplete_ruas')
+                        .select('id, nome, tipo_via')
+                        .ilike('nome', `%${query}%`)
+                        .limit(5);
+
+                    if (error || !data || data.length === 0) {
+                        suggestionsContainer.innerHTML = '';
+                        suggestionsContainer.style.display = 'none';
+                        return;
+                    }
+
+                    suggestionsContainer.innerHTML = '';
+                    data.forEach(match => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.style.padding = '10px 15px';
+                        div.style.cursor = 'pointer';
+                        div.style.fontSize = '13px';
+                        div.style.color = 'var(--amc-text-muted)';
+                        div.style.transition = 'all 0.2s';
+                        div.innerText = match.nome;
+                        
+                        div.addEventListener('mouseenter', () => {
+                            div.style.background = 'rgba(168, 85, 247, 0.15)';
+                            div.style.color = '#fff';
+                        });
+                        div.addEventListener('mouseleave', () => {
+                            div.style.background = 'transparent';
+                            div.style.color = 'var(--amc-text-muted)';
+                        });
+
+                        div.addEventListener('click', () => {
+                            input.value = match.nome;
+                            if (hiddenId) {
+                                document.getElementById(hiddenId).value = match.id;
+                            }
+                            suggestionsContainer.style.display = 'none';
+                        });
+                        suggestionsContainer.appendChild(div);
+                    });
+                    suggestionsContainer.style.display = 'block';
+                }, 300);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+
+        // Buscar e popular tipos de solicitação do banco
+        async function fetchTiposSolicitacao() {
+            const selectEl = document.getElementById('new_tipo_solicitacao');
+            if (!selectEl) return;
+
+            const { data, error } = await supabase
+                .from('cat_tipos_solicitacao')
+                .select('nome')
+                .order('nome');
+
+            if (error) {
+                console.error("Erro ao carregar tipos de solicitação:", error);
+                return;
+            }
+
+            const currentValue = selectEl.value;
+            selectEl.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+            data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.nome;
+                opt.textContent = item.nome;
+                selectEl.appendChild(opt);
+            });
+            if (currentValue) selectEl.value = currentValue;
+        }
+
+        // Inserir novo tipo de solicitação dinamicamente
+        async function adicionarNovoTipo() {
+            const novoTipo = prompt("Digite o nome do novo tipo de solicitação:");
+            if (!novoTipo || !novoTipo.trim()) return;
+
+            showToast('Cadastrando', 'Enviando nova opção de tipo...', 'info');
+
+            const { error } = await supabase
+                .from('cat_tipos_solicitacao')
+                .insert({ nome: novoTipo.trim() });
+
+            if (error) {
+                showToast('Erro ao Adicionar', 'Erro: ' + error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Novo tipo adicionado com sucesso!', 'success');
+                await fetchTiposSolicitacao();
+                document.getElementById('new_tipo_solicitacao').value = novoTipo.trim();
+            }
+        }
+    </script>
+</body>
+</html>

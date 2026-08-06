@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Dashboard Gerencial</title>
+    
+    <!-- Scripts Externos & Fontes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <!-- Leaflet Map CSS e JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+
+    <style>
+        :root {
+            /* AMC Colors */
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+            --amc-red-glow: rgba(241, 90, 34, 0.4);
+            --amc-green-glow: rgba(16, 185, 129, 0.4);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Estilo de Vidro (Glassmorphism) --- */
+        .glass {
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ds-card {
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Sidebar Lateral --- */
+        aside {
+            width: 320px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 16px;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .menu-item {
+            margin-bottom: 8px;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .menu-link:hover, .menu-link.active {
+            color: #fff;
+            background: rgba(248, 183, 0, 0.1);
+            border-left: 3px solid var(--amc-primary);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            margin-left: 320px;
+            flex-grow: 1;
+            padding: 2.5rem;
+            max-width: 1200px;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* --- Glows --- */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 80% 20%, rgba(248, 183, 0, 0.05) 0%, transparent 60%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- Barra de Filtros --- */
+        .search-filter-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+            padding: 10px 16px;
+            border-radius: 99px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .search-input {
+            background: transparent;
+            border: none;
+            color: #fff;
+            outline: none;
+            width: 100%;
+            font-size: 14px;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chip {
+            padding: 8px 20px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--amc-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chip:hover, .chip.active {
+            border-color: var(--amc-primary);
+            color: #fff;
+            background: rgba(248, 183, 0, 0.1);
+            box-shadow: 0 0 10px rgba(248, 183, 0, 0.15);
+        }
+
+        /* --- KPI Cards Grid --- */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .kpi-card {
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            position: relative;
+        }
+
+        .kpi-icon-wrapper {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .kpi-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--amc-text-muted);
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .kpi-value {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 500;
+            color: #fff;
+            margin: 0;
+        }
+
+        /* --- Map container --- */
+        #map {
+            height: 450px;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.08);
+            z-index: 10;
+        }
+
+        /* Customizar Popups do Leaflet */
+        .leaflet-popup-content-wrapper {
+            background: rgba(10, 10, 12, 0.95) !important;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            color: #fff !important;
+            border-radius: 12px !important;
+            padding: 5px !important;
+        }
+        .leaflet-popup-tip {
+            background: rgba(10, 10, 12, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        }
+        .popup-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.1rem;
+            margin: 0 0 6px 0;
+            color: var(--amc-primary);
+        }
+        .popup-text {
+            font-size: 12px;
+            color: var(--amc-text-muted);
+            margin: 3px 0;
+        }
+
+        /* --- Tabela de Aprovação --- */
+        .table-section-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ds-table-container {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 1rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background: rgba(255,255,255,0.02);
+            padding: 14px 20px;
+            color: var(--amc-text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        td {
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: #fff;
+        }
+
+        tr:hover td {
+            background: rgba(255,255,255,0.01);
+        }
+
+        .badge-priority {
+            background: rgba(241, 90, 34, 0.15);
+            color: var(--amc-secondary);
+            border: 1px solid var(--amc-secondary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* --- Botões --- */
+        .btn-amc {
+            padding: 8px 16px;
+            border-radius: 9999px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            border: none;
+            font-size: 11px;
+        }
+        
+        .btn-primary-amc {
+            background: var(--amc-primary);
+            color: #000;
+            box-shadow: 0 4px 10px var(--amc-glow);
+        }
+
+        .btn-primary-amc:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 15px var(--amc-glow);
+        }
+
+        .btn-primary-amc:disabled {
+            background: #555;
+            color: #888;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .btn-outline-amc {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn-outline-amc:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: var(--amc-primary);
+        }
+
+        /* --- Painel de Autenticação na Sidebar --- */
+        .auth-panel {
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .auth-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amc-primary);
+            margin-bottom: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            border-color: var(--amc-primary);
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: -400px;
+            width: 350px;
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 1100;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .toast.show {
+            right: 24px;
+        }
+
+        .toast-success {
+            background: rgba(10, 30, 10, 0.9);
+            border: 1px solid #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .toast-error {
+            background: rgba(30, 10, 10, 0.9);
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-status {
+            font-size: 13px;
+            color: var(--amc-text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 99px;
+        }
+    
+        /* --- Sidebar Menu List Scrollbar (Checkpoint 4) --- */
+        .menu-list {
+            overflow-y: auto !important;
+            max-height: calc(100vh - 220px) !important;
+        }
+        .menu-list::-webkit-scrollbar {
+            width: 4px !important;
+            display: block !important;
+        }
+        .menu-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-radius: 4px !important;
+        }
+        .menu-list::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Background Glows -->
+    <div class="hero-bg"></div>
+
+    <!-- Sidebar Lateral -->
+    <aside class="glass">
+        <div>
+            <!-- Logo AMC -->
+            <div class="logo-container">
+            <i class="fa fa-car-side fa-xl" style="color:var(--amc-secondary, #f15a22);"></i>
+            <span class="logo-text">AMC — Engenharia</span>
+        </div>
+        <ul class="menu-list">
+            <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link "><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+            <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+            <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link "><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+            <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link "><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+            <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+            <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link "><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+            <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link "><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+            <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link "><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+            <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link "><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+            <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link active"><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+            <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link "><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+        </ul>
+        </div>
+
+        <!-- Painel de Login e Simulação de Perfis -->
+        <div class="auth-panel glass-dark">
+            <div class="auth-title">
+                <i class="fa fa-user-shield"></i>
+                <span>Gabinete Diretoria</span>
+            </div>
+            
+            <div id="auth-unlogged">
+                <div class="form-group">
+                    <input type="email" id="auth-email" placeholder="E-mail" class="form-input" style="padding: 8px 12px; font-size: 11px; margin-bottom: 6px;">
+                    <input type="password" id="auth-password" placeholder="Senha" class="form-input" style="padding: 8px 12px; font-size: 11px;">
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn-amc btn-primary-amc" style="padding: 6px; font-size: 10px; flex: 1;" onclick="login()">Entrar</button>
+                    <button class="btn-amc btn-outline-amc" style="padding: 6px; font-size: 10px; flex: 1;" onclick="register()">Registrar</button>
+                </div>
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 10px 0;">
+                <button class="btn-amc btn-outline-amc" style="padding: 6px 10px; font-size: 10px; width: 100%;" onclick="simulateQuickLogin()">
+                    Simular Login Rápido (Diretoria)
+                </button>
+            </div>
+
+            <div id="auth-logged" style="display: none;">
+                <p id="logged-email" style="font-size: 11px; margin: 0 0 8px 0; color: #fff; word-break: break-all; font-weight: 500;"></p>
+                
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label class="form-label" style="font-size: 9px; margin-bottom: 4px;">Simular Papel (Role)</label>
+                    <select id="role-selector" class="form-input" style="padding: 6px 10px; font-size: 11px;" onchange="changeRole(this.value)">
+                        <option value="Público">Público</option>
+                        <option value="Técnico">Técnico</option>
+                        <option value="Gerência">Gerência</option>
+                        <option value="Diretoria">Diretoria</option>
+                    </select>
+                </div>
+                <button class="btn-amc btn-outline-amc" style="padding: 6px 12px; font-size: 10px; color: var(--amc-secondary); width: 100%;" onclick="logout()">Desconectar</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Área de Conteúdo Central -->
+    <main>
+        <div class="dashboard-header">
+            <h1 class="header-title">Dashboard Gerencial</h1>
+            <div class="header-status glass-dark" id="role-badge">
+                <i class="fa fa-info-circle"></i>
+                <span>Conectando ao banco...</span>
+            </div>
+        </div>
+
+        <!-- Bloco 1: Filtro de Busca Estratégica -->
+        <div class="search-filter-bar">
+            <div class="search-box glass">
+                <i class="fa fa-search" style="color: var(--amc-primary);"></i>
+                <input type="text" id="search-input" class="search-input" placeholder="Pesquisar por protocolo ou solicitante..." oninput="filterData()">
+            </div>
+            
+            <div class="filter-chips">
+                <div class="chip active" id="chip-all" onclick="setFilter('all')">Todas</div>
+                <div class="chip" id="chip-priority" onclick="setFilter('priority')">Prioridade Diretoria</div>
+                <div class="chip" id="chip-pending" onclick="setFilter('pending')">Aguardando Aprovação</div>
+            </div>
+        </div>
+
+        <!-- Bloco 2: Termômetros / KPI Cards -->
+        <div class="kpi-grid">
+            <!-- Total de Processos Ativos -->
+            <div class="kpi-card glass">
+                <div class="kpi-icon-wrapper" style="background: rgba(48, 133, 214, 0.15); color: var(--amc-accent);">
+                    <i class="fa fa-folder-open"></i>
+                </div>
+                <div>
+                    <div class="kpi-title">Processos Ativos</div>
+                    <div class="kpi-value" id="kpi-ativos">0</div>
+                </div>
+            </div>
+
+            <!-- Projetos Atrasados (SLA > 15 dias) -->
+            <div class="kpi-card glass">
+                <div class="kpi-icon-wrapper" style="background: rgba(241, 90, 34, 0.15); color: var(--amc-secondary);">
+                    <i class="fa fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <div class="kpi-title">Projetos Atrasados (SLA)</div>
+                    <div class="kpi-value" id="kpi-atrasados" style="color: var(--amc-secondary);">0</div>
+                </div>
+            </div>
+
+            <!-- Custo Total Estimado -->
+            <div class="kpi-card glass">
+                <div class="kpi-icon-wrapper" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                    <i class="fa fa-coins"></i>
+                </div>
+                <div>
+                    <div class="kpi-title">Custo Total Estimado</div>
+                    <div class="kpi-value" id="kpi-custo" style="color: #10b981;">R$ 0,00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloco 3: Mapa Interativo -->
+        <div id="map"></div>
+
+        <!-- Bloco 4: Tabela de Aprovação -->
+        <div class="ds-card glass" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <h2 class="table-section-title">
+                <i class="fa fa-stamp" style="color: var(--amc-primary);"></i>
+                Ordens de Execução (Aguardando Aprovação)
+            </h2>
+            <div class="ds-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Protocolo</th>
+                            <th>Tipo</th>
+                            <th>Solicitante</th>
+                            <th>Bairro / Regional</th>
+                            <th>Custo Estimado</th>
+                            <th style="text-align: right;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approval-table-body">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--amc-text-muted);">Nenhum projeto aguardando aprovação.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i id="toast-icon" class="fa fa-2x"></i>
+        <div>
+            <strong id="toast-title" style="display: block; font-size: 14px; margin-bottom: 4px; color: #fff;">Sucesso</strong>
+            <span id="toast-message" style="font-size: 13px; color: rgba(255,255,255,0.8);">Ação concluída.</span>
+        </div>
+    </div>
+
+    <script>
+        // Supabase já inicializado pelo auth.js
+
+        // Estado Global
+        let rawData = [];
+        let filteredData = [];
+        let map = null;
+        let markerLayer = null;
+        let currentFilter = 'all'; // all, priority, pending
+        let currentUser = null;
+        let currentUserProfile = null;
+
+        // Ao carregar a página
+        window.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            initMap();
+            await checkSession();
+            await loadDashboardData();
+        });
+
+        // Inicializar Mapa
+        function initMap() {
+            // Centro em Fortaleza-CE
+            map = L.map('map').setView([-3.7319, -38.5267], 12);
+            
+            // Layout escuro do mapa (CartoDB DarkMatter)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+            }).addTo(map);
+
+            markerLayer = L.layerGroup().addTo(map);
+        }
+
+        // Monitor de Autenticação do Supabase
+        async function checkSession() {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                await loadUserProfile(currentUser.id);
+                showLoggedState();
+            } else {
+                showUnloggedState();
+            }
+        }
+
+        // Carregar Perfil do Usuário
+        async function loadUserProfile(userId) {
+            const { data, error } = await supabase
+                .from('perfis_usuarios')
+                .select('*')
+                .eq('id', userId)
+                .single();
+            
+            if (data) {
+                const mappedRole = data.nivel_acesso === 'admin' ? 'Gerência' : (data.nivel_acesso === 'diretor' ? 'Diretoria' : (data.nivel_acesso === 'coordenador' ? 'Gerência' : 'Técnico'));
+                currentUserProfile = { ...data, role: mappedRole };
+                updateRoleBadge(mappedRole);
+                const roleSel = document.getElementById('role-selector');
+                if (roleSel) roleSel.value = mappedRole;
+            } else {
+                updateRoleBadge("Erro no Perfil");
+            }
+        }
+
+        // Atualizar Badge de Role
+        function updateRoleBadge(role) {
+            const badge = document.getElementById('role-badge');
+            let color = 'var(--amc-text-muted)';
+            let icon = 'fa-user';
+            
+            if (role === 'Diretoria' || role === 'Gerência') {
+                color = 'var(--amc-secondary)';
+                icon = 'fa-user-shield';
+            } else if (role === 'Técnico') {
+                color = 'var(--amc-accent)';
+                icon = 'fa-user-gear';
+            }
+
+            badge.style.border = `1px solid ${color}`;
+            badge.style.color = color;
+            badge.innerHTML = `<i class="fa ${icon}"></i> <span>Operador: ${role}</span>`;
+        }
+
+        // Mostrar Tela Logada
+        function showLoggedState() {
+            document.getElementById('auth-unlogged').style.display = 'none';
+            document.getElementById('auth-logged').style.display = 'block';
+            document.getElementById('logged-email').innerText = currentUser.email;
+        }
+
+        // Mostrar Tela Não Logada
+        function showUnloggedState() {
+            document.getElementById('auth-unlogged').style.display = 'block';
+            document.getElementById('auth-logged').style.display = 'none';
+            
+            const badge = document.getElementById('role-badge');
+            badge.style.border = '1px solid #ef4444';
+            badge.style.color = '#ef4444';
+            badge.innerHTML = `<i class="fa fa-exclamation-triangle"></i> <span>Acesso Restrito (Faça Login)</span>`;
+        }
+
+        // Simular Login Rápido
+        async function simulateQuickLogin() {
+            const testEmail = `diretor_${Math.floor(Math.random() * 10000)}@amc.fortaleza.br`;
+            const testPassword = 'amcTestPassword123';
+
+            showToast('Aguarde', 'Criando e autenticando administrador...', 'info');
+
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email: testEmail,
+                password: testPassword
+            });
+
+            if (signUpError) {
+                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                    email: testEmail,
+                    password: testPassword
+                });
+                if (signInError) {
+                    showToast('Erro', 'Falha ao simular login.', 'error');
+                    return;
+                }
+                currentUser = signInData.user;
+            } else {
+                currentUser = signUpData.user;
+            }
+
+            setTimeout(async () => {
+                await checkSession();
+                // Acesso gerencial de Diretoria para poder aprovar
+                await changeRole('Diretoria');
+                showToast('Conectado', 'Diretor conectado com acesso total RLS!', 'success');
+                await loadDashboardData();
+            }, 1500);
+        }
+
+        // Login Manual
+        async function login() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return;
+
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                showToast('Erro de Login', error.message, 'error');
+            } else {
+                currentUser = data.user;
+                await checkSession();
+                showToast('Conectado', 'Login efetuado.', 'success');
+                await loadDashboardData();
+            }
+        }
+
+        // Cadastro Manual
+        async function register() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            if (!email || !password) return;
+
+            const { data, error } = await supabase.auth.signUp({ email, password });
+            if (error) {
+                showToast('Erro de Registro', error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Verifique seu e-mail para confirmação.', 'success');
+            }
+        }
+
+        // Logout
+        async function logout() {
+            await realizarLogout();
+        }
+
+        // Alterar Role do Usuário
+        async function changeRole(newRole) {
+            if (!currentUser) return;
+            const { error } = await supabase
+                .from('profiles')
+                .update({ role: newRole })
+                .eq('id', currentUser.id);
+
+            if (error) {
+                showToast('Erro RLS', 'Erro: ' + error.message, 'error');
+            } else {
+                await loadUserProfile(currentUser.id);
+                showToast('Perfil Atualizado', `Seu perfil foi alterado para: ${newRole}`, 'success');
+                await loadDashboardData();
+            }
+        }
+
+        // Limpar Dados do Dashboard
+        function clearDashboard() {
+            rawData = [];
+            filteredData = [];
+            document.getElementById('kpi-ativos').innerText = '0';
+            document.getElementById('kpi-atrasados').innerText = '0';
+            document.getElementById('kpi-custo').innerText = 'R$ 0,00';
+            markerLayer.clearLayers();
+            document.getElementById('approval-table-body').innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; color: var(--amc-text-muted);">Nenhum projeto aguardando aprovação.</td>
+                </tr>
+            `;
+        }
+
+        // Carregar Dados da View e Tabela Sensível
+        async function loadDashboardData() {
+            if (!currentUser) {
+                clearDashboard();
+                return;
+            }
+
+            // Consultar a view consolidada
+            const { data, error } = await supabase
+                .from('vw_demandas_consolidadas')
+                .select('*');
+
+            if (error) {
+                console.error("Erro ao buscar dados gerenciais:", error);
+                showToast('Erro RLS/Banco', 'Erro ao ler dados: ' + error.message, 'error');
+                clearDashboard();
+                return;
+            }
+
+            rawData = data;
+            filterData();
+        }
+
+        // Filtrar e renderizar KPIs, Tabela e Mapa
+        function filterData() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+
+            filteredData = rawData.filter(d => {
+                // Filtro da busca
+                const matchProtocol = d.protocolo_oficial.toLowerCase().includes(query);
+                const matchSolicitante = (d.solicitante_oficial || '').toLowerCase().includes(query);
+
+                const matchSearch = matchProtocol || matchSolicitante;
+
+                // Filtro rápido de Chips
+                if (currentFilter === 'priority') {
+                    return matchSearch && d.prioridade_diretoria;
+                } else if (currentFilter === 'pending') {
+                    return matchSearch && d.status_geral === 'Aguardando Aprovação';
+                }
+
+                return matchSearch;
+            });
+
+            renderKPIs();
+            renderMapPins();
+            renderApprovalTable();
+        }
+
+        // Definir Filtro Rápido (Chips)
+        function setFilter(type) {
+            currentFilter = type;
+            
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            if (type === 'all') document.getElementById('chip-all').classList.add('active');
+            if (type === 'priority') document.getElementById('chip-priority').classList.add('active');
+            if (type === 'pending') document.getElementById('chip-pending').classList.add('active');
+
+            filterData();
+        }
+
+        // Renderizar KPIs
+        function renderKPIs() {
+            // 1. Processos Ativos
+            document.getElementById('kpi-ativos').innerText = rawData.length;
+
+            // 2. Projetos Atrasados (SLA > 15 dias e não Aprovado)
+            const hoje = new Date();
+            const atrasados = rawData.filter(d => {
+                const dataCriacao = new Date(d.created_at);
+                const diffTime = Math.abs(hoje - dataCriacao);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                return diffDays > 15 && d.status_geral !== 'Aprovado';
+            });
+            document.getElementById('kpi-atrasados').innerText = atrasados.length;
+
+            // 3. Custo Total Estimado
+            const custoTotal = rawData.reduce((acc, curr) => acc + (parseFloat(curr.custo_estimado) || 0), 0);
+            document.getElementById('kpi-custo').innerText = new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(custoTotal);
+        }
+
+        // Renderizar Marcadores no Mapa (Leaflet)
+        function renderMapPins() {
+            markerLayer.clearLayers();
+
+            filteredData.forEach(d => {
+                if (!d.latitude || !d.longitude) return;
+
+                // Definir Ícone
+                let colorClass = 'var(--amc-accent)'; // Azul: Geral
+                let shadowColor = 'var(--amc-glow)';
+
+                if (d.prioridade_diretoria) {
+                    colorClass = 'var(--amc-secondary)'; // Laranja/Vermelho: Prioritário
+                    shadowColor = 'var(--amc-red-glow)';
+                } else if (d.status_geral === 'Aguardando Aprovação' || d.status_npo === 'Análise' || d.status_npo === 'Projetando') {
+                    colorClass = '#eab308'; // Amarelo: Em Projeto NPO
+                    shadowColor = 'rgba(234, 179, 8, 0.4)';
+                } else if (d.status_geral === 'Aprovado') {
+                    colorClass = '#10b981'; // Verde: Em execução (Aprovado)
+                    shadowColor = 'var(--amc-green-glow)';
+                }
+
+                // Ícone em FA
+                const pinIcon = L.divIcon({
+                    html: `<i class="fa fa-location-dot fa-2x" style="color: ${colorClass}; filter: drop-shadow(0 0 8px ${shadowColor});"></i>`,
+                    className: 'custom-pin-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24],
+                    popupAnchor: [0, -24]
+                });
+
+                const popupHtml = `
+                    <div style="min-width: 180px;">
+                        <h4 class="popup-title">${d.protocolo_oficial}</h4>
+                        <p class="popup-text"><strong>Solicitante:</strong> ${d.solicitante_oficial}</p>
+                        <p class="popup-text"><strong>Tipo:</strong> ${d.tipo_solicitacao}</p>
+                        <p class="popup-text"><strong>Bairro:</strong> ${d.nome_bairro}</p>
+                        <p class="popup-text"><strong>Status:</strong> ${d.status_geral}</p>
+                    </div>
+                `;
+
+                L.marker([d.latitude, d.longitude], { icon: pinIcon })
+                    .bindPopup(popupHtml)
+                    .addTo(markerLayer);
+            });
+        }
+
+        // Renderizar Tabela de Aprovações Pendentes
+        function renderApprovalTable() {
+            const tbody = document.getElementById('approval-table-body');
+            const pendingProjects = filteredData.filter(d => d.status_geral === 'Aguardando Aprovação');
+
+            if (pendingProjects.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--amc-text-muted);">Nenhum projeto aguardando aprovação.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = '';
+            const isManagerOrDirector = currentUserProfile && (currentUserProfile.role === 'Diretoria' || currentUserProfile.role === 'Gerência');
+
+            pendingProjects.forEach(d => {
+                const tr = document.createElement('tr');
+                
+                // Formatar Custo
+                const custoFormatado = new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                }).format(d.custo_estimado || 0);
+
+                tr.innerHTML = `
+                    <td style="font-weight: 700;">${d.protocolo_oficial}</td>
+                    <td>${d.tipo_solicitacao}</td>
+                    <td>${d.solicitante_oficial}</td>
+                    <td>${d.nome_bairro} (${d.nome_regional})</td>
+                    <td style="font-weight: 600; color: #10b981;">${custoFormatado}</td>
+                    <td style="text-align: right;">
+                        <button class="btn-amc btn-primary-amc" style="padding: 6px 12px; font-size: 10px;" 
+                                ${isManagerOrDirector ? '' : 'disabled'} 
+                                onclick="approveExecution('${d.id}')">
+                            <i class="fa fa-check"></i> Aprovar Execução
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Aprovar Execução (Diretoria/Gerência)
+        async function approveExecution(id) {
+            if (!currentUser) return;
+
+            showToast('Processando', 'Aprovando execução do projeto...', 'info');
+
+            // Atualizar status_geral na demandas_pai para 'Aprovado'
+            const { error } = await supabase
+                .from('demandas_pai')
+                .update({ status_geral: 'Aprovado' })
+                .eq('id', id);
+
+            if (error) {
+                showToast('Erro RLS/Banco', 'Erro de permissão ou rede: ' + error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Projeto aprovado e travado para edição técnica!', 'success');
+                await loadDashboardData();
+            }
+        }
+
+        // Toast de Feedback Visual
+        function showToast(title, message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastTitle.innerText = title;
+            toastMessage.innerText = message;
+            
+            toast.className = 'toast show';
+            toastIcon.className = 'fa fa-2x';
+
+            if (type === 'success') {
+                toast.classList.add('toast-success');
+                toastIcon.classList.add('fa-check-circle');
+                toastIcon.style.color = '#10b981';
+            } else if (type === 'error') {
+                toast.classList.add('toast-error');
+                toastIcon.classList.add('fa-times-circle');
+                toastIcon.style.color = '#ef4444';
+            } else {
+                toast.classList.add('toast-success');
+                toastIcon.classList.add('fa-spinner', 'fa-spin');
+                toastIcon.style.color = 'var(--amc-primary)';
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

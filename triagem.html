@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Sistema de Triagem</title>
+    
+    <!-- Scripts Externos & Fontes -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+
+    <style>
+        :root {
+            /* AMC Colors */
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+            --amc-red-glow: rgba(241, 90, 34, 0.4);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Estilo de Vidro (Glassmorphism) --- */
+        .glass {
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-dark {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .ds-card {
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Sidebar Lateral --- */
+        aside {
+            width: 320px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 16px;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .menu-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .menu-item {
+            margin-bottom: 8px;
+        }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .menu-link:hover, .menu-link.active {
+            color: #fff;
+            background: rgba(248, 183, 0, 0.1);
+            border-left: 3px solid var(--amc-primary);
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            margin-left: 320px;
+            flex-grow: 1;
+            padding: 3rem;
+            max-width: 1000px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        /* --- Hero background glows --- */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 70% 20%, rgba(248, 183, 0, 0.08) 0%, transparent 60%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--amc-glow);
+            filter: blur(120px);
+            border-radius: 50%;
+            z-index: -2;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* --- Formulários --- */
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 11px;
+            color: var(--amc-text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+
+        select option, option {
+            background-color: #0A0A0C !important;
+            color: #ffffff !important;
+        }
+
+        .form-input:focus {
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 15px rgba(248, 183, 0, 0.2);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .form-input:disabled {
+            background: rgba(255, 255, 255, 0.01);
+            color: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.05);
+            cursor: not-allowed;
+        }
+
+        /* Dropdown Autocomplete de Bairros */
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #0A0A0C;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            margin-top: 5px;
+        }
+
+        .suggestion-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--amc-text-muted);
+            transition: all 0.2s;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(248, 183, 0, 0.15);
+            color: #fff;
+        }
+
+        /* Checkbox customizado para Prioridade Institucional */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s;
+            cursor: pointer;
+            user-select: none;
+            background: rgba(255, 255, 255, 0.02);
+            margin-top: 1rem;
+        }
+
+        .checkbox-container:hover {
+            border-color: rgba(241, 90, 34, 0.3);
+            background: rgba(241, 90, 34, 0.03);
+        }
+
+        .checkbox-container.checked {
+            border-color: var(--amc-secondary);
+            box-shadow: 0 0 20px var(--amc-red-glow);
+            background: rgba(241, 90, 34, 0.08);
+        }
+
+        .checkbox-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .checkbox-container.checked .checkbox-indicator {
+            background: var(--amc-secondary);
+            border-color: var(--amc-secondary);
+        }
+
+        .checkbox-indicator i {
+            font-size: 12px;
+            color: #fff;
+            display: none;
+        }
+
+        .checkbox-container.checked .checkbox-indicator i {
+            display: block;
+        }
+
+        .checkbox-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--amc-text-muted);
+            transition: color 0.3s;
+        }
+
+        .checkbox-container.checked .checkbox-label {
+            color: #fff;
+        }
+
+        /* --- Botões --- */
+        .btn-amc {
+            padding: 14px 32px;
+            border-radius: 9999px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            font-size: 13px;
+        }
+        
+        .btn-primary-amc {
+            background: var(--amc-primary);
+            color: #000;
+            box-shadow: 0 4px 15px var(--amc-glow);
+        }
+
+        .btn-primary-amc:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px var(--amc-glow);
+            background: #ffcc33;
+        }
+
+        .btn-primary-amc:disabled {
+            background: #666;
+            color: #999;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .btn-outline-amc {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn-outline-amc:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: var(--amc-primary);
+        }
+
+        /* --- Painel de Autenticação na Sidebar --- */
+        .auth-panel {
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .auth-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amc-primary);
+            margin-bottom: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: -400px;
+            width: 350px;
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 1000;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .toast.show {
+            right: 24px;
+        }
+
+        .toast-success {
+            background: rgba(10, 30, 10, 0.9);
+            border: 1px solid #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+        }
+
+        .toast-error {
+            background: rgba(30, 10, 10, 0.9);
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Header superior */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin: 0;
+        }
+
+        .header-status {
+            font-size: 13px;
+            color: var(--amc-text-muted);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 99px;
+        }
+    
+        /* --- Sidebar Menu List Scrollbar (Checkpoint 4) --- */
+        .menu-list {
+            overflow-y: auto !important;
+            max-height: calc(100vh - 220px) !important;
+        }
+        .menu-list::-webkit-scrollbar {
+            width: 4px !important;
+            display: block !important;
+        }
+        .menu-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-radius: 4px !important;
+        }
+        .menu-list::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Background Glows -->
+    <div class="hero-bg"></div>
+    <div class="hero-glow" style="top: 20%; right: 10%;"></div>
+
+    <!-- Sidebar Lateral -->
+    <aside class="glass">
+        <div>
+            <!-- Logo AMC -->
+            <div class="logo-container">
+            <i class="fa fa-car-side fa-xl" style="color:var(--amc-primary, #F8B700);"></i>
+            <span class="logo-text">AMC — Engenharia</span>
+        </div>
+        <ul class="menu-list">
+            <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link "><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+            <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+            <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link active"><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+            <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link "><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+            <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+            <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link "><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+            <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link "><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+            <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link "><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+            <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link "><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+            <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link "><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+            <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link "><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+        </ul>
+        </div>
+
+        <!-- Painel de Login e Simulação de Perfis -->
+        <div class="auth-panel glass-dark">
+            <div class="auth-title">
+                <i class="fa fa-user-shield"></i>
+                <span>Operador de Triagem</span>
+            </div>
+            
+            <div id="auth-unlogged">
+                <div class="form-group">
+                    <input type="email" id="auth-email" placeholder="E-mail" class="form-input" style="padding: 10px 14px; font-size: 12px; margin-bottom: 8px;">
+                    <input type="password" id="auth-password" placeholder="Senha" class="form-input" style="padding: 10px 14px; font-size: 12px;">
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-amc btn-primary-amc" style="padding: 8px; font-size: 11px;" onclick="login()">Entrar</button>
+                    <button class="btn-amc btn-outline-amc" style="padding: 8px; font-size: 11px;" onclick="register()">Cadastrar</button>
+                </div>
+                <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.05); margin: 12px 0;">
+                <button class="btn-amc btn-outline-amc" style="padding: 6px 12px; font-size: 10px;" onclick="simulateQuickLogin()">
+                    Simular Login Rápido
+                </button>
+            </div>
+
+            <div id="auth-logged" style="display: none;">
+                <p id="logged-email" style="font-size: 12px; margin: 0 0 10px 0; color: #fff; word-break: break-all; font-weight: 500;"></p>
+                
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-size: 9px;">Simular Papel (Role)</label>
+                    <select id="role-selector" class="form-input" style="padding: 8px 12px; font-size: 12px;" onchange="changeRole(this.value)">
+                        <option value="Público">Público (Sem acesso estratégico)</option>
+                        <option value="Técnico">Técnico (Apenas demandas gerais)</option>
+                        <option value="Gerência">Gerência (Acesso estratégico)</option>
+                        <option value="Diretoria">Diretoria (Acesso estratégico)</option>
+                    </select>
+                </div>
+                <button class="btn-amc btn-outline-amc" style="padding: 8px; font-size: 11px; color: var(--amc-secondary);" onclick="logout()">Desconectar</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Área de Conteúdo Central -->
+    <main>
+        <div class="dashboard-header">
+            <h1 class="header-title">Nova Demanda</h1>
+            <div class="header-status glass-dark" id="role-badge">
+                <i class="fa fa-info-circle"></i>
+                <span>Conectando ao banco de dados...</span>
+            </div>
+        </div>
+
+        <!-- Formulário da Demanda -->
+        <div class="ds-card glass">
+            <form id="demanda-form" onsubmit="submitDemanda(event)">
+                
+                <!-- Protocolo e Tipo de Solicitação -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="protocolo_oficial" class="form-label">Protocolo Oficial</label>
+                        <input type="text" id="protocolo_oficial" class="form-input" placeholder="Deixe em branco para gerar protocolo interno">
+                    </div>
+                    <div class="form-group">
+                        <label for="tipo_solicitacao" class="form-label">Tipo de Solicitação</label>
+                        <div style="display: flex; gap: 8px; width: 100%;">
+                            <select id="tipo_solicitacao" class="form-input" style="flex: 1;" required>
+                                <option value="" disabled selected>Carregando...</option>
+                            </select>
+                            <button type="button" id="btn-add-tipo" class="btn-amc btn-outline-amc" style="display: none; padding: 0 14px; width: auto; height: 42px; border-radius: 8px; flex-shrink: 0;" onclick="adicionarNovoTipo()">
+                                <i class="fa fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Solicitante -->
+                <div class="form-row">
+                    <div class="form-group" style="flex: 0 0 40%;">
+                        <label for="solicitante_cpf_cnpj" class="form-label">CPF / CNPJ do Solicitante</label>
+                        <input type="text" id="solicitante_cpf_cnpj" class="form-input" placeholder="Ex: 000.000.000-00" maxlength="18">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="solicitante_oficial" class="form-label">Solicitante Oficial (Público)</label>
+                        <input type="text" id="solicitante_oficial" class="form-input" placeholder="Ex: Cidadão, Vereador, Órgão Público" required>
+                    </div>
+                </div>
+
+                <!-- Localização (Bairro com Autocomplete, Regional e Endereço) -->
+                <div class="form-row">
+                    <div class="form-group autocomplete-container">
+                        <label for="bairro_input" class="form-label">Bairro (Autocomplete)</label>
+                        <input type="text" id="bairro_input" class="form-input" placeholder="Digite para buscar o bairro..." autocomplete="off" required>
+                        <div id="suggestions" class="autocomplete-suggestions"></div>
+                        <input type="hidden" id="id_bairro">
+                    </div>
+                    <div class="form-group">
+                        <label for="regional_input" class="form-label">Regional</label>
+                        <input type="text" id="regional_input" class="form-input" placeholder="Regional" readonly disabled>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group autocomplete-container" style="flex: 1;">
+                        <label for="endereco" class="form-label">Endereço / Logradouro</label>
+                        <input type="text" id="endereco" class="form-input" placeholder="Ex: Av. Pontes Vieira, 1200" autocomplete="off" required>
+                        <div id="street-suggestions" class="autocomplete-suggestions"></div>
+                        <input type="hidden" id="id_rua">
+                    </div>
+                </div>
+
+                <!-- Atribuição de Núcleos Responsáveis -->
+                <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                    <label class="form-label" style="margin-bottom: 10px; display: block;">Atribuição de Núcleos Responsáveis (Encaminhamento)</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--amc-primary)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="checkbox" name="nucleo_destino" value="NPA" style="width: 16px; height: 16px; accent-color: var(--amc-primary); cursor: pointer;">
+                            <span style="font-size: 13px; font-weight: 500; color: #fff;">NPA</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--amc-primary)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="checkbox" name="nucleo_destino" value="NPE" style="width: 16px; height: 16px; accent-color: var(--amc-primary); cursor: pointer;">
+                            <span style="font-size: 13px; font-weight: 500; color: #fff;">NPE</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--amc-primary)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="checkbox" name="nucleo_destino" value="NCO" style="width: 16px; height: 16px; accent-color: var(--amc-primary); cursor: pointer;">
+                            <span style="font-size: 13px; font-weight: 500; color: #fff;">NCO</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--amc-primary)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="checkbox" name="nucleo_destino" value="NCE" style="width: 16px; height: 16px; accent-color: var(--amc-primary); cursor: pointer;">
+                            <span style="font-size: 13px; font-weight: 500; color: #fff;">NCE</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--amc-primary)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="checkbox" name="nucleo_destino" value="NPO" style="width: 16px; height: 16px; accent-color: var(--amc-primary); cursor: pointer;">
+                            <span style="font-size: 13px; font-weight: 500; color: #fff;">NPO</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--amc-primary)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.05)'">
+                            <input type="checkbox" name="nucleo_destino" value="NGC" style="width: 16px; height: 16px; accent-color: var(--amc-primary); cursor: pointer;">
+                            <span style="font-size: 13px; font-weight: 500; color: #fff;">NGC</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Prioridade Institucional -->
+                <div class="checkbox-container" id="prioridade-toggle" onclick="togglePrioridade()">
+                    <div class="checkbox-indicator">
+                        <i class="fa fa-check"></i>
+                    </div>
+                    <span class="checkbox-label">Prioridade Institucional (Diretoria)</span>
+                    <input type="checkbox" id="prioridade_diretoria" style="display: none;">
+                </div>
+
+                <!-- Ações -->
+                <div style="margin-top: 2.5rem;">
+                    <button type="submit" id="btn-submit" class="btn-amc btn-primary-amc" disabled>
+                        <i class="fa fa-paper-plane"></i>
+                        Cadastrar e Distribuir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i id="toast-icon" class="fa fa-2x"></i>
+        <div>
+            <strong id="toast-title" style="display: block; font-size: 14px; margin-bottom: 4px; color: #fff;">Sucesso</strong>
+            <span id="toast-message" style="font-size: 13px; color: rgba(255,255,255,0.8);">A demanda foi cadastrada.</span>
+        </div>
+    </div>
+
+    <script>
+        // Supabase já inicializado pelo auth.js
+        const supabaseClientInstance = window.supabase;
+
+        // Estado Global
+        let bairrosData = [];
+        let currentUser = null;
+        let currentUserProfile = null;
+
+        // Ao carregar a página
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Inicializar ícones do Lucide
+            lucide.createIcons();
+            await fetchTiposSolicitacao();
+            await checkSession();
+            await fetchBairros();
+            setupAutocomplete();
+            setupStreetAutocomplete();
+            setupCpfCnpjAutocomplete();
+        });
+
+        // Monitor de Autenticação do Supabase
+        async function checkSession() {
+            const { data: { session } } = await supabaseClientInstance.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                await loadUserProfile(currentUser.id);
+                showLoggedState();
+            } else {
+                showUnloggedState();
+            }
+        }
+
+        // Carregar Perfil do Usuário
+        async function loadUserProfile(userId) {
+            const { data, error } = await supabaseClientInstance
+                .from('perfis_usuarios')
+                .select('*')
+                .eq('id', userId)
+                .single();
+            
+            if (data) {
+                const mappedRole = data.nivel_acesso === 'admin' ? 'Gerência' : (data.nivel_acesso === 'diretor' ? 'Diretoria' : (data.nivel_acesso === 'coordenador' ? 'Gerência' : 'Técnico'));
+                currentUserProfile = { ...data, role: mappedRole };
+                updateRoleBadge(mappedRole);
+                const roleSel = document.getElementById('role-selector');
+                if (roleSel) roleSel.value = mappedRole;
+
+                // Exibe botão de adicionar tipo se o usuário for do núcleo técnico autorizado
+                const nucleosAutorizados = ['NPA', 'NPE', 'NCO', 'NCE', 'NPO', 'NGC'];
+                const btnAddTipo = document.getElementById('btn-add-tipo');
+                if (btnAddTipo) {
+                    if (nucleosAutorizados.includes(data.nucleo_lotacao)) {
+                        btnAddTipo.style.display = 'inline-flex';
+                    } else {
+                        btnAddTipo.style.display = 'none';
+                    }
+                }
+            } else {
+                console.error("Erro ao carregar perfil:", error);
+                updateRoleBadge("Erro no Perfil");
+            }
+        }
+
+        // Atualizar Badge de Role
+        function updateRoleBadge(role) {
+            const badge = document.getElementById('role-badge');
+            let color = 'var(--amc-text-muted)';
+            let icon = 'fa-user';
+            
+            if (role === 'Diretoria' || role === 'Gerência') {
+                color = 'var(--amc-secondary)';
+                icon = 'fa-user-shield';
+            } else if (role === 'Técnico') {
+                color = 'var(--amc-accent)';
+                icon = 'fa-user-gear';
+            }
+
+            badge.style.border = `1px solid ${color}`;
+            badge.style.color = color;
+            badge.innerHTML = `<i class="fa ${icon}"></i> <span>Operador: ${role}</span>`;
+            document.getElementById('btn-submit').removeAttribute('disabled');
+        }
+
+        // Mostrar Tela Logada
+        function showLoggedState() {
+            document.getElementById('auth-unlogged').style.display = 'none';
+            document.getElementById('auth-logged').style.display = 'block';
+            document.getElementById('logged-email').innerText = currentUser.email;
+        }
+
+        // Mostrar Tela Não Logada
+        function showUnloggedState() {
+            document.getElementById('auth-unlogged').style.display = 'block';
+            document.getElementById('auth-logged').style.display = 'none';
+            document.getElementById('btn-submit').setAttribute('disabled', 'true');
+            
+            const badge = document.getElementById('role-badge');
+            badge.style.border = '1px solid #ef4444';
+            badge.style.color = '#ef4444';
+            badge.innerHTML = `<i class="fa fa-exclamation-triangle"></i> <span>Acesso Bloqueado (Faça Login)</span>`;
+
+            // Oculta botão de adicionar tipo
+            const btnAddTipo = document.getElementById('btn-add-tipo');
+            if (btnAddTipo) btnAddTipo.style.display = 'none';
+        }
+
+        // Simular Login Rápido para testes
+        async function simulateQuickLogin() {
+            const testEmail = `operador_${Math.floor(Math.random() * 10000)}@amc.fortaleza.br`;
+            const testPassword = 'amcTestPassword123';
+
+            showToast('Aguarde', 'Criando e autenticando operador de teste...', 'info');
+
+            // 1. Criar Usuário no Supabase Auth
+            const { data: signUpData, error: signUpError } = await supabaseClientInstance.auth.signUp({
+                email: testEmail,
+                password: testPassword
+            });
+
+            if (signUpError) {
+                // Se já existir (muito improvável devido ao random), tentar logar
+                const { data: signInData, error: signInError } = await supabaseClientInstance.auth.signInWithPassword({
+                    email: testEmail,
+                    password: testPassword
+                });
+                
+                if (signInError) {
+                    showToast('Erro', 'Falha ao simular login de teste.', 'error');
+                    return;
+                }
+                
+                currentUser = signInData.user;
+            } else {
+                currentUser = signUpData.user;
+            }
+
+            // Aguardar um momento para o trigger criar o profile no PostgreSQL
+            setTimeout(async () => {
+                await checkSession();
+                // Definir perfil padrão de teste como "Gerência" para que o operador possa testar todas as funcionalidades RLS
+                await changeRole('Gerência');
+                showToast('Conectado', 'Operador de teste conectado e configurado como Gerência!', 'success');
+            }, 1500);
+        }
+
+        // Login Manual
+        async function login() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            
+            if (!email || !password) {
+                showToast('Aviso', 'Preencha e-mail e senha.', 'error');
+                return;
+            }
+
+            const { data, error } = await supabaseClientInstance.auth.signInWithPassword({ email, password });
+            if (error) {
+                showToast('Erro de Login', error.message, 'error');
+            } else {
+                currentUser = data.user;
+                await checkSession();
+                showToast('Conectado', 'Login efetuado com sucesso.', 'success');
+            }
+        }
+
+        // Cadastro Manual
+        async function register() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            
+            if (!email || !password) {
+                showToast('Aviso', 'Preencha e-mail e senha.', 'error');
+                return;
+            }
+
+            const { data, error } = await supabaseClientInstance.auth.signUp({ email, password });
+            if (error) {
+                showToast('Erro de Cadastro', error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Verifique seu e-mail para confirmar o cadastro.', 'success');
+            }
+        }
+
+        // Logout
+        async function logout() {
+            await realizarLogout();
+        }
+
+        // Alterar Role do Usuário Atual (para teste de RLS)
+        async function changeRole(newRole) {
+            if (!currentUser) return;
+            const { error } = await supabaseClientInstance
+                .from('profiles')
+                .update({ role: newRole })
+                .eq('id', currentUser.id);
+
+            if (error) {
+                showToast('Erro RLS', 'Não foi possível alterar a role: ' + error.message, 'error');
+            } else {
+                await loadUserProfile(currentUser.id);
+                showToast('Perfil Atualizado', `Seu perfil foi alterado para: ${newRole}`, 'success');
+            }
+        }
+
+        // Carregar Bairros do Banco de Dados
+        async function fetchBairros() {
+            const { data, error } = await supabaseClientInstance
+                .from('cat_bairros')
+                .select('id, nome_bairro, cat_regionais(nome_regional)')
+                .order('nome_bairro');
+            
+            if (error) {
+                console.error("Erro ao carregar bairros:", error);
+                showToast('Erro de Banco', 'Não foi possível carregar o catálogo de bairros.', 'error');
+            } else {
+                bairrosData = data;
+            }
+        }
+
+        // Lógica de Autocomplete do Bairro
+        function setupAutocomplete() {
+            const input = document.getElementById('bairro_input');
+            const suggestionsContainer = document.getElementById('suggestions');
+            const normalizeStr = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+            input.addEventListener('input', () => {
+                const query = normalizeStr(input.value);
+                suggestionsContainer.innerHTML = '';
+                
+                if (!query) {
+                    suggestionsContainer.style.display = 'none';
+                    document.getElementById('id_bairro').value = '';
+                    document.getElementById('regional_input').value = '';
+                    return;
+                }
+
+                // Filtrar bairros sem considerar acentos
+                const matches = bairrosData.filter(b => normalizeStr(b.nome_bairro).includes(query));
+
+                if (matches.length === 0) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+
+                matches.slice(0, 5).forEach(match => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    div.innerText = match.nome_bairro;
+                    div.addEventListener('click', () => {
+                        input.value = match.nome_bairro;
+                        document.getElementById('id_bairro').value = match.id;
+                        document.getElementById('regional_input').value = match.cat_regionais.nome_regional;
+                        suggestionsContainer.style.display = 'none';
+                    });
+                    suggestionsContainer.appendChild(div);
+                });
+
+                suggestionsContainer.style.display = 'block';
+            });
+
+            // Ocultar sugestões ao clicar fora
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+
+        let streetDebounceTimeout;
+        function setupStreetAutocomplete() {
+            const input = document.getElementById('endereco');
+            const suggestionsContainer = document.getElementById('street-suggestions');
+
+            input.addEventListener('input', () => {
+                clearTimeout(streetDebounceTimeout);
+                const query = input.value.trim();
+                
+                document.getElementById('id_rua').value = '';
+
+                if (query.length < 3) {
+                    suggestionsContainer.innerHTML = '';
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+
+                streetDebounceTimeout = setTimeout(async () => {
+                    const { data, error } = await supabaseClientInstance
+                        .from('autocomplete_ruas')
+                        .select('id, nome, tipo_via')
+                        .ilike('nome', `%${query}%`)
+                        .limit(5);
+
+                    if (error || !data || data.length === 0) {
+                        suggestionsContainer.innerHTML = '';
+                        suggestionsContainer.style.display = 'none';
+                        return;
+                    }
+
+                    suggestionsContainer.innerHTML = '';
+                    data.forEach(match => {
+                        const div = document.createElement('div');
+                        div.className = 'suggestion-item';
+                        div.innerText = `${match.nome} (${match.tipo_via || 'via'})`;
+                        div.addEventListener('click', () => {
+                            input.value = match.nome;
+                            document.getElementById('id_rua').value = match.id;
+                            suggestionsContainer.style.display = 'none';
+                        });
+                        suggestionsContainer.appendChild(div);
+                    });
+                    suggestionsContainer.style.display = 'block';
+                }, 300);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!input.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+        }
+
+        // Formatador/Mascara de CPF e CNPJ
+        function formatCpfCnpj(value) {
+            const cleanValue = value.replace(/\D/g, '');
+            if (cleanValue.length <= 11) {
+                // CPF: 000.000.000-00
+                return cleanValue
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            } else {
+                // CNPJ: 00.000.000/0000-00
+                return cleanValue
+                    .replace(/(\d{2})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1.$2')
+                    .replace(/(\d{3})(\d)/, '$1/$2')
+                    .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+            }
+        }
+
+        // Configuração do input e busca automática de CPF/CNPJ
+        function setupCpfCnpjAutocomplete() {
+            const cpfCnpjInput = document.getElementById('solicitante_cpf_cnpj');
+            if (!cpfCnpjInput) return;
+
+            cpfCnpjInput.addEventListener('input', async (e) => {
+                let value = e.target.value;
+                const cleanValue = value.replace(/\D/g, '').slice(0, 14); // limite de 14 digitos
+                
+                // Aplica a mascara
+                e.target.value = formatCpfCnpj(cleanValue);
+                
+                // Busca automática
+                if (cleanValue.length === 11 || cleanValue.length === 14) {
+                    const { data, error } = await supabaseClientInstance
+                        .from('demandas_pai')
+                        .select('solicitante_oficial')
+                        .eq('solicitante_cpf_cnpj', cleanValue)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                    
+                    if (!error && data && data.length > 0) {
+                        const nameInput = document.getElementById('solicitante_oficial');
+                        nameInput.value = data[0].solicitante_oficial;
+                        
+                        // Feedback visual verde rápido
+                        nameInput.style.transition = 'background 0.3s';
+                        nameInput.style.background = 'rgba(16, 185, 129, 0.15)';
+                        setTimeout(() => {
+                            nameInput.style.background = '';
+                        }, 1000);
+                    }
+                }
+            });
+        }
+
+        // Checkbox de Prioridade
+        function togglePrioridade() {
+            const container = document.getElementById('prioridade-toggle');
+            const checkbox = document.getElementById('prioridade_diretoria');
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                container.classList.add('checked');
+            } else {
+                container.classList.remove('checked');
+            }
+        }
+
+        // Enviar Demanda
+        async function submitDemanda(event) {
+            event.preventDefault();
+
+            if (!currentUser) {
+                showToast('Erro de Permissão', 'Você precisa fazer login para inserir uma demanda.', 'error');
+                return;
+            }
+
+            const protocolo = document.getElementById('protocolo_oficial').value.trim();
+            const tipo = document.getElementById('tipo_solicitacao').value;
+            const solicitante = document.getElementById('solicitante_oficial').value.trim();
+            const rawCpfCnpj = document.getElementById('solicitante_cpf_cnpj').value.trim();
+            const cleanCpfCnpj = rawCpfCnpj.replace(/\D/g, '');
+            const idBairro = document.getElementById('id_bairro').value;
+            const prioridade = document.getElementById('prioridade_diretoria').checked;
+            const endereco = document.getElementById('endereco').value.trim();
+            const idRua = document.getElementById('id_rua').value;
+
+            const checkboxes = document.querySelectorAll('input[name="nucleo_destino"]:checked');
+            const nucleosAtribuidos = Array.from(checkboxes).map(cb => cb.value);
+
+            if (!idBairro) {
+                showToast('Erro de Validação', 'Por favor, selecione um bairro válido da lista.', 'error');
+                return;
+            }
+
+            // 1. Preparar Payload Geral
+            const payload = {
+                solicitante_oficial: solicitante,
+                solicitante_cpf_cnpj: cleanCpfCnpj || null,
+                tipo_solicitacao: tipo,
+                id_bairro: idBairro,
+                prioridade_diretoria: prioridade,
+                endereco: endereco || null,
+                nucleos_atribuidos: nucleosAtribuidos.length > 0 ? nucleosAtribuidos : null
+            };
+
+            // Se o protocolo oficial não for vazio, envia. Caso contrário, envia vazio ou null para a trigger processar
+            if (protocolo) {
+                payload.protocolo_oficial = protocolo;
+            } else {
+                payload.protocolo_oficial = '';
+            }
+
+            showToast('Gravando', 'Processando cadastro da demanda no banco...', 'info');
+
+            // 1.5 Se houver id_rua selecionada, garante que existe na tabela ruas_fortaleza (devido à FK)
+            if (idRua) {
+                const { data: existFort, error: errExist } = await supabaseClientInstance
+                    .from('ruas_fortaleza')
+                    .select('id_osm')
+                    .eq('id_osm', idRua);
+                
+                if (!errExist && (!existFort || existFort.length === 0)) {
+                    const streetOnly = endereco.split(',')[0].trim();
+                    await supabaseClientInstance
+                        .from('ruas_fortaleza')
+                        .insert({ id_osm: idRua, nome: streetOnly, tipo_via: 'residential' });
+                }
+                payload.id_rua = idRua;
+            }
+
+            // 2. Inserir Demanda Pai
+            const { data: demandaData, error: demandaError } = await supabaseClientInstance
+                .from('demandas_pai')
+                .insert(payload)
+                .select()
+                .single();
+
+            if (demandaError) {
+                showToast('Erro de Inserção', 'Erro ao salvar demanda: ' + demandaError.message, 'error');
+                return;
+            }
+
+            showToast('Sucesso', `Demanda ${demandaData.protocolo_oficial} cadastrada com sucesso!`, 'success');
+            resetForm();
+        }
+
+        // Limpar Formulário
+        function resetForm() {
+            document.getElementById('demanda-form').reset();
+            document.getElementById('id_bairro').value = '';
+            document.getElementById('id_rua').value = '';
+            document.getElementById('regional_input').value = '';
+            document.getElementById('prioridade_diretoria').checked = false;
+            document.getElementById('prioridade-toggle').classList.remove('checked');
+            document.querySelectorAll('input[name="nucleo_destino"]').forEach(cb => cb.checked = false);
+        }
+
+        // Buscar e popular tipos de solicitação do banco
+        async function fetchTiposSolicitacao() {
+            const selectEl = document.getElementById('tipo_solicitacao');
+            if (!selectEl) return;
+
+            const { data, error } = await supabaseClientInstance
+                .from('cat_tipos_solicitacao')
+                .select('nome')
+                .order('nome');
+
+            if (error) {
+                console.error("Erro ao carregar tipos de solicitação:", error);
+                return;
+            }
+
+            const currentValue = selectEl.value;
+            selectEl.innerHTML = '<option value="" disabled selected>Selecione...</option>';
+            data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.nome;
+                opt.textContent = item.nome;
+                selectEl.appendChild(opt);
+            });
+            if (currentValue) selectEl.value = currentValue;
+        }
+
+        // Inserir novo tipo de solicitação dinamicamente
+        async function adicionarNovoTipo() {
+            const novoTipo = prompt("Digite o nome do novo tipo de solicitação:");
+            if (!novoTipo || !novoTipo.trim()) return;
+
+            showToast('Cadastrando', 'Enviando nova opção de tipo...', 'info');
+
+            const { error } = await supabaseClientInstance
+                .from('cat_tipos_solicitacao')
+                .insert({ nome: novoTipo.trim() });
+
+            if (error) {
+                showToast('Erro ao Adicionar', 'Erro: ' + error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Novo tipo adicionado com sucesso!', 'success');
+                await fetchTiposSolicitacao();
+                document.getElementById('tipo_solicitacao').value = novoTipo.trim();
+            }
+        }
+
+        // Toast de Feedback Visual
+        function showToast(title, message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastTitle.innerText = title;
+            toastMessage.innerText = message;
+            
+            toast.className = 'toast show';
+            toastIcon.className = 'fa fa-2x';
+
+            if (type === 'success') {
+                toast.classList.add('toast-success');
+                toastIcon.classList.add('fa-check-circle');
+                toastIcon.style.color = '#10b981';
+            } else if (type === 'error') {
+                toast.classList.add('toast-error');
+                toastIcon.classList.add('fa-times-circle');
+                toastIcon.style.color = '#ef4444';
+            } else {
+                // Info / Loading
+                toast.classList.add('toast-success');
+                toastIcon.classList.add('fa-spinner', 'fa-spin');
+                toastIcon.style.color = 'var(--amc-primary)';
+            }
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Gestão Cicloviária (NGC)</title>
+    <meta name="description" content="Núcleo de Gestão Cicloviária — Controle de expansão da malha cicloviária de Fortaleza."/>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+
+    <style>
+        :root {
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-green: #10b981;
+            --amc-ngc: #22d3ee;          /* Cor tema do NGC: Ciano cicloviário */
+            --amc-ngc-glow: rgba(34, 211, 238, 0.35);
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+            --amc-red-glow: rgba(241, 90, 34, 0.4);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .glass {
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .glass-dark {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .clickable-row {
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .clickable-row:hover {
+            background-color: rgba(34, 211, 238, 0.05) !important;
+        }
+
+        .clickable-row:active {
+            transform: scale(0.995);
+        }
+
+        /* ─── Sidebar ─── */
+        aside {
+            width: 300px;
+            min-width: 300px;
+            height: 100vh;
+            position: fixed;
+            left: 0; top: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 2rem 1.5rem;
+            box-sizing: border-box;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .logo-text {
+            font-family: 'Oswald', sans-serif;
+            font-weight: 300;
+            font-size: 15px;
+            letter-spacing: 0.15em;
+            color: rgba(255,255,255,0.8);
+            text-transform: uppercase;
+        }
+
+        .menu-list { list-style: none; padding: 0; margin: 0; }
+        .menu-item { margin-bottom: 6px; }
+
+        .menu-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            border-radius: 10px;
+            color: var(--amc-text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.25s;
+        }
+
+        .menu-link:hover, .menu-link.active {
+            color: #fff;
+            background: rgba(34, 211, 238, 0.08);
+            border-left: 3px solid var(--amc-ngc);
+        }
+
+        /* ─── Main ─── */
+        main {
+            margin-left: 300px;
+            flex-grow: 1;
+            padding: 2.5rem 3rem;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .hero-bg {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at 70% 10%, rgba(34, 211, 238, 0.07) 0%, transparent 60%),
+                        radial-gradient(ellipse at 20% 90%, rgba(248, 183, 0, 0.05) 0%, transparent 50%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* ─── KPI Cards ─── */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .kpi-card {
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.06) 0%, rgba(10,10,12,0.9) 60%);
+            transition: all 0.3s;
+        }
+
+        .kpi-card:hover {
+            border-color: var(--amc-ngc);
+            box-shadow: 0 8px 30px -5px var(--amc-ngc-glow);
+            transform: translateY(-3px);
+        }
+
+        .kpi-card.secondary {
+            border-color: rgba(248, 183, 0, 0.2);
+            background: linear-gradient(135deg, rgba(248, 183, 0, 0.06) 0%, rgba(10,10,12,0.9) 60%);
+        }
+        .kpi-card.secondary:hover {
+            border-color: var(--amc-primary);
+            box-shadow: 0 8px 30px -5px var(--amc-glow);
+        }
+
+        .kpi-card.green {
+            border-color: rgba(16, 185, 129, 0.2);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(10,10,12,0.9) 60%);
+        }
+        .kpi-card.green:hover {
+            border-color: var(--amc-green);
+            box-shadow: 0 8px 30px -5px rgba(16, 185, 129, 0.35);
+        }
+
+        .kpi-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-bottom: 1rem;
+        }
+
+        .kpi-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--amc-text-muted);
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .kpi-value {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 500;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .kpi-sub {
+            font-size: 11px;
+            color: var(--amc-text-muted);
+            margin-top: 6px;
+        }
+
+        .kpi-shine {
+            position: absolute;
+            top: -40px; right: -40px;
+            width: 120px; height: 120px;
+            border-radius: 50%;
+            opacity: 0.08;
+        }
+
+        /* ─── Table Section ─── */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 400;
+            color: #fff;
+            margin: 0;
+        }
+
+        .table-wrapper {
+            border-radius: 1.25rem;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead {
+            background: rgba(34, 211, 238, 0.06);
+            border-bottom: 1px solid rgba(34, 211, 238, 0.15);
+        }
+
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--amc-ngc);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 13px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: rgba(255,255,255,0.85);
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: rgba(34, 211, 238, 0.04);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ─── Badges ─── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .badge-em-estudo    { background: rgba(248,183,0,0.12); color: var(--amc-primary); border: 1px solid var(--amc-primary); }
+        .badge-proj-exec    { background: rgba(48,133,214,0.12); color: var(--amc-accent); border: 1px solid var(--amc-accent); }
+        .badge-em-obras     { background: rgba(241,90,34,0.12); color: var(--amc-secondary); border: 1px solid var(--amc-secondary); }
+        .badge-concluido    { background: rgba(16,185,129,0.12); color: var(--amc-green); border: 1px solid var(--amc-green); }
+
+        .badge-tipologia    { background: rgba(34,211,238,0.1); color: var(--amc-ngc); border: 1px solid rgba(34,211,238,0.3); }
+        .badge-generic      { background: rgba(255,255,255,0.05); color: var(--amc-text-muted); border: 1px solid rgba(255,255,255,0.1); }
+
+        /* ─── Botões ─── */
+        .btn-amc {
+            padding: 10px 20px;
+            border-radius: 9999px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            font-size: 11px;
+        }
+
+        .btn-primary-amc {
+            background: var(--amc-primary);
+            color: #000;
+            box-shadow: 0 4px 15px var(--amc-glow);
+        }
+
+        .btn-primary-amc:hover { transform: scale(1.02); box-shadow: 0 8px 25px var(--amc-glow); }
+        .btn-primary-amc:disabled { background: #444; color: #777; box-shadow: none; cursor: not-allowed; }
+
+        .btn-outline-amc {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .btn-outline-amc:hover { background: rgba(255,255,255,0.05); border-color: var(--amc-primary); }
+
+        .btn-ngc {
+            background: rgba(34, 211, 238, 0.12);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            color: var(--amc-ngc);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-ngc:hover { background: rgba(34, 211, 238, 0.2); box-shadow: 0 0 15px var(--amc-ngc-glow); }
+
+        /* ─── Modal ─── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(16px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 700px;
+            max-height: 92vh;
+            border-radius: 1.5rem;
+            overflow-y: auto;
+            transform: scale(0.95) translateY(16px);
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.show .modal-content { transform: scale(1) translateY(0); }
+
+        .modal-header {
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: rgba(10,10,12,0.95);
+            backdrop-filter: blur(12px);
+        }
+
+        .modal-body { padding: 2rem; }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--amc-text-muted);
+            cursor: pointer;
+            font-size: 1.4rem;
+            transition: color 0.2s;
+        }
+        .modal-close:hover { color: #fff; }
+
+        /* ─── Form ─── */
+        .form-group { margin-bottom: 1.1rem; }
+
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+        .form-label {
+            display: block;
+            font-size: 10px;
+            color: var(--amc-text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 0.75rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.25s;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-input:focus {
+            border-color: var(--amc-ngc);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+            background: rgba(34, 211, 238, 0.04);
+        }
+
+        select option, option {
+            background-color: #0A0A0C !important;
+            color: #ffffff !important;
+        }
+        .priority-row {
+            border-left: 4px solid #ef4444 !important;
+            background: rgba(239, 68, 68, 0.04) !important;
+        }
+        .priority-row:hover {
+            background: rgba(239, 68, 68, 0.08) !important;
+        }
+
+        .info-panel {
+            background: rgba(34, 211, 238, 0.04);
+            border: 1px solid rgba(34, 211, 238, 0.15);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* ─── Auth Panel ─── */
+        .auth-panel {
+            padding: 1.25rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .auth-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--amc-ngc);
+            margin-bottom: 12px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ─── Dashboard Header ─── */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .header-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 300;
+            margin: 0 0 4px 0;
+            color: #fff;
+        }
+
+        .header-sub {
+            font-size: 13px;
+            color: var(--amc-text-muted);
+        }
+
+        .role-badge {
+            font-size: 12px;
+            padding: 8px 16px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ─── Empty state ─── */
+        .empty-row td {
+            text-align: center;
+            padding: 3rem;
+            color: var(--amc-text-muted);
+        }
+
+        /* ─── Toast ─── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: -400px;
+            width: 340px;
+            padding: 18px;
+            border-radius: 12px;
+            z-index: 1100;
+            transition: right 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .toast.show { right: 24px; }
+        .toast-success { background: rgba(6,20,10,0.95); border: 1px solid #10b981; box-shadow: 0 0 24px rgba(16,185,129,0.2); }
+        .toast-error   { background: rgba(20,6,6,0.95);  border: 1px solid #ef4444; box-shadow: 0 0 24px rgba(239,68,68,0.2); }
+        .toast-info    { background: rgba(6,10,20,0.95);  border: 1px solid var(--amc-ngc); box-shadow: 0 0 24px var(--amc-ngc-glow); }
+
+        /* ─── Extensao km display ─── */
+        .km-value {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1rem;
+            color: var(--amc-ngc);
+            font-weight: 500;
+        }
+    
+        /* --- Sidebar Menu List Scrollbar (Checkpoint 4) --- */
+        .menu-list {
+            overflow-y: auto !important;
+            max-height: calc(100vh - 220px) !important;
+        }
+        .menu-list::-webkit-scrollbar {
+            width: 4px !important;
+            display: block !important;
+        }
+        .menu-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15) !important;
+            border-radius: 4px !important;
+        }
+        .menu-list::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+
+        /* --- UPLOAD ÁREA --- */
+        .upload-zone {
+            border: 2px dashed rgba(34, 211, 238, .25);
+            border-radius: 12px; padding: 1.25rem;
+            text-align: center; cursor: pointer;
+            transition: all .25s; background: rgba(34, 211, 238, .03);
+            position: relative; overflow: hidden;
+            margin-top: 5px;
+        }
+        .upload-zone:hover { border-color: var(--amc-ngc); background: rgba(34, 211, 238, .07); }
+        .upload-zone.uploading { border-color: var(--amc-primary); }
+        .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+        .upload-icon { font-size: 1.5rem; color: var(--amc-ngc); margin-bottom: 6px; }
+        .upload-text { font-size: 12px; color: var(--amc-text-muted); }
+        .upload-text strong { color: var(--amc-ngc); }
+
+        .doc-link-row {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 8px; padding: 8px 12px; border-radius: 8px;
+            background: rgba(16, 185, 129, .06); border: 1px solid rgba(16, 185, 129, .2);
+            font-size: 12px;
+        }
+        .doc-link-row a { color: #10b981; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .doc-link-row a:hover { text-decoration: underline; }
+        .btn-danger { background: #ef4444; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s; }
+        .btn-danger:hover { opacity: 0.9; }
+
+        .upload-progress {
+            height: 3px; border-radius: 99px;
+            background: rgba(255, 255, 255, 0.06); margin-top: 6px; overflow: hidden; display: none;
+        }
+        .upload-progress-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, var(--amc-ngc), var(--amc-primary));
+            border-radius: 99px; transition: width .3s;
+        }
+        /* --- AGGREGATION --- */
+        .aggr-banner { display: flex; align-items: flex-start; gap: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 12px 16px; margin-bottom: 1rem; font-size: 13px; color: #fbbf24; }
+        .aggr-banner i { font-size: 16px; margin-top:1px; flex-shrink:0; }
+        .aggr-banner strong { color: #fde68a; display: block; margin-bottom: 3px; }
+        .badge-aggr { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b; font-size: 10px; font-weight: 900; margin-left: 5px; flex-shrink: 0; vertical-align: middle; }
+        #aggr-modal { position: fixed; inset: 0; z-index: 1200; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s; }
+        #aggr-modal.show { opacity: 1; pointer-events: auto; }
+        #aggr-modal .aggr-inner { background: #0d0d10; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; width: 900px; max-width: 96vw; max-height: 85vh; overflow-y: auto; padding: 2rem; }
+        #aggr-modal h4 { color: #f59e0b; font-family: 'Oswald', sans-serif; font-size: 1.2rem; margin: 0 0 4px; }
+        #aggr-modal .aggr-sub { color: var(--amc-text-muted); font-size: 12px; margin: 0 0 1.5rem; }
+        .aggr-filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; margin-bottom: 1.5rem; }
+        .aggr-filter-row .aggr-search-btn { padding: 10px 20px; background: #f59e0b; color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px; }
+        #aggr-results-table { width: 100%; border-collapse: collapse; }
+        #aggr-results-table th { text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--amc-text-muted); border-bottom: 1px solid rgba(255,255,255,.07); }
+        #aggr-results-table td { padding: 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); }
+        .aggr-action-btn { padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; border: 1px solid rgba(245,158,11,.5); background: rgba(245,158,11,.1); color: #f59e0b; }
+        .aggr-action-btn:hover { background: rgba(245,158,11,.25); }
+        .aggr-empty { text-align: center; padding: 2rem; color: var(--amc-text-muted); font-size: 13px; }
+        #btn-verify-local { padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 8px; border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.08); color: #f59e0b; display: inline-flex; align-items: center; gap: 6px; }
+    </style>
+</head>
+<body>
+<div class="hero-bg"></div>
+
+<!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+<aside class="glass">
+    <div>
+        <div class="logo-container">
+            <i class="fa fa-car-side fa-xl" style="color:var(--amc-secondary, #f15a22);"></i>
+            <span class="logo-text">AMC — Engenharia</span>
+        </div>
+        <ul class="menu-list">
+            <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link "><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+            <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+            <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link "><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+            <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link "><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+            <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+            <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link "><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+            <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link "><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+            <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link "><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+            <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link active"><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+            <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link "><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+            <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link "><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+        </ul>
+    </div>
+
+    <!-- Auth Panel -->
+    <div class="auth-panel glass-dark">
+        <div class="auth-title">
+            <i class="fa fa-user-shield"></i>
+            <span>NGC — Cicloviário</span>
+        </div>
+
+        <div id="auth-unlogged">
+            <div class="form-group">
+                <input type="email" id="auth-email" placeholder="E-mail" class="form-input" style="padding:8px 12px; font-size:11px; margin-bottom:6px;">
+                <input type="password" id="auth-password" placeholder="Senha" class="form-input" style="padding:8px 12px; font-size:11px;">
+            </div>
+            <div style="display:flex; gap:6px;">
+                <button class="btn-amc btn-primary-amc" style="padding:6px; font-size:10px; flex:1;" onclick="login()">Entrar</button>
+                <button class="btn-amc btn-outline-amc" style="padding:6px; font-size:10px; flex:1;" onclick="register()">Registrar</button>
+            </div>
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.05); margin:10px 0;">
+            <button class="btn-amc btn-outline-amc" style="padding:6px 10px; font-size:10px; width:100%;" onclick="simulateQuickLogin()">
+                Simular Login Rápido (Técnico)
+            </button>
+        </div>
+
+        <div id="auth-logged" style="display:none;">
+            <p id="logged-email" style="font-size:11px; margin:0 0 8px 0; color:#fff; word-break:break-all; font-weight:500;"></p>
+            <div class="form-group" style="margin-bottom:10px;">
+                <label class="form-label" style="font-size:9px; margin-bottom:4px;">Simular Papel (Role)</label>
+                <select id="role-selector" class="form-input" style="padding:6px 10px; font-size:11px;" onchange="changeRole(this.value)">
+                    <option value="Público">Público</option>
+                    <option value="Técnico">Técnico</option>
+                    <option value="Gerência">Gerência</option>
+                    <option value="Diretoria">Diretoria</option>
+                </select>
+            </div>
+            <button class="btn-amc btn-outline-amc" style="padding:6px 12px; font-size:10px; color:var(--amc-secondary); width:100%;" onclick="logout()">Desconectar</button>
+        </div>
+    </div>
+</aside>
+<!-- Aggr Search Modal -->
+<div id="aggr-modal"><div class="aggr-inner">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+        <div><h4><i class="fa fa-magnifying-glass-location"></i> Verificar Processos no Local</h4><p class="aggr-sub" id="aggr-modal-sub"></p></div>
+        <button class="modal-close" onclick="closeAggrModal()">&#x2715;</button>
+    </div>
+    <div class="aggr-filter-row">
+        <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label class="form-label" style="margin: 0;">Bairro</label>
+                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                    <input type="checkbox" id="aggr-use-bairro" checked onchange="toggleAggrFilter('bairro')" style="accent-color: var(--amc-ngc); width: 12px; height: 12px;">
+                    <span>Ativo</span>
+                </label>
+            </div>
+            <input type="text" id="aggr-filter-bairro" class="form-input" placeholder="Ex: Aldeota">
+        </div>
+        <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label class="form-label" style="margin: 0;">Regional</label>
+                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                    <input type="checkbox" id="aggr-use-regional" checked onchange="toggleAggrFilter('regional')" style="accent-color: var(--amc-ngc); width: 12px; height: 12px;">
+                    <span>Ativo</span>
+                </label>
+            </div>
+            <input type="text" id="aggr-filter-regional" class="form-input" placeholder="Ex: Regional II">
+        </div>
+        <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label class="form-label" style="margin: 0;">Endereço / Rua</label>
+                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                    <input type="checkbox" id="aggr-use-endereco" checked onchange="toggleAggrFilter('endereco')" style="accent-color: var(--amc-ngc); width: 12px; height: 12px;">
+                    <span>Ativo</span>
+                </label>
+            </div>
+            <input type="text" id="aggr-filter-endereco" class="form-input" placeholder="Ex: Av. Santos Dumont">
+        </div>
+        <button class="aggr-search-btn" onclick="searchSimilarDemandas()"><i class="fa fa-search"></i> Pesquisar</button>
+    </div>
+    <div id="aggr-results-area"><div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Use os filtros acima para buscar processos relacionados.</div></div>
+    <input type="hidden" id="aggr-current-demanda-id"><input type="hidden" id="aggr-current-protocolo">
+</div></div>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<main>
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div>
+            <h1 class="header-title">Gestão Cicloviária <span style="color:var(--amc-ngc);">NGC</span></h1>
+            <p class="header-sub">Controle da expansão da malha cicloviária de Fortaleza</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div class="role-badge glass-dark" id="role-badge">
+                <i class="fa fa-circle-notch fa-spin"></i>
+                <span>Conectando...</span>
+            </div>
+            <button class="btn-amc btn-primary-amc" onclick="openNgcModal(null)" id="btn-novo-projeto">
+                <i class="fa fa-plus"></i> Novo Projeto
+            </button>
+        </div>
+    </div>
+
+    <!-- ─── KPI Cards ─── -->
+    <div class="kpi-row" id="kpi-row">
+        <div class="kpi-card">
+            <div class="kpi-shine" style="background: var(--amc-ngc);"></div>
+            <div class="kpi-icon" style="background:rgba(34,211,238,0.12); color:var(--amc-ngc);">
+                <i class="fa fa-route"></i>
+            </div>
+            <div class="kpi-label">Malha Cicloviária Acumulada</div>
+            <div class="kpi-value" id="kpi-malha-total">— km</div>
+            <div class="kpi-sub" id="kpi-malha-sub">Apenas projetos <strong style="color:var(--amc-green);">Concluídos</strong></div>
+        </div>
+
+        <div class="kpi-card secondary">
+            <div class="kpi-shine" style="background: var(--amc-primary);"></div>
+            <div class="kpi-icon" style="background:rgba(248,183,0,0.12); color:var(--amc-primary);">
+                <i class="fa fa-layer-group"></i>
+            </div>
+            <div class="kpi-label">Extensão Total em Portfólio</div>
+            <div class="kpi-value" id="kpi-malha-portfólio">— km</div>
+            <div class="kpi-sub">Todos os projetos cadastrados</div>
+        </div>
+
+        <div class="kpi-card green">
+            <div class="kpi-shine" style="background: var(--amc-green);"></div>
+            <div class="kpi-icon" style="background:rgba(16,185,129,0.12); color:var(--amc-green);">
+                <i class="fa fa-check-circle"></i>
+            </div>
+            <div class="kpi-label">Projetos Concluídos</div>
+            <div class="kpi-value" id="kpi-count-concluido">—</div>
+            <div class="kpi-sub">Trechos entregues à população</div>
+        </div>
+
+        <div class="kpi-card" style="border-color:rgba(241,90,34,0.2); background:linear-gradient(135deg,rgba(241,90,34,0.06) 0%,rgba(10,10,12,0.9) 60%);">
+            <div class="kpi-shine" style="background: var(--amc-secondary);"></div>
+            <div class="kpi-icon" style="background:rgba(241,90,34,0.12); color:var(--amc-secondary);">
+                <i class="fa fa-hard-hat"></i>
+            </div>
+            <div class="kpi-label">Em Obras / Estudo</div>
+            <div class="kpi-value" id="kpi-count-andamento">—</div>
+            <div class="kpi-sub">Projetos em andamento</div>
+        </div>
+    </div>
+
+    <!-- ─── Tabela de Projetos ─── -->
+    <div>
+        <div class="section-header">
+            <h2 class="section-title"><i class="fa fa-table-list" style="color:var(--amc-ngc); margin-right:8px;"></i>Trechos Cicloviários</h2>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <input type="text" id="filter-input" class="form-input" style="width:220px; padding:8px 12px; font-size:12px;" placeholder="Filtrar por protocolo..." oninput="filterTable(this.value)">
+            </div>
+        </div>
+
+        <div class="table-wrapper glass">
+            <table id="ngc-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%">Processo</th>
+                        <th style="width: 33%">Via</th>
+                        <th style="width: 16%">Tipo</th>
+                        <th style="width: 13%">Extensão</th>
+                        <th style="width: 16%">Designação</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr class="empty-row"><td colspan="4">Carregando projetos...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- ══════════════════════ MODAL NGC ══════════════════════ -->
+<div id="ngc-modal" class="modal-overlay">
+    <div class="modal-content glass">
+        <div class="modal-header">
+            <div>
+                <h3 style="font-family:'Oswald',sans-serif; font-size:1.4rem; margin:0; color:var(--amc-ngc);" id="modal-title">Cadastrar Projeto Cicloviário</h3>
+                <p id="modal-subtitle" style="font-size:12px; color:var(--amc-text-muted); margin:2px 0 0 0;"></p>
+            </div>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <!-- Banner de Prioridade DITRAN -->
+            <div id="ngc-priority-banner" style="display:none;"></div>
+            <div id="ngc-aggr-banner" class="aggr-banner" style="display:none;">
+                <i class="fa fa-link"></i>
+                <div><strong id="ngc-aggr-banner-title">Processo Agregado</strong><div id="ngc-aggr-banner-text" style="color:rgba(253,230,138,.75);font-size:12px;"></div></div>
+            </div>
+
+            <!-- Info do projeto pai -->
+            <div class="info-panel" id="info-panel" style="display:none; background: rgba(34, 211, 238, 0.04); border: 1px solid rgba(34, 211, 238, 0.15); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+                <h4 style="margin:0 0 10px 0; font-size:10px; text-transform:uppercase; color:var(--amc-ngc); font-weight:700;">Detalhamento Geral (Integração)</h4>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:13px;">
+                    <div><span class="form-label" style="display:block; font-size:10px; color:var(--amc-text-muted); margin-bottom:2px;">Protocolo</span><span id="info-protocolo" style="color:#fff; font-weight:600;">—</span></div>
+                    <div><span class="form-label" style="display:block; font-size:10px; color:var(--amc-text-muted); margin-bottom:2px;">Tipo de Demanda</span><span id="info-tipo" style="color:#fff; font-weight:600;">—</span></div>
+                    <div style="grid-column:span 2;"><span class="form-label" style="display:block; font-size:10px; color:var(--amc-text-muted); margin-bottom:2px;">Endereço Oficial</span><span id="info-endereco" style="color:#fff; font-weight:600;">—</span></div>
+                    <div style="grid-column:span 2;"><span class="form-label" style="display:block; font-size:10px; color:var(--amc-text-muted); margin-bottom:2px;">Trecho (NPO)</span><span id="info-trecho" style="color:#fff; font-weight:500; font-style:italic;">—</span></div>
+                    <div style="grid-column:span 2;">
+                        <span class="form-label" style="display:block; font-size:10px; color:var(--amc-text-muted); margin-bottom:4px;">Data da Implantação (NCE / NCO)</span>
+                        <span id="info-data-implantacao" style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 4px 10px; font-weight:600; display:inline-block; font-size:12px;">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selector de demanda (quando modal é novo) -->
+            <div class="form-group" id="demanda-selector-group">
+                <label for="select-demanda" class="form-label">Demanda Aprovada (Pai)</label>
+                <select id="select-demanda" class="form-input" onchange="onDemandaSelected(this.value)" required>
+                    <option value="" disabled selected>Selecione uma demanda aprovada...</option>
+                </select>
+            </div>
+
+            <input type="hidden" id="ngc-demanda-id">
+            <input type="hidden" id="ngc-record-id">
+            <input type="hidden" id="ngc-parecer-ngc">
+            <input type="hidden" id="ngc-projeto-ngc">
+
+            <div class="form-row-2">
+                <!-- Status -->
+                <div class="form-group">
+                    <label for="ngc-status" class="form-label">Status do Projeto</label>
+                    <select id="ngc-status" class="form-input" required>
+                        <option value="Em Estudo">Em Estudo</option>
+                        <option value="Projeto Executivo">Projeto Executivo</option>
+                        <option value="Em Obras">Em Obras</option>
+                        <option value="Concluído">Concluído</option>
+                    </select>
+                </div>
+
+                <!-- Tipologia -->
+                <div class="form-group">
+                    <label for="ngc-tipologia" class="form-label">Tipologia</label>
+                    <select id="ngc-tipologia" class="form-input" required>
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="Ciclovia">Ciclovia</option>
+                        <option value="Ciclofaixa">Ciclofaixa</option>
+                        <option value="Ciclorrota">Ciclorrota</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <!-- Posição na Via -->
+                <div class="form-group">
+                    <label for="ngc-posicao" class="form-label">Posição na Via</label>
+                    <select id="ngc-posicao" class="form-input" required>
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="Canteiro central">Canteiro central</option>
+                        <option value="Lado direito">Lado direito</option>
+                        <option value="Lado esquerdo">Lado esquerdo</option>
+                        <option value="Junto ao canteiro central">Junto ao canteiro central</option>
+                        <option value="Calçada">Calçada</option>
+                    </select>
+                </div>
+
+                <!-- Orientação -->
+                <div class="form-group">
+                    <label for="ngc-orientacao" class="form-label">Orientação</label>
+                    <select id="ngc-orientacao" class="form-input" required>
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="Norte">Norte</option>
+                        <option value="Sul">Sul</option>
+                        <option value="Leste">Leste</option>
+                        <option value="Oeste">Oeste</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <!-- Sentido de Circulação -->
+                <div class="form-group">
+                    <label for="ngc-sentido" class="form-label">Sentido de Circulação</label>
+                    <select id="ngc-sentido" class="form-input" required>
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="Bidirecional">Bidirecional</option>
+                        <option value="Unidirecional">Unidirecional</option>
+                        <option value="Unidirecional bilateral">Unidirecional bilateral</option>
+                    </select>
+                </div>
+
+                <!-- Pavimento -->
+                <div class="form-group">
+                    <label for="ngc-pavimento" class="form-label">Tipo de Pavimento</label>
+                    <select id="ngc-pavimento" class="form-input" required>
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="Asfalto">Asfalto</option>
+                        <option value="Concreto">Concreto</option>
+                        <option value="Intertravado">Intertravado</option>
+                        <option value="Asfalto/Intertravado">Asfalto/Intertravado</option>
+                        <option value="Asfalto/Concreto">Asfalto/Concreto</option>
+                        <option value="Concreto/Intertravado">Concreto/Intertravado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <!-- Elementos de Separação -->
+                <div class="form-group">
+                    <label for="ngc-separacao" class="form-label">Elementos de Separação</label>
+                    <select id="ngc-separacao" class="form-input" required>
+                        <option value="" disabled selected>Selecione...</option>
+                        <option value="Canteiro físico">Canteiro físico</option>
+                        <option value="Canteiro fictício">Canteiro fictício</option>
+                        <option value="Tachões">Tachões</option>
+                        <option value="Calçada">Calçada</option>
+                        <option value="Balizadores">Balizadores</option>
+                        <option value="Buffer">Buffer</option>
+                    </select>
+                </div>
+
+                <!-- Extensão -->
+                <div class="form-group">
+                    <label for="ngc-extensao" class="form-label">Extensão do Trecho (km)</label>
+                    <input type="number" id="ngc-extensao" class="form-input" step="0.001" min="0" placeholder="ex: 2.150" required>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="ngc-protegida" style="width: 16px; height: 16px; accent-color: var(--amc-ngc);">
+                <label for="ngc-protegida" class="form-label" style="margin-bottom: 0; cursor: pointer; user-select: none;">Infraestrutura Protegida?</label>
+            </div>
+
+            <!-- Projeto e Parecer NGC -->
+            <div class="form-section" style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1.25rem;">
+                <p class="form-section-title"><i class="fa fa-file-invoice"></i> Projeto e Parecer NGC</p>
+                
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label for="ngc-projeto-ngc-titulo" class="form-label">Título do Projeto *</label>
+                        <input type="text" id="ngc-projeto-ngc-titulo" class="form-input" placeholder="Ex: Ciclovia Av. Bezerra de Menezes">
+                    </div>
+                    <div class="form-group">
+                        <label for="ngc-projeto-ngc-numero" class="form-label">Número do Projeto *</label>
+                        <input type="text" id="ngc-projeto-ngc-numero" class="form-input" placeholder="Ex: PRJ-NGC-045/2026">
+                    </div>
+                </div>
+
+                <div class="form-row-2" style="margin-top: 10px;">
+                    <div class="form-group">
+                        <label class="form-label">Arquivo do Projeto (PDF)</label>
+                        <div class="upload-zone" id="zone-projeto-ngc" onclick="document.getElementById('file-projeto-ngc').click()">
+                            <input type="file" id="file-projeto-ngc" accept="application/pdf" style="display:none;" onchange="uploadFileSpecific(this, 'projeto_ngc')">
+                            <div class="upload-icon"><i class="fa fa-cloud-arrow-up"></i></div>
+                            <div class="upload-text">Clique para <strong>anexar o Projeto NGC (PDF)</strong></div>
+                            <div class="upload-progress" id="prog-projeto-ngc"><div class="upload-progress-fill" id="prog-projeto-ngc-fill"></div></div>
+                        </div>
+                        <div id="projeto-ngc-link-row" style="display:none;">
+                            <div class="doc-link-row">
+                                <a id="projeto-ngc-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i><span>Ver Projeto NGC</span></a>
+                                <button type="button" class="btn-danger" onclick="removeFileSpecific('projeto_ngc')"><i class="fa fa-trash"></i> Remover</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Arquivo do Parecer (PDF)</label>
+                        <div class="upload-zone" id="zone-parecer-ngc" onclick="document.getElementById('file-parecer-ngc').click()">
+                            <input type="file" id="file-parecer-ngc" accept="application/pdf" style="display:none;" onchange="uploadFileSpecific(this, 'parecer_ngc')">
+                            <div class="upload-icon"><i class="fa fa-cloud-arrow-up"></i></div>
+                            <div class="upload-text">Clique para <strong>anexar o Parecer NGC (PDF)</strong></div>
+                            <div class="upload-progress" id="prog-parecer-ngc"><div class="upload-progress-fill" id="prog-parecer-ngc-fill"></div></div>
+                        </div>
+                        <div id="parecer-ngc-link-row" style="display:none;">
+                            <div class="doc-link-row">
+                                <a id="parecer-ngc-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i><span>Ver Parecer NGC</span></a>
+                                <button type="button" class="btn-danger" onclick="removeFileSpecific('parecer_ngc')"><i class="fa fa-trash"></i> Remover</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões -->
+            <div style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:12px;">
+                <button type="button" class="btn-amc btn-outline-amc" onclick="closeModal()">Cancelar</button>
+                <button type="button" id="btn-save-ngc" class="btn-amc btn-primary-amc" onclick="saveNgcProject()">
+                    <i class="fa fa-floppy-disk"></i> Salvar Projeto Cicloviário
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast">
+    <i id="toast-icon" class="fa fa-2x"></i>
+    <div>
+        <strong id="toast-title" style="display:block; font-size:13px; margin-bottom:3px; color:#fff;"></strong>
+        <span id="toast-message" style="font-size:12px; color:rgba(255,255,255,0.75);"></span>
+    </div>
+</div>
+
+<script>
+    // Supabase já inicializado pelo auth.js
+
+    // ─── State ───
+    let currentUser = null;
+    let currentProfile = null;
+    let allDemandas = [];
+    let allNgcProjects = [];
+
+    // ─── Init ───
+    window.addEventListener('DOMContentLoaded', async () => {
+        lucide.createIcons();
+        await checkSession();
+    });
+
+    async function checkSession() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            currentUser = session.user;
+            await loadProfile(currentUser.id);
+            showLoggedState();
+        } else {
+            showUnloggedState();
+        }
+    }
+
+    async function loadProfile(userId) {
+        const { data } = await supabase.from('perfis_usuarios').select('*').eq('id', userId).single();
+        if (data) {
+            const mappedRole = data.nivel_acesso === 'admin' ? 'Gerência' : (data.nivel_acesso === 'diretor' ? 'Diretoria' : (data.nivel_acesso === 'coordenador' ? 'Gerência' : 'Técnico'));
+            currentProfile = { ...data, role: mappedRole };
+            currentUserProfile = currentProfile; // Garantir compatibilidade se outro lugar usar
+            updateRoleBadge(mappedRole);
+            const roleSel = document.getElementById('role-selector');
+            if (roleSel) roleSel.value = mappedRole;
+        }
+    }
+
+    function updateRoleBadge(role) {
+        const badge = document.getElementById('role-badge');
+        const saveBtn = document.getElementById('btn-save-ngc');
+        const novoBtn = document.getElementById('btn-novo-projeto');
+
+        let color = 'var(--amc-text-muted)', icon = 'fa-user';
+        const authorized = ['Técnico','Gerência','Diretoria'].includes(role);
+
+        if (role === 'Diretoria' || role === 'Gerência') { color = 'var(--amc-secondary)'; icon = 'fa-user-shield'; }
+        else if (role === 'Técnico') { color = 'var(--amc-ngc)'; icon = 'fa-user-gear'; }
+
+        badge.style.border = `1px solid ${color}`;
+        badge.style.color = color;
+        badge.innerHTML = `<i class="fa ${icon}"></i> <span>Operador: ${role}</span>`;
+
+        if (saveBtn) saveBtn[authorized ? 'removeAttribute' : 'setAttribute']('disabled', 'true');
+    }
+
+    function showLoggedState() {
+        document.getElementById('auth-unlogged').style.display = 'none';
+        document.getElementById('auth-logged').style.display = 'block';
+        document.getElementById('logged-email').innerText = currentUser.email;
+        fetchData();
+    }
+
+    function showUnloggedState() {
+        document.getElementById('auth-unlogged').style.display = 'block';
+        document.getElementById('auth-logged').style.display = 'none';
+        const badge = document.getElementById('role-badge');
+        badge.style.border = '1px solid #ef4444';
+        badge.style.color = '#ef4444';
+        badge.innerHTML = `<i class="fa fa-exclamation-triangle"></i> <span>Acesso Restrito (Faça Login)</span>`;
+        renderTable([]);
+        renderKpis([]);
+    }
+
+    async function simulateQuickLogin() {
+        const email = `ngc_${Math.floor(Math.random()*99999)}@amc.fortaleza.br`;
+        const pwd = 'amcTestPassword123';
+        showToast('Aguarde', 'Criando sessão técnica...', 'info');
+
+        let { data, error } = await supabase.auth.signUp({ email, password: pwd });
+        if (error) {
+            const res2 = await supabase.auth.signInWithPassword({ email, password: pwd });
+            if (res2.error) { showToast('Erro', res2.error.message, 'error'); return; }
+            currentUser = res2.data.user;
+        } else {
+            currentUser = data.user;
+        }
+
+        setTimeout(async () => {
+            await checkSession();
+            await changeRole('Técnico');
+            showToast('Conectado', 'Sessão como Técnico ativa!', 'success');
+        }, 1500);
+    }
+
+    async function login() {
+        const email = document.getElementById('auth-email').value;
+        const pwd = document.getElementById('auth-password').value;
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd });
+        if (error) { showToast('Erro', error.message, 'error'); return; }
+        currentUser = data.user;
+        await checkSession();
+        showToast('Conectado', 'Acesso autorizado!', 'success');
+    }
+
+    async function register() {
+        const email = document.getElementById('auth-email').value;
+        const pwd = document.getElementById('auth-password').value;
+        const { error } = await supabase.auth.signUp({ email, password: pwd });
+        if (error) { showToast('Erro', error.message, 'error'); }
+        else { showToast('Sucesso', 'Verifique seu e-mail para confirmação.', 'success'); }
+    }
+
+    async function logout() {
+        await realizarLogout();
+    }
+
+    async function changeRole(role) {
+        if (!currentUser) return;
+        const { error } = await supabase.from('profiles').update({ role }).eq('id', currentUser.id);
+        if (error) { showToast('Erro', error.message, 'error'); return; }
+        await loadProfile(currentUser.id);
+        showToast('Role Alterada', `Perfil: ${role}`, 'success');
+        await fetchData();
+    }
+
+    // ─── Data Fetching ───
+    async function fetchData() {
+        await Promise.all([fetchDemandas(), fetchNgcProjects()]);
+    }
+
+    async function fetchDemandas() {
+        const { data, error } = await supabase
+            .from('demandas_pai')
+            .select(`
+                id, protocolo_oficial, tipo_solicitacao, solicitante_oficial,
+                cat_bairros (nome_bairro, cat_regionais(nome_regional)),
+                ruas_fortaleza:id_rua (nome),
+                projetos_npo!id_demanda_pai (
+                    trecho
+                ),
+                execucao_nce (
+                    data_conclusao_real,
+                    status_nce
+                ),
+                execucao_nco (
+                    data_fim_obra,
+                    status_nco
+                )
+            `)
+            .eq('status_geral', 'Aprovado');
+
+        if (error) { showToast('Erro', 'Erro ao carregar demandas: ' + error.message, 'error'); return; }
+        allDemandas = data || [];
+
+        // Populate demanda selector
+        const sel = document.getElementById('select-demanda');
+        sel.innerHTML = '<option value="" disabled selected>Selecione uma demanda aprovada...</option>';
+        allDemandas.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            const rua = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+            const bairro = d.cat_bairros ? d.cat_bairros.nome_bairro : '';
+            opt.textContent = `${d.protocolo_oficial} — ${rua || bairro || d.tipo_solicitacao}`;
+            sel.appendChild(opt);
+        });
+    }
+
+    async function fetchNgcProjects() {
+        const { data, error } = await supabase
+            .from('projetos_ngc')
+            .select(`
+                *,
+                demandas_pai:id_demanda_pai (
+                    protocolo_oficial, tipo_solicitacao, solicitante_oficial,
+                    endereco, nucleos_atribuidos, prioridade_diretoria, prioridade_nome, id_demanda_principal,
+                    cat_bairros (nome_bairro, cat_regionais(nome_regional)),
+                    ruas_fortaleza:id_rua (nome),
+                    projetos_npo!id_demanda_pai (
+                        trecho
+                    ),
+                    execucao_nce (
+                        data_conclusao_real,
+                        status_nce
+                    ),
+                    execucao_nco (
+                        data_fim_obra,
+                        status_nco
+                    )
+                )
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) { showToast('Erro', 'Erro ao carregar projetos: ' + error.message, 'error'); return; }
+        allNgcProjects = data || [];
+        renderTable(allNgcProjects);
+        renderKpis(allNgcProjects);
+    }
+
+    // ─── KPIs ───
+    function renderKpis(projects) {
+        const concluidos = projects.filter(p => p.status_ngc === 'Concluído');
+        const emAndamento = projects.filter(p => p.status_ngc !== 'Concluído');
+
+        const malhaTotal = concluidos.reduce((sum, p) => sum + (parseFloat(p.extensao_km) || 0), 0);
+        const portTotal = projects.reduce((sum, p) => sum + (parseFloat(p.extensao_km) || 0), 0);
+
+        document.getElementById('kpi-malha-total').textContent = malhaTotal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3}) + ' km';
+        document.getElementById('kpi-malha-portfólio').textContent = portTotal.toLocaleString('pt-BR', {minimumFractionDigits:3, maximumFractionDigits:3}) + ' km';
+        document.getElementById('kpi-count-concluido').textContent = concluidos.length;
+        document.getElementById('kpi-count-andamento').textContent = emAndamento.length;
+        document.getElementById('kpi-malha-sub').innerHTML = `${concluidos.length} trecho(s) <strong style="color:var(--amc-green);">Concluído(s)</strong>`;
+    }
+
+    // ─── Table ───
+    function renderTable(projects) {
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+
+        if (projects.length === 0) {
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="5" style="text-align:center; padding:3rem; color:var(--amc-text-muted);">Nenhum projeto cicloviário cadastrado.</td></tr>`;
+            return;
+        }
+
+        projects.forEach(p => {
+            const d = p.demandas_pai;
+            const protocolo = d ? d.protocolo_oficial : '—';
+            const rua = d && d.ruas_fortaleza ? d.ruas_fortaleza.nome : 'Não especificada';
+            const bairro = d && d.cat_bairros ? d.cat_bairros.nome_bairro : '';
+            const regional = d && d.cat_bairros && d.cat_bairros.cat_regionais ? d.cat_bairros.cat_regionais.nome_regional : '';
+
+            const endSub = bairro ? `${bairro} (Reg. ${regional})` : '—';
+            const extensao = p.extensao_km ? parseFloat(p.extensao_km).toLocaleString('pt-BR', {minimumFractionDigits:3}) + ' km' : '—';
+
+            const nucleos = d && d.nucleos_atribuidos ? d.nucleos_atribuidos : [];
+            let nucleosBadges = '';
+            if (nucleos.length > 0) {
+                nucleosBadges = nucleos.map(n => `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(248, 183, 0, 0.15); color: var(--amc-primary); border: 1px solid rgba(248, 183, 0, 0.3); font-weight: bold; border-radius: 4px;">${n}</span>`).join('');
+            } else {
+                nucleosBadges = `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(255,255,255,0.05); color: var(--amc-text-muted); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">NPO (Legado)</span>`;
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'clickable-row' + (d && d.prioridade_diretoria === true ? ' priority-row' : '');
+            tr.onclick = () => openNgcModal(p.id);
+            tr.innerHTML = `
+                <td>
+                    <div style="font-weight:700; font-family:'Oswald',sans-serif; color:#fff; display:flex; align-items:center; gap:6px;">
+                        ${d && d.prioridade_diretoria === true ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Prioridade: ${d.prioridade_nome || 'Sim'}"></i>` : ''}
+                        ${protocolo}
+                        ${d && d.id_demanda_principal ? `<span class="badge-aggr" title="Processo Agregado">A</span>` : ''}
+                    </div>
+                    <div style="font-size:11px; color:var(--amc-text-muted); margin-top:2px;">${endSub}</div>
+                </td>
+                <td><span style="font-weight: 500;">${rua}</span></td>
+                <td>${p.tipologia ? `<span class="badge badge-tipologia" style="background: rgba(34, 211, 238, 0.1); color: var(--amc-ngc); border: 1px solid rgba(34, 211, 238, 0.2);"><i class="fa fa-bicycle"></i> ${p.tipologia}</span>` : '—'}</td>
+                <td><span class="km-value" style="font-weight: 600; color: var(--amc-primary);">${extensao}</span></td>
+                <td><div style="display:flex; flex-wrap:wrap; gap:2px;">${nucleosBadges}</div></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ─── Filter ───
+    function filterTable(query) {
+        const q = query.toLowerCase();
+        const filtered = allNgcProjects.filter(p => {
+            const d = p.demandas_pai;
+            const protocolo = d ? d.protocolo_oficial.toLowerCase() : '';
+            const tipo = p.tipologia ? p.tipologia.toLowerCase() : '';
+            return protocolo.includes(q) || tipo.includes(q);
+        });
+        renderTable(filtered);
+    }
+
+    // ─── Modal ───
+    function fillIntegrationInfo(d) {
+        if (!d) {
+            document.getElementById('info-panel').style.display = 'none';
+            return;
+        }
+        document.getElementById('info-protocolo').textContent = d.protocolo_oficial || '—';
+        document.getElementById('info-tipo').textContent = d.tipo_solicitacao || '—';
+        const rua = d.ruas_fortaleza ? d.ruas_fortaleza.nome : '';
+        const bairro = d.cat_bairros ? d.cat_bairros.nome_bairro : '';
+        const regional = d.cat_bairros && d.cat_bairros.cat_regionais ? d.cat_bairros.cat_regionais.nome_regional : '';
+        document.getElementById('info-endereco').textContent = rua ? `${rua}, ${bairro} (Reg. ${regional})` : `${bairro} (Reg. ${regional})`;
+
+        // Trecho NPO
+        const npo = d.projetos_npo && d.projetos_npo[0];
+        document.getElementById('info-trecho').textContent = npo && npo.trecho ? npo.trecho : 'Não especificado';
+
+        // Data da Implantação calculada
+        let dataImplStr = 'Não iniciada';
+        const nce = d.execucao_nce && d.execucao_nce[0];
+        const nco = d.execucao_nco && d.execucao_nco[0];
+        if (nce && nce.status_nce === 'Concluído' && nce.data_conclusao_real) {
+            dataImplStr = new Date(nce.data_conclusao_real).toLocaleDateString('pt-BR');
+        } else if (nco && nco.status_nco === 'Medição Concluída' && nco.data_fim_obra) {
+            dataImplStr = new Date(nco.data_fim_obra).toLocaleDateString('pt-BR');
+        } else if ((nce && nce.status_nce === 'Equipe em Campo') || (nco && nco.status_nco === 'Em Execução')) {
+            dataImplStr = 'Em implantação';
+        }
+        document.getElementById('info-data-implantacao').innerText = dataImplStr;
+        document.getElementById('info-panel').style.display = 'block';
+    }
+
+    function openNgcModal(recordId) {
+        const modal = document.getElementById('ngc-modal');
+        const isNew = !recordId;
+
+        document.getElementById('ngc-priority-banner').style.display = 'none';
+
+        // Reset
+        document.getElementById('ngc-record-id').value = '';
+        document.getElementById('ngc-demanda-id').value = '';
+        document.getElementById('ngc-status').value = 'Em Estudo';
+        document.getElementById('ngc-tipologia').value = '';
+        document.getElementById('ngc-posicao').value = '';
+        document.getElementById('ngc-sentido').value = '';
+        document.getElementById('ngc-pavimento').value = '';
+        document.getElementById('ngc-separacao').value = '';
+        document.getElementById('ngc-extensao').value = '';
+        document.getElementById('ngc-orientacao').value = '';
+        document.getElementById('ngc-protegida').checked = false;
+        document.getElementById('ngc-parecer-ngc').value = '';
+        document.getElementById('ngc-projeto-ngc').value = '';
+        document.getElementById('ngc-projeto-ngc-titulo').value = '';
+        document.getElementById('ngc-projeto-ngc-numero').value = '';
+        
+        hideFileLinkRow('parecer_ngc');
+        hideFileLinkRow('projeto_ngc');
+        
+        document.getElementById('info-panel').style.display = 'none';
+        document.getElementById('demanda-selector-group').style.display = 'block';
+        document.getElementById('select-demanda').value = '';
+
+        if (isNew) {
+            document.getElementById('modal-title').textContent = 'Cadastrar Projeto Cicloviário';
+            document.getElementById('modal-subtitle').textContent = 'Vincule a uma demanda aprovada e preencha os dados técnicos.';
+        } else {
+            const p = allNgcProjects.find(x => x.id === recordId);
+            if (!p) return;
+
+            if (p.demandas_pai && p.demandas_pai.prioridade_diretoria === true) {
+                const banner = document.getElementById('ngc-priority-banner');
+                if (banner) {
+                    banner.innerHTML = `
+                        <div class="priority-banner" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <i class="fa fa-triangle-exclamation" style="font-size: 14px;"></i>
+                            <span><strong>Prioridade Institucional da Diretoria:</strong> Sim</span>
+                        </div>
+                    `;
+                    banner.style.display = 'block';
+                }
+            }
+            // Banner de Agregação
+            const aggrBngc = document.getElementById('ngc-aggr-banner');
+            if (aggrBngc) aggrBngc.style.display = 'none';
+            if (p.demandas_pai && p.demandas_pai.id_demanda_principal) {
+                supabase.from('demandas_pai').select('protocolo_oficial').eq('id', p.demandas_pai.id_demanda_principal).single().then(({ data: pd }) => { if (pd && aggrBngc) { document.getElementById('ngc-aggr-banner-title').textContent = 'Este processo está agregado ao seguinte processo:'; document.getElementById('ngc-aggr-banner-text').innerHTML = `<strong style="color:#fde68a;">${pd.protocolo_oficial}</strong><br><span style="font-size:11px;">O status deve ser gerenciado manualmente.</span>`; aggrBngc.style.display = 'flex'; } });
+            }
+            supabase.from('demandas_pai').select('protocolo_oficial').eq('id_demanda_principal', p.id_demanda_pai).then(({ data: fd }) => { if (fd && fd.length > 0 && aggrBngc && aggrBngc.style.display === 'none') { document.getElementById('ngc-aggr-banner-title').textContent = 'Processos agregados a este:'; document.getElementById('ngc-aggr-banner-text').innerHTML = fd.map(f => `<strong style="color:#fde68a;">${f.protocolo_oficial}</strong>`).join(', ') + '<br><span style="font-size:11px;">Verifique e atualize os status manualmente.</span>'; aggrBngc.style.display = 'flex'; } });
+            // Btn Verificar no Local
+            let btnVNgc = document.getElementById('btn-verify-local');
+            if (!btnVNgc) { btnVNgc = document.createElement('button'); btnVNgc.id = 'btn-verify-local'; btnVNgc.innerHTML = '<i class="fa fa-magnifying-glass-location"></i> Verificar no Local'; const mh = document.querySelector('#ngc-modal .modal-header > div'); if (mh) mh.appendChild(btnVNgc); }
+            const da = p.demandas_pai; const ruNg = da && da.ruas_fortaleza ? da.ruas_fortaleza.nome : ''; const baNg = da && da.cat_bairros ? da.cat_bairros.nome_bairro : '';
+            btnVNgc.onclick = () => openAggrModal(p.id_demanda_pai, da ? da.protocolo_oficial : '', baNg, (da && da.endereco) || ruNg, da && da.cat_bairros && da.cat_bairros.cat_regionais ? da.cat_bairros.cat_regionais.nome_regional : '');
+            btnVNgc.style.display = 'inline-flex';
+
+            document.getElementById('modal-title').textContent = 'Editar Projeto Cicloviário';
+            document.getElementById('ngc-record-id').value = p.id;
+            document.getElementById('ngc-demanda-id').value = p.id_demanda_pai;
+            document.getElementById('demanda-selector-group').style.display = 'none';
+
+            // Fill info panel via helper
+            fillIntegrationInfo(p.demandas_pai);
+            if (p.demandas_pai) {
+                document.getElementById('modal-subtitle').textContent = p.demandas_pai.protocolo_oficial;
+            }
+
+            // Fill form
+            document.getElementById('ngc-status').value = p.status_ngc || 'Em Estudo';
+            document.getElementById('ngc-tipologia').value = p.tipologia || '';
+            document.getElementById('ngc-posicao').value = p.posicao_via || '';
+            document.getElementById('ngc-sentido').value = p.sentido_circulacao || '';
+            document.getElementById('ngc-pavimento').value = p.pavimento || '';
+            document.getElementById('ngc-separacao').value = p.elementos_separacao || '';
+            document.getElementById('ngc-extensao').value = p.extensao_km || '';
+            document.getElementById('ngc-orientacao').value = p.orientacao || '';
+            document.getElementById('ngc-protegida').checked = !!p.protegida;
+
+            // Load specific documents and metadata
+            document.getElementById('ngc-parecer-ngc').value = p.parecer_ngc || '';
+            document.getElementById('ngc-projeto-ngc').value = p.projeto_ngc || '';
+            document.getElementById('ngc-projeto-ngc-titulo').value = p.projeto_ngc_titulo || '';
+            document.getElementById('ngc-projeto-ngc-numero').value = p.projeto_ngc_numero || '';
+
+            if (p.parecer_ngc) showFileLinkRow('parecer_ngc', p.parecer_ngc);
+            if (p.projeto_ngc) showFileLinkRow('projeto_ngc', p.projeto_ngc);
+        }
+
+        modal.classList.add('show');
+     }
+
+     function onDemandaSelected(demandaId) {
+         const d = allDemandas.find(x => x.id === demandaId);
+         if (!d) return;
+
+         document.getElementById('ngc-demanda-id').value = demandaId;
+         fillIntegrationInfo(d);
+     }
+
+     function closeModal() {
+         document.getElementById('ngc-modal').classList.remove('show');
+     }
+
+    // ─── Save ───
+    async function saveNgcProject() {
+        if (!currentUser) { showToast('Aviso', 'Faça login para salvar.', 'error'); return; }
+        const authorized = currentProfile && ['Técnico','Gerência','Diretoria'].includes(currentProfile.role);
+        if (!authorized) { showToast('Permissão', 'Sem permissão de escrita.', 'error'); return; }
+
+        const demandaId = document.getElementById('ngc-demanda-id').value;
+        const recordId  = document.getElementById('ngc-record-id').value;
+
+        if (!demandaId) { showToast('Aviso', 'Selecione uma demanda.', 'error'); return; }
+
+        const tipologia = document.getElementById('ngc-tipologia').value;
+        const posicao   = document.getElementById('ngc-posicao').value;
+        const sentido   = document.getElementById('ngc-sentido').value;
+        const pavimento = document.getElementById('ngc-pavimento').value;
+        const separacao = document.getElementById('ngc-separacao').value;
+        const extensao  = document.getElementById('ngc-extensao').value;
+        const status    = document.getElementById('ngc-status').value;
+        const orientacao = document.getElementById('ngc-orientacao').value;
+        const protegida = document.getElementById('ngc-protegida').checked;
+
+        if (!tipologia || !posicao || !sentido || !pavimento || !separacao || !extensao || !orientacao) {
+            showToast('Aviso', 'Preencha todos os campos obrigatórios.', 'error');
+            return;
+        }
+
+        showToast('Salvando', 'Gravando projeto cicloviário...', 'info');
+
+        const payload = {
+            id_demanda_pai: demandaId,
+            status_ngc: status,
+            tipology: tipologia || null, // Wait, tipologia is correct, but let's keep database mapping. Oh, list_tables said column name is 'tipologia'!
+            tipologia: tipologia || null,
+            posicao_via: posicao || null,
+            sentido_circulacao: sentido || null,
+            pavimento: pavimento || null,
+            elementos_separacao: separacao || null,
+            extensao_km: extensao ? parseFloat(extensao) : null,
+            orientacao: orientacao || null,
+            protegida: protegida,
+            parecer_ngc: document.getElementById('ngc-parecer-ngc').value || null,
+            projeto_ngc: document.getElementById('ngc-projeto-ngc').value || null,
+            projeto_ngc_titulo: document.getElementById('ngc-projeto-ngc-titulo').value.trim() || null,
+            projeto_ngc_numero: document.getElementById('ngc-projeto-ngc-numero').value.trim() || null
+        };
+
+        let error;
+
+        if (recordId) {
+            // Update existing
+            const res = await supabase.from('projetos_ngc').update(payload).eq('id', recordId);
+            error = res.error;
+        } else {
+            // Insert new (upsert on id_demanda_pai)
+            const res = await supabase.from('projetos_ngc').upsert(payload, { onConflict: 'id_demanda_pai' });
+            error = res.error;
+        }
+
+        if (error) {
+            console.error(error);
+            showToast('Erro', 'Falha ao salvar: ' + error.message, 'error');
+        } else {
+            showToast('Sucesso', 'Projeto cicloviário salvo com sucesso!', 'success');
+            closeModal();
+            await fetchNgcProjects();
+        }
+    }
+
+    // Upload de Arquivos Específicos NGC
+    async function uploadFileSpecific(input, fieldName) {
+        if (!input.files || !input.files[0]) return;
+        if (!currentUser) { showToast('Aviso', 'Faça login para realizar uploads.', 'error'); return; }
+
+        const file = input.files[0];
+        if (file.size > 52428800) { showToast('Erro', 'O PDF excede o limite de 50MB.', 'error'); return; }
+
+        const prefix = fieldName.split('_')[1]; // "ngc"
+        const demandaId = document.getElementById(`${prefix}-demanda-id`).value;
+        if (!demandaId) { showToast('Aviso', 'Selecione a demanda antes do upload.', 'error'); return; }
+
+        const htmlField = fieldName.replace('_', '-');
+        const progBar = document.getElementById(`prog-${htmlField}`);
+        const progFill = document.getElementById(`prog-${htmlField}-fill`);
+        const zone = document.getElementById(`zone-${htmlField}`);
+
+        progBar.style.display = 'block';
+        zone.classList.add('uploading');
+        progFill.style.width = '30%';
+
+        const ext = file.name.split('.').pop() || 'pdf';
+        const path = `${prefix}_documentos/${demandaId}/${fieldName}_${Date.now()}.${ext}`;
+
+        const { data, error } = await supabase.storage
+            .from(BUCKET)
+            .upload(path, file, { upsert: true, contentType: 'application/pdf' });
+
+        if (error) {
+            showToast('Erro no Upload', error.message, 'error');
+            progBar.style.display = 'none';
+            zone.classList.remove('uploading');
+            return;
+        }
+
+        progFill.style.width = '100%';
+        setTimeout(() => {
+            progBar.style.display = 'none';
+            progFill.style.width = '0%';
+        }, 600);
+        
+        zone.classList.remove('uploading');
+
+        const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(path);
+
+        document.getElementById(`${prefix}-${htmlField}`).value = publicUrl;
+        showFileLinkRow(fieldName, publicUrl);
+        showToast('Sucesso', 'Arquivo anexado!', 'success');
+    }
+
+    function showFileLinkRow(fieldName, url) {
+        const htmlField = fieldName.replace('_', '-');
+        document.getElementById(`${htmlField}-link-row`).style.display = 'block';
+        document.getElementById(`${htmlField}-link`).href = url;
+        document.getElementById(`zone-${htmlField}`).style.display = 'none';
+    }
+
+    function hideFileLinkRow(fieldName) {
+        const htmlField = fieldName.replace('_', '-');
+        document.getElementById(`${htmlField}-link-row`).style.display = 'none';
+        document.getElementById(`zone-${htmlField}`).style.display = 'block';
+    }
+
+    function removeFileSpecific(fieldName) {
+        const prefix = fieldName.split('_')[1];
+        const htmlField = fieldName.replace('_', '-');
+        document.getElementById(`${prefix}-${htmlField}`).value = '';
+        hideFileLinkRow(fieldName);
+        showToast('Removido', 'Arquivo desanexado.', 'info');
+    }
+
+    // ─── Toast ───
+        // Aggregation
+        function toggleAggrFilter(field) {
+            const checkbox = document.getElementById(`aggr-use-${field}`);
+            const input = document.getElementById(`aggr-filter-${field}`);
+            if (checkbox && input) {
+                input.disabled = !checkbox.checked;
+            }
+        }
+
+        function openAggrModal(demandaId, protocolo, bairro, endereco, regional) {
+            document.getElementById('aggr-current-demanda-id').value = demandaId || '';
+            document.getElementById('aggr-current-protocolo').value = protocolo || '';
+            document.getElementById('aggr-modal-sub').textContent = `Processo atual: ${protocolo || '—'} · Pesquise outros processos que já contemplem este local.`;
+            
+            ['bairro', 'regional', 'endereco'].forEach(f => {
+                const cb = document.getElementById(`aggr-use-${f}`);
+                const inp = document.getElementById(`aggr-filter-${f}`);
+                if (cb) cb.checked = true;
+                if (inp) inp.disabled = false;
+            });
+
+            document.getElementById('aggr-filter-bairro').value = bairro || '';
+            document.getElementById('aggr-filter-regional').value = regional || '';
+            document.getElementById('aggr-filter-endereco').value = endereco || '';
+            document.getElementById('aggr-results-area').innerHTML = '<div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Ajuste os filtros e clique em Pesquisar.</div>';
+            document.getElementById('aggr-modal').classList.add('show');
+        }
+        function closeAggrModal() { document.getElementById('aggr-modal').classList.remove('show'); }
+        function escapeHtml(t) { if (!t) return ''; const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}; return t.replace(/[&<>"']/g,c=>m[c]); }
+        async function searchSimilarDemandas() {
+            const cId = document.getElementById('aggr-current-demanda-id').value;
+            const useBairro = document.getElementById('aggr-use-bairro').checked;
+            const useEndereco = document.getElementById('aggr-use-endereco').checked;
+            const useRegional = document.getElementById('aggr-use-regional').checked;
+
+            const bairro = document.getElementById('aggr-filter-bairro').value.trim();
+            const endereco = document.getElementById('aggr-filter-endereco').value.trim();
+            const regional = document.getElementById('aggr-filter-regional').value.trim();
+            document.getElementById('aggr-results-area').innerHTML = '<div class="aggr-empty"><i class="fa fa-spinner fa-spin" style="margin-right:6px;"></i>Buscando...</div>';
+            let q = supabase.from('demandas_pai').select(`id,protocolo_oficial,tipo_solicitacao,solicitante_oficial,endereco,nucleos_atribuidos,id_demanda_principal,cat_bairros(nome_bairro,cat_regionais(nome_regional)),ruas_fortaleza:id_rua(nome),projetos_npo!projetos_npo_id_demanda_pai_fkey(status_npo),execucao_nce!execucao_nce_id_demanda_pai_fkey(status_nce),execucao_nco!execucao_nco_id_demanda_pai_fkey(status_nco),projetos_npe!projetos_npe_id_demanda_pai_fkey(status_npe),analise_npa!analise_npa_id_demanda_pai_fkey(status_npa),projetos_ngc!projetos_ngc_id_demanda_pai_fkey(status_ngc)`);
+            if (useBairro && bairro) q = q.ilike('cat_bairros.nome_bairro', `%${bairro}%`);
+            if (useEndereco && endereco) q = q.or(`endereco.ilike.%${endereco}%,ruas_fortaleza.nome.ilike.%${endereco}%`);
+            const { data, error } = await q.order('created_at', { ascending: false }).limit(50);
+            if(error){document.getElementById('aggr-results-area').innerHTML=`<div class="aggr-empty" style="color:#f87171;">Erro:${escapeHtml(error.message)}</div>`;return;}
+            
+            let results = (data || []).filter(r => r.id !== cId);
+            if (useRegional && regional) {
+                results = results.filter(r => {
+                    const rReg = r.cat_bairros?.cat_regionais?.nome_regional || '';
+                    return rReg.toLowerCase().includes(regional.toLowerCase());
+                });
+            }
+            if(!results.length){document.getElementById('aggr-results-area').innerHTML='<div class="aggr-empty"><i class="fa fa-check-circle" style="color:#4ade80;margin-right:6px;"></i>Nenhum processo similar encontrado.</div>';return;}
+            let html=`<table id="aggr-results-table"><thead><tr><th>Processo</th><th>Endereço</th><th>Bairro</th><th>Solicitante</th><th>Núcleo/Status</th><th>Ação</th></tr></thead><tbody>`;
+            results.forEach(r=>{
+                const bn=r.cat_bairros?r.cat_bairros.nome_bairro:'—';
+                const en=r.endereco||(r.ruas_fortaleza?r.ruas_fortaleza.nome:'')||'—';
+                let sh='';
+                if(r.projetos_npo&&r.projetos_npo[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(248,183,0,.12);color:#f8b700;border-radius:4px;">NPO:${r.projetos_npo[0].status_npo}</span>`;
+                if(r.execucao_nce&&r.execucao_nce[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(167,139,250,.12);color:#a78bfa;border-radius:4px;">NCE:${r.execucao_nce[0].status_nce}</span>`;
+                if(r.execucao_nco&&r.execucao_nco[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(99,102,241,.12);color:#818cf8;border-radius:4px;">NCO:${r.execucao_nco[0].status_nco}</span>`;
+                if(r.projetos_npe&&r.projetos_npe[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(16,185,129,.12);color:#10b981;border-radius:4px;margin:1px;">NPE:${r.projetos_npe[0].status_npe}</span>`;
+                if(r.analise_npa&&r.analise_npa[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(59,130,246,.12);color:#3b82f6;border-radius:4px;margin:1px;">NPA:${r.analise_npa[0].status_npa}</span>`;
+                if(r.projetos_ngc&&r.projetos_ngc[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(236,72,153,.12);color:#ec4899;border-radius:4px;margin:1px;">NGC:${r.projetos_ngc[0].status_ngc}</span>`;
+                if(!sh)sh=`<span style="font-size:10px;color:var(--amc-text-muted);">${(r.nucleos_atribuidos||[]).join(', ')||'—'}</span>`;
+                const ab=r.id_demanda_principal?`<span class="badge-aggr" title="Já agregado">A</span>`:'';
+                html+=`<tr><td style="font-family:'Oswald',sans-serif;color:var(--amc-ngc);">${escapeHtml(r.protocolo_oficial)}${ab}</td><td>${escapeHtml(en)}</td><td>${escapeHtml(bn)}</td><td>${escapeHtml(r.solicitante_oficial||'—')}</td><td><div style="display:flex;flex-wrap:wrap;gap:2px;">${sh}</div></td><td><button class="aggr-action-btn" onclick="confirmAggr('${cId}','${r.id}','${escapeHtml(r.protocolo_oficial)}')"><i class="fa fa-link"></i> Agregar</button></td></tr>`;
+            });
+            html+='</tbody></table>'; document.getElementById('aggr-results-area').innerHTML=html;
+        }
+        async function confirmAggr(idAtual,idPrincipal,protPrincipal){const protAtual=document.getElementById('aggr-current-protocolo').value;if(!confirm(`Confirma a agregação?\nO processo "${protAtual}" será vinculado ao processo "${protPrincipal}".\nO status não será alterado automaticamente.`))return;const{error}=await supabase.from('demandas_pai').update({id_demanda_principal:idPrincipal}).eq('id',idAtual);if(error){showToast('Erro','Falha ao agregar: '+error.message,'error');return;}showToast('Sucesso',`${protAtual} agregado a ${protPrincipal}!`,'success');closeAggrModal();await fetchNgcProjects();}
+
+    function showToast(title, message, type = 'success') {
+        const toast = document.getElementById('toast');
+        const toastTitle = document.getElementById('toast-title');
+        const toastMessage = document.getElementById('toast-message');
+        const toastIcon = document.getElementById('toast-icon');
+
+        toastTitle.innerText = title;
+        toastMessage.innerText = message;
+        toast.className = 'toast show';
+        toastIcon.className = 'fa fa-2x';
+
+        if (type === 'success') {
+            toast.classList.add('toast-success');
+            toastIcon.classList.add('fa-check-circle');
+            toastIcon.style.color = '#10b981';
+        } else if (type === 'error') {
+            toast.classList.add('toast-error');
+            toastIcon.classList.add('fa-times-circle');
+            toastIcon.style.color = '#ef4444';
+        } else {
+            toast.classList.add('toast-info');
+            toastIcon.classList.add('fa-spinner', 'fa-spin');
+            toastIcon.style.color = 'var(--amc-ngc)';
+        }
+
+        setTimeout(() => toast.classList.remove('show'), 5000);
+    }
+</script>
+</body>
+</html>

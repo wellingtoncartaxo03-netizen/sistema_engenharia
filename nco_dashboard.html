@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>AMC — Obras e Fiscalização (NCO)</title>
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth.js"></script>
+
+    <style>
+        :root {
+            --amc-primary: #F8B700;
+            --amc-secondary: #f15a22;
+            --amc-accent: #3085d6;
+            --amc-nco: #fbbf24;
+            --amc-bg-dark: #050505;
+            --amc-card-bg: #0A0A0C;
+            --amc-text-light: #ffffff;
+            --amc-text-muted: #9ca3af;
+            --amc-glow: rgba(248, 183, 0, 0.4);
+            --amc-nco-glow: rgba(251, 191, 36, 0.25);
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            background: var(--amc-bg-dark);
+            color: var(--amc-text-light);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .glass { background: rgba(10,10,12,0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .glass-dark { background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.05); }
+
+        aside {
+            width: 320px; height: 100vh; position: fixed; left: 0; top: 0;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 2rem 1.5rem; box-sizing: border-box;
+            border-right: 1px solid rgba(255,255,255,0.05); z-index: 100;
+        }
+
+        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; }
+        .logo-text { font-family: 'Oswald', sans-serif; font-weight: 300; font-size: 16px; letter-spacing: 0.15em; color: rgba(255,255,255,0.8); text-transform: uppercase; }
+        .menu-list { list-style: none; padding: 0; margin: 0; flex-grow: 1; overflow-y: auto !important; max-height: calc(100vh - 220px) !important; }
+        .menu-list::-webkit-scrollbar { width: 4px !important; display: block !important; }
+        .menu-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15) !important; border-radius: 4px !important; }
+        .menu-item { margin-bottom: 8px; }
+        .menu-link { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; color: var(--amc-text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.3s; }
+        .menu-link:hover, .menu-link.active { color: #fff; background: rgba(248,183,0,0.1); border-left: 3px solid var(--amc-primary); }
+
+        main { margin-left: 320px; flex-grow: 1; padding: 3rem; box-sizing: border-box; position: relative; display: flex; flex-direction: column; }
+
+        .hero-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 70% 20%, rgba(251,191,36,0.06) 0%, transparent 60%); z-index: -1; pointer-events: none; }
+        .hero-glow { position: absolute; width: 400px; height: 400px; background: var(--amc-nco-glow); filter: blur(120px); border-radius: 50%; z-index: -2; opacity: 0.3; pointer-events: none; }
+
+        .table-container { border-radius: 1.25rem; overflow: hidden; margin-top: 1rem; border: 1px solid rgba(255,255,255,0.06); background: rgba(10,10,12,0.85); backdrop-filter: blur(12px); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th { background: rgba(255,255,255,0.02); padding: 16px 20px; color: var(--amc-text-muted); font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.06); text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
+        td { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.9); }
+        tr:last-child td { border-bottom: none; }
+
+        .clickable-row { cursor: pointer; transition: background-color 0.2s ease; }
+        .clickable-row:hover { background-color: rgba(251,191,36,0.05) !important; }
+        .empty-state { text-align: center; padding: 3rem; color: var(--amc-text-muted); }
+
+        .badge { font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-aguardando { background: rgba(248,183,0,0.1); color: var(--amc-primary); border: 1px solid rgba(248,183,0,0.3); }
+        .badge-execucao { background: rgba(48,133,214,0.12); color: #60a5fa; border: 1px solid rgba(48,133,214,0.3); }
+        .badge-paralisada { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+        .badge-concluida { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge-generic { background: rgba(255,255,255,0.05); color: var(--amc-text-muted); border: 1px solid rgba(255,255,255,0.1); }
+
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .header-title { font-family: 'Oswald', sans-serif; font-size: 2.5rem; font-weight: 300; margin: 0; }
+        .header-status { font-size: 13px; color: var(--amc-text-muted); display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 99px; }
+
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 13px; outline: none; transition: all 0.2s; }
+        .filter-input:focus { border-color: var(--amc-nco); box-shadow: 0 0 0 2px rgba(251,191,36,.15); }
+        .filter-input::placeholder { color: var(--amc-text-muted); }
+        select.filter-input option { background: #111; }
+
+        .auth-panel { padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
+        .auth-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--amc-primary); margin-bottom: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .btn-amc { padding: 12px 24px; border-radius: 9999px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: none; font-size: 12px; }
+        .btn-primary-amc { background: var(--amc-primary); color: #000; box-shadow: 0 4px 15px var(--amc-glow); }
+        .btn-primary-amc:hover { transform: scale(1.02); }
+        .btn-outline-amc { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; }
+        .btn-outline-amc:hover { background: rgba(255,255,255,0.05); border-color: var(--amc-primary); }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(15px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-content { width: 100%; max-width: 720px; border-radius: 1.5rem; max-height: 90vh; overflow-y: auto; position: relative; transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .modal-overlay.show .modal-content { transform: scale(1); }
+        .modal-header { border-bottom: 1px solid rgba(255,255,255,0.05); padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 2rem; }
+        .modal-close { background: transparent; border: none; color: var(--amc-text-muted); cursor: pointer; font-size: 1.5rem; transition: color 0.3s; }
+        .modal-close:hover { color: #fff; }
+        .modal-footer { padding: 1.25rem 2rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end; gap: 10px; }
+
+        .form-group { margin-bottom: 1.25rem; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .form-row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; }
+        .form-label { display: block; font-size: 11px; color: var(--amc-text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .form-input { width: 100%; padding: 12px 16px; border-radius: 0.75rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff; font-size: 14px; outline: none; transition: all 0.3s; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        .form-input:focus { border-color: var(--amc-primary); box-shadow: 0 0 15px rgba(248,183,0,0.15); background: rgba(248,183,0,0.03); }
+        select option, option {
+            background-color: #0A0A0C !important;
+            color: #ffffff !important;
+        }
+        .priority-row {
+            border-left: 4px solid #ef4444 !important;
+            background: rgba(239, 68, 68, 0.04) !important;
+        }
+        .priority-row:hover {
+            background: rgba(239, 68, 68, 0.08) !important;
+        }
+        /* Sub-accordions do NPO na Visualização Geral */
+        .npo-sub-accordion {
+            margin-top: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(10, 10, 12, 0.2);
+        }
+        .npo-sub-header {
+            width: 100%;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.02);
+            border: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--amc-text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .npo-sub-header:hover {
+            background: rgba(255, 255, 255, 0.04);
+            color: #fff;
+        }
+        .npo-sub-content {
+            padding: 12px;
+            display: none;
+        }
+        textarea.form-input { resize: vertical; min-height: 80px; }
+
+        .info-panel { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; }
+        .info-label { font-size: 11px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 600; display: block; margin-bottom: 2px; }
+
+        .form-section { margin-bottom: 1.5rem; }
+        .form-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--amc-primary); font-weight: 700; margin: 0 0 1rem 0; display: flex; align-items: center; gap: 8px; }
+        
+        .btn-save { background: var(--amc-primary); color: #000; padding: 10px 24px; border-radius: 99px; border: none; cursor: pointer; font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+        .btn-save:hover { opacity: 0.9; transform: scale(1.02); }
+        .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 10px 24px; border-radius: 99px; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s; }
+        .btn-cancel:hover { background: rgba(255,255,255,0.05); }
+
+        /* Slider */
+        .slider-container { display: flex; align-items: center; gap: 12px; }
+        .slider-input { flex-grow: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; outline: none; -webkit-appearance: none; cursor: pointer; }
+        .slider-input::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--amc-primary); cursor: pointer; margin-top: -7px; box-shadow: 0 0 10px var(--amc-glow); }
+        .slider-value { font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 500; width: 50px; text-align: right; color: var(--amc-primary); }
+
+        /* Toast */
+        .toast { position: fixed; bottom: 24px; right: -400px; width: 350px; padding: 20px; border-radius: 12px; z-index: 1100; transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: flex-start; gap: 12px; }
+        .toast.show { right: 24px; }
+        .toast-success { background: rgba(10,30,10,0.9); border: 1px solid #10b981; box-shadow: 0 0 20px rgba(16,185,129,0.2); }
+        .toast-error { background: rgba(30,10,10,0.9); border: 1px solid #ef4444; box-shadow: 0 0 20px rgba(239,68,68,0.2); }
+
+        /* --- ABAS DE NAVEGAÇÃO DO MODAL --- */
+        .tabs-nav { display: flex; gap: 4px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem; overflow-x: auto; padding-bottom: 2px; }
+        .tab-btn { background: transparent; border: none; color: var(--amc-text-muted); padding: 10px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer; transition: all 0.2s; border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.03); }
+        .tab-btn.active { color: var(--amc-primary); border-bottom-color: var(--amc-primary); background: rgba(248,183,0,0.05); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* --- CARDS DE LEITURA DOS NÚCLEOS --- */
+        .nuc-preview-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem; }
+        .nuc-preview-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .nuc-npa { color: #38bdf8; }
+        .nuc-npo { color: #fb7185; }
+        .nuc-npe { color: #a78bfa; }
+        .nuc-ngc { color: #22d3ee; }
+        .nuc-field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; font-size: 13px; color: rgba(255,255,255,0.85); }
+        .nuc-field-full { grid-column: span 2; }
+        .nuc-label { font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 600; display: block; margin-bottom: 2px; }
+        .nuc-value { font-weight: 500; color: #fff; }
+        .doc-view-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .doc-link-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 6px; text-decoration: none; transition: all 0.2s; }
+        .doc-link-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--amc-primary); }
+
+        /* --- FILTRO DE ATRIBUIÇÃO --- */
+        .filter-btn-group { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+        .filter-tab-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--amc-text-muted); font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .filter-tab-btn:hover { color: #fff; background: rgba(255,255,255,0.06); }
+        .filter-tab-btn.active { background: var(--amc-primary); color: #000; border-color: var(--amc-primary); box-shadow: 0 2px 10px var(--amc-nco-glow); }
+
+        /* Quantitativos de obras */
+        .quant-obras-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+        .quant-item { background: rgba(248,183,0,0.03); border: 1px solid rgba(248,183,0,0.1); border-radius: 10px; padding: 10px 14px; }
+        .quant-item-label { font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 600; display: block; margin-bottom: 6px; }
+        /* --- AGGREGATION --- */
+        .aggr-banner { display: flex; align-items: flex-start; gap: 10px; background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 12px 16px; margin-bottom: 1rem; font-size: 13px; color: #fbbf24; }
+        .aggr-banner i { font-size: 16px; margin-top:1px; flex-shrink:0; }
+        .aggr-banner strong { color: #fde68a; display: block; margin-bottom: 3px; }
+        .badge-aggr { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b; font-size: 10px; font-weight: 900; margin-left: 5px; flex-shrink: 0; vertical-align: middle; }
+        #aggr-modal { position: fixed; inset: 0; z-index: 1200; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s; }
+        #aggr-modal.show { opacity: 1; pointer-events: auto; }
+        #aggr-modal .aggr-inner { background: #0d0d10; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; width: 900px; max-width: 96vw; max-height: 85vh; overflow-y: auto; padding: 2rem; }
+        #aggr-modal h4 { color: #f59e0b; font-family: 'Oswald', sans-serif; font-size: 1.2rem; margin: 0 0 4px; }
+        #aggr-modal .aggr-sub { color: var(--amc-text-muted); font-size: 12px; margin: 0 0 1.5rem; }
+        .aggr-filter-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: flex-end; margin-bottom: 1.5rem; }
+        .aggr-filter-row .aggr-search-btn { padding: 10px 20px; background: #f59e0b; color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 13px; }
+        #aggr-results-table { width: 100%; border-collapse: collapse; }
+        #aggr-results-table th { text-align: left; padding: 8px 10px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--amc-text-muted); border-bottom: 1px solid rgba(255,255,255,.07); }
+        #aggr-results-table td { padding: 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.04); }
+        .aggr-action-btn { padding: 5px 12px; font-size: 11px; font-weight: 700; border-radius: 6px; cursor: pointer; border: 1px solid rgba(245,158,11,.5); background: rgba(245,158,11,.1); color: #f59e0b; }
+        .aggr-action-btn:hover { background: rgba(245,158,11,.25); }
+        .aggr-empty { text-align: center; padding: 2rem; color: var(--amc-text-muted); font-size: 13px; }
+        #btn-verify-local { padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 8px; border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.08); color: #f59e0b; display: inline-flex; align-items: center; gap: 6px; }
+    </style>
+</head>
+<body>
+    <div class="hero-bg"></div>
+    <div class="hero-glow" style="top: 20%; right: 10%;"></div>
+
+    <!-- Sidebar -->
+    <aside class="glass">
+        <div>
+            <div class="logo-container">
+                <i class="fa fa-car-side fa-xl" style="color:var(--amc-primary);"></i>
+                <span class="logo-text">AMC — Engenharia</span>
+            </div>
+            <ul class="menu-list">
+                <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link"><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
+                <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link"><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+                <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link"><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
+                <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link"><i class="fa fa-building-columns"></i><span>NCE - Controle de Execuções</span></a></li>
+                <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link active"><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
+                <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link"><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
+                <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link"><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
+                <li class="menu-item" id="menu-npe"><a href="npe_dashboard.html" class="menu-link"><i class="fa fa-folder-open"></i><span>NPE - Projetos Especiais</span></a></li>
+                <li class="menu-item" id="menu-ngc"><a href="ngc_dashboard.html" class="menu-link"><i class="fa fa-bicycle"></i><span>NGC - Gestão Cicloviária</span></a></li>
+                <li class="menu-item" id="menu-diretoria"><a href="diretoria_dashboard.html" class="menu-link"><i class="fa fa-chart-line"></i><span>Dashboard Gerencial</span></a></li>
+                <li class="menu-item" id="menu-ditran"><a href="ditran_dashboard.html" class="menu-link"><i class="fa fa-traffic-light"></i><span>DITRAN</span></a></li>
+            </ul>
+        </div>
+        <div class="auth-panel glass-dark">
+            <div class="auth-title">
+                <i class="fa fa-screwdriver-wrench"></i>
+                <span>NCO — Obras</span>
+            </div>
+            <div id="auth-unlogged">
+                <div class="form-group">
+                    <input type="email" id="auth-email" placeholder="E-mail" class="form-input" style="padding:8px 12px; font-size:11px; margin-bottom:6px;">
+                    <input type="password" id="auth-password" placeholder="Senha" class="form-input" style="padding:8px 12px; font-size:11px;">
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn-amc btn-primary-amc" style="padding:6px; font-size:10px; flex:1;" onclick="login()">Entrar</button>
+                    <button class="btn-amc btn-outline-amc" style="padding:6px; font-size:10px; flex:1;" onclick="register()">Registrar</button>
+                </div>
+            </div>
+            <div id="auth-logged" style="display:none;">
+                <p id="logged-email" style="font-size:11px; margin:0 0 8px 0; color:#fff; word-break:break-all; font-weight:500;"></p>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label class="form-label" style="font-size:9px; margin-bottom:4px;">Simular Papel (Role)</label>
+                    <select id="role-selector" class="form-input" style="padding:6px 10px; font-size:11px;" onchange="changeRole(this.value)">
+                        <option value="Público">Público</option>
+                        <option value="Técnico">Técnico</option>
+                        <option value="Gerência">Gerência</option>
+                        <option value="Diretoria">Diretoria</option>
+                    </select>
+                </div>
+                <button class="btn-amc btn-outline-amc" style="padding:6px 12px; font-size:10px; color:var(--amc-secondary); width:100%;" onclick="logout()">Desconectar</button>
+            </div>
+        </div>
+    </aside>
+    <!-- Aggr Search Modal -->
+    <div id="aggr-modal"><div class="aggr-inner">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+            <div><h4><i class="fa fa-magnifying-glass-location"></i> Verificar Processos no Local</h4><p class="aggr-sub" id="aggr-modal-sub"></p></div>
+            <button class="modal-close" onclick="closeAggrModal()">&#x2715;</button>
+        </div>
+        <div class="aggr-filter-row">
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Bairro</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-bairro" checked onchange="toggleAggrFilter('bairro')" style="accent-color: var(--amc-primary); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-bairro" class="form-input" placeholder="Ex: Aldeota">
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Regional</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-regional" checked onchange="toggleAggrFilter('regional')" style="accent-color: var(--amc-primary); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-regional" class="form-input" placeholder="Ex: Regional II">
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                    <label class="form-label" style="margin: 0;">Endereço / Rua</label>
+                    <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-size: 10px; color: var(--amc-text-muted);">
+                        <input type="checkbox" id="aggr-use-endereco" checked onchange="toggleAggrFilter('endereco')" style="accent-color: var(--amc-primary); width: 12px; height: 12px;">
+                        <span>Ativo</span>
+                    </label>
+                </div>
+                <input type="text" id="aggr-filter-endereco" class="form-input" placeholder="Ex: Av. Santos Dumont">
+            </div>
+            <button class="aggr-search-btn" onclick="searchSimilarDemandas()"><i class="fa fa-search"></i> Pesquisar</button>
+        </div>
+        <div id="aggr-results-area"><div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Use os filtros acima para buscar processos relacionados.</div></div>
+        <input type="hidden" id="aggr-current-demanda-id"><input type="hidden" id="aggr-current-protocolo">
+    </div></div>
+
+    <!-- Conteúdo Principal -->
+    <main>
+        <div class="dashboard-header">
+            <div>
+                <h1 class="header-title">Controle de <span style="color:var(--amc-primary);">Obras</span> NCO</h1>
+                <p style="color:var(--amc-text-muted); margin:4px 0 0 0; font-size:14px;">Fiscalização, medição e despacho de equipes de obras viárias</p>
+            </div>
+            <div class="header-status glass-dark" id="role-badge">
+                <i class="fa fa-circle-notch fa-spin"></i>
+                <span>Conectando...</span>
+            </div>
+        </div>
+
+        <!-- Filtros rápidos de núcleo -->
+        <div class="filter-btn-group">
+            <button type="button" class="filter-tab-btn active" id="btn-filt-all" onclick="setFilterTab('all')">Todos os Processos</button>
+            <button type="button" class="filter-tab-btn" id="btn-filt-nco" onclick="setFilterTab('nco')">Designados NCO</button>
+            <button type="button" class="filter-tab-btn" id="btn-filt-npa" onclick="setFilterTab('npa')">Origem NPA</button>
+            <button type="button" class="filter-tab-btn" id="btn-filt-npo" onclick="setFilterTab('npo')">Origem NPO</button>
+            <button type="button" class="filter-tab-btn" id="btn-filt-npe" onclick="setFilterTab('npe')">Origem NPE</button>
+            <button type="button" class="filter-tab-btn" id="btn-filt-ngc" onclick="setFilterTab('ngc')">Origem NGC</button>
+        </div>
+
+        <!-- Barra de filtros -->
+        <div class="filter-bar">
+            <input type="text" id="filter-search" class="filter-input" placeholder="Buscar por protocolo, endereço..." oninput="applyFilters()" style="flex:1; min-width:200px;">
+            <select id="filter-status" class="filter-input" onchange="applyFilters()">
+                <option value="">Todos os status</option>
+                <option value="Aguardando Ordem de Serviço">Aguardando Ordem de Serviço</option>
+                <option value="Em Execução">Em Execução</option>
+                <option value="Paralisada">Paralisada</option>
+                <option value="Medição Concluída">Medição Concluída</option>
+            </select>
+        </div>
+
+        <!-- Tabela Principal -->
+        <div class="table-container glass">
+            <table id="nco-table">
+                <thead>
+                    <tr>
+                        <th style="width:18%">Processo</th>
+                        <th style="width:22%">Local (Endereço)</th>
+                        <th style="width:15%">Solicitante</th>
+                        <th style="width:14%">Status NCO</th>
+                        <th style="width:15%">Equipe Designada</th>
+                        <th style="width:16%">Núcleos</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fa fa-circle-notch fa-spin fa-lg" style="margin-right:8px;"></i> Carregando processos...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal NCO -->
+    <div id="nco-modal" class="modal-overlay">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-family:'Oswald',sans-serif; font-size:1.4rem; margin:4px 0 2px; color:var(--amc-primary);" id="modal-title">Processo NCO</h3>
+                    <p id="modal-subtitle" style="font-size:12px; color:var(--amc-text-muted); margin:0;"></p>
+                </div>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Banner de Prioridade DITRAN -->
+                <div id="nco-priority-banner" style="display:none;"></div>
+                <div id="nco-aggr-banner" class="aggr-banner" style="display:none;">
+                    <i class="fa fa-link"></i>
+                    <div><strong id="nco-aggr-banner-title">Processo Agregado</strong><div id="nco-aggr-banner-text" style="color:rgba(253,230,138,.75);font-size:12px;"></div></div>
+                </div>
+
+                <input type="hidden" id="nco-record-id">
+                <input type="hidden" id="nco-demanda-id">
+
+                <!-- Painel de Informações da Demanda Pai -->
+                <div class="info-panel" id="info-panel" style="display:none;">
+                    <h4 style="margin:0 0 10px 0; font-size:11px; text-transform:uppercase; color:var(--amc-primary);">Demanda Vinculada</h4>
+                    <div class="info-grid">
+                        <div>
+                            <span class="info-label">Protocolo:</span>
+                            <span id="info-protocolo" style="color:#fff; font-weight:600;"></span>
+                        </div>
+                        <div>
+                            <span class="info-label">Tipo de Solicitação:</span>
+                            <span id="info-tipo" style="color:#fff; font-weight:500;"></span>
+                        </div>
+                        <div style="grid-column:span 2;">
+                            <span class="info-label">Endereço:</span>
+                            <span id="info-endereco" style="color:#fff; font-weight:500;"></span>
+                        </div>
+                        <div style="grid-column:span 2;">
+                            <span class="info-label">Núcleos Designados:</span>
+                            <div id="info-nucleos" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Abas de Navegação -->
+                <div class="tabs-nav">
+                    <button type="button" class="tab-btn active" id="btn-tab-visualizacao" onclick="switchTab('tab-visualizacao')"><i class="fa fa-eye"></i> Visualização Geral</button>
+                    <button type="button" class="tab-btn" id="btn-tab-despacho" onclick="switchTab('tab-despacho')"><i class="fa fa-hard-hat"></i> Despacho NCO</button>
+                </div>
+
+                <!-- ABA VISUALIZAÇÃO GERAL (TELA ÚNICA CONSOLIDADA) -->
+                <div id="tab-visualizacao" class="tab-content active">
+                    <div id="preview-consolidado-content">
+                        <!-- Injetado dinamicamente via JS contendo NPA, NPO, NPE, NGC e Anexos -->
+                    </div>
+                    
+                    <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                        <button type="button" class="btn-amc btn-primary-amc" onclick="switchTab('tab-despacho')">
+                            <i class="fa fa-edit"></i> Editar Despacho / Ajustar Quantitativos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ABA DESPACHO NCO -->
+                <div id="tab-despacho" class="tab-content">
+                    <!-- Botão de Autopreenchimento Rápido -->
+                    <div class="form-group" id="auto-authorize-container" style="margin-bottom: 1.5rem;">
+                        <button type="button" class="btn-amc btn-primary-amc" style="width: 100%; border-radius: 8px; justify-content: center; background: #059669; color: #fff; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);" onclick="copyProjectedToAuthorized()">
+                            <i class="fa fa-bolt"></i> ⚡ Autorizar Tudo Conforme Projetado
+                        </button>
+                    </div>
+
+                    <!-- Informações Gerais -->
+                    <div class="form-section">
+                        <p class="form-section-title"><i class="fa fa-file-lines"></i> Informações Gerais do Processo NCO</p>
+                        <div class="form-row-3">
+                            <div class="form-group">
+                                <label for="nco-status" class="form-label">Status da Obra</label>
+                                <select id="nco-status" class="form-input">
+                                    <option value="Aguardando Ordem de Serviço">Aguardando OS</option>
+                                    <option value="Em Execução">Em Execução</option>
+                                    <option value="Paralisada">Paralisada</option>
+                                    <option value="Medição Concluída">Medição Concluída</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="nco-numero-processo" class="form-label">Número do Processo</label>
+                                <input type="text" id="nco-numero-processo" class="form-input" placeholder="Ex: NCO-2026/001">
+                            </div>
+                            <div class="form-group">
+                                <label for="nco-tipo-obra" class="form-label">Tipo de Obra</label>
+                                <select id="nco-tipo-obra" class="form-input">
+                                    <option value="">Selecione...</option>
+                                    <option value="Sinalização Viária">Sinalização Viária</option>
+                                    <option value="Dispositivos de Moderação">Dispositivos de Moderação</option>
+                                    <option value="Infraestrutura Cicloviária">Infraestrutura Cicloviária</option>
+                                    <option value="Calçadas e Acessibilidade">Calçadas e Acessibilidade</option>
+                                    <option value="Semaforização">Semaforização</option>
+                                    <option value="Mista">Mista</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="nco-solicitante" class="form-label">Solicitante / Empresa</label>
+                                <input type="text" id="nco-solicitante" class="form-input" placeholder="Nome do solicitante ou empresa">
+                            </div>
+                            <div class="form-group">
+                                <label for="nco-tecnico" class="form-label">Técnico Responsável</label>
+                                <input type="text" id="nco-tecnico" class="form-input" placeholder="Nome do técnico fiscal">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="nco-local-endereco" class="form-label">Local / Endereço da Obra</label>
+                            <input type="text" id="nco-local-endereco" class="form-input" placeholder="Endereço completo da obra">
+                        </div>
+                    </div>
+
+                    <!-- Medição e Fiscalização -->
+                    <div class="form-section" style="border-top:1px solid rgba(255,255,255,0.06); padding-top:1.25rem;">
+                        <p class="form-section-title"><i class="fa fa-clipboard-check"></i> Medição e Fiscalização</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="nco-empresa" class="form-label">Empresa Terceirizada Executora</label>
+                                <select id="nco-empresa" class="form-input">
+                                    <option value="">Não aplicável / AMC própria</option>
+                                    <option value="Sinalize Ceará Ltda">Sinalize Ceará Ltda</option>
+                                    <option value="Trânsito Seguro Engenharia S.A.">Trânsito Seguro Engenharia S.A.</option>
+                                    <option value="Via Expressa Construtora Eireli">Via Expressa Construtora Eireli</option>
+                                    <option value="Mobilidade Urbana Obras e Serviços">Mobilidade Urbana Obras e Serviços</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="nco-valor-medido" class="form-label">Valor Medido para Faturamento (R$)</label>
+                                <input type="text" id="nco-valor-medido" class="form-input" placeholder="R$ 0,00" oninput="formatCurrencyInput(this)">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="nco-percentual" class="form-label">Avanço Físico (%)</label>
+                            <div class="slider-container">
+                                <input type="range" id="nco-percentual" class="slider-input" min="0" max="100" step="1" value="0" oninput="document.getElementById('nco-percentual-display').textContent = this.value + '%'">
+                                <span class="slider-value" id="nco-percentual-display">0%</span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="nco-data-inicio" class="form-label">Data de Início da Obra</label>
+                                <input type="date" id="nco-data-inicio" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="nco-data-fim" class="form-label">Data de Fim (Previsão/Real)</label>
+                                <input type="date" id="nco-data-fim" class="form-input">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="nco-relatorio" class="form-label">Relatório / Parecer de Fiscalização</label>
+                            <textarea id="nco-relatorio" class="form-input" rows="3" placeholder="Descreva os detalhes de qualidade, intercorrências ou justificativas de paralisação..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Controle de Quantitativos de Obras Autorizados -->
+                    <div class="form-section" style="border-top:1px solid rgba(255,255,255,0.06); padding-top:1.25rem;">
+                        <p class="form-section-title"><i class="fa fa-cubes"></i> Controle de Quantitativos de Obras Autorizados</p>
+                        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" id="nco-ajustar-quantitativos" style="width:16px; height:16px; accent-color:var(--amc-primary);" onchange="toggleQuantitativosFields(this.checked)">
+                            <label for="nco-ajustar-quantitativos" class="form-label" style="margin-bottom:0; cursor:pointer; user-select:none;">Ajustar quantitativos manualmente para execução parcial?</label>
+                        </div>
+
+                        <div id="nco-quantitativos-fields" style="display:none; margin-top:12px;">
+                            <p style="font-size:12px; color:var(--amc-text-muted); margin:0 0 12px 0;">Preencha apenas os elementos que serão executados nesta ordem de serviço.</p>
+                            <div class="quant-obras-grid">
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-road" style="color:var(--amc-primary); margin-right:4px;"></i> Lombada (un)</span>
+                                    <input type="number" id="nco-lombada" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="1" placeholder="0">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-layer-group" style="color:var(--amc-primary); margin-right:4px;"></i> Platô / Elevação (un)</span>
+                                    <input type="number" id="nco-plato" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="1" placeholder="0">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-person-walking" style="color:var(--amc-primary); margin-right:4px;"></i> Travessia de Pedestres (un)</span>
+                                    <input type="number" id="nco-travessia" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="1" placeholder="0">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-bicycle" style="color:var(--amc-primary); margin-right:4px;"></i> Ciclofaixa / Ciclovia (m) <span id="nco-ciclofaixa-projetada-ref" style="color:var(--amc-text-muted); font-size:9px; margin-left:4px; font-weight:normal;"></span></span>
+                                    <input type="number" id="nco-ciclofaixa" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="0.1" placeholder="0.0">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-paint-roller" style="color:var(--amc-primary); margin-right:4px;"></i> Sinalização Horizontal (m²) <span id="nco-sinalizacao-h-projetada-ref" style="color:var(--amc-text-muted); font-size:9px; margin-left:4px; font-weight:normal;"></span></span>
+                                    <input type="number" id="nco-sinalizacao-h" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-sign" style="color:var(--amc-primary); margin-right:4px;"></i> Sinalização Vertical (un) <span id="nco-sinalizacao-v-projetada-ref" style="color:var(--amc-text-muted); font-size:9px; margin-left:4px; font-weight:normal;"></span></span>
+                                    <input type="number" id="nco-sinalizacao-v" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="1" placeholder="0">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-minus" style="color:var(--amc-primary); margin-right:4px;"></i> Barreira / Segregador (m)</span>
+                                    <input type="number" id="nco-barreira" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="0.1" placeholder="0.0">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-car" style="color:var(--amc-primary); margin-right:4px;"></i> Estacionamento Regulado (vagas)</span>
+                                    <input type="number" id="nco-estacionamento" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="1" placeholder="0">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-person-cane" style="color:var(--amc-primary); margin-right:4px;"></i> Calçada / Meio-fio (m)</span>
+                                    <input type="number" id="nco-calcada" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="0.1" placeholder="0.0">
+                                </div>
+                                <div class="quant-item">
+                                    <span class="quant-item-label"><i class="fa fa-traffic-light" style="color:var(--amc-primary); margin-right:4px;"></i> Semáforo (un)</span>
+                                    <input type="number" id="nco-semaforo" class="form-input" style="padding:8px 12px; font-size:13px;" min="0" step="1" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Equipe Executora -->
+                    <div class="form-section" style="border-top:1px solid rgba(255,255,255,0.06); padding-top:1.25rem;">
+                        <p class="form-section-title"><i class="fa fa-truck"></i> Envio para Equipe Executora (AMC)</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="nco-equipe-tipo" class="form-label">Tipo de Equipe</label>
+                                <select id="nco-equipe-tipo" class="form-input" onchange="toggleEquipeInputs(this.value)">
+                                    <option value="">Não designada</option>
+                                    <option value="AMC">Própria AMC</option>
+                                    <option value="Terceirizada">Empresa Terceirizada</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="nco-equipe-nome" class="form-label">Equipe / Empresa Designada</label>
+                                <select id="nco-equipe-nome" class="form-input" disabled>
+                                    <option value="">Escolha o tipo primeiro...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button class="btn-save" onclick="saveNco()"><i class="fa fa-floppy-disk"></i> Salvar Processo NCO</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <i class="fa fa-2x" id="toast-icon"></i>
+        <div>
+            <div style="font-weight:700; margin-bottom:4px;" id="toast-title">Sucesso</div>
+            <div style="font-size:13px; color:var(--amc-text-muted);" id="toast-message"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let currentUserProfile = null;
+        let allNcoProjects = [];
+        let currentSelectedProject = null;
+
+        // ─── Auth ───
+        async function loadUserProfile(userId) {
+            const { data, error } = await supabase.from('perfis_usuarios').select('*').eq('id', userId).single();
+            if (error || !data) { updateRoleBadge('Público'); return; }
+            currentUserProfile = data;
+            document.getElementById('auth-unlogged').style.display = 'none';
+            document.getElementById('auth-logged').style.display = 'block';
+            document.getElementById('logged-email').textContent = data.nome_completo || data.cpf || 'Usuário NCO';
+            const roleMapped = data.nivel_acesso === 'admin' ? 'Gerência'
+                : data.nivel_acesso === 'diretor' ? 'Diretoria'
+                : data.nivel_acesso === 'coordenador' ? 'Gerência' : 'Técnico';
+            updateRoleBadge(data.nivel_acesso || 'Técnico');
+            const roleSel = document.getElementById('role-selector');
+            if (roleSel) roleSel.value = roleMapped;
+        }
+
+        function updateRoleBadge(role) {
+            const badge = document.getElementById('role-badge');
+            const icons = { 'admin': 'fa-shield-halved', 'diretor': 'fa-crown', 'gerente': 'fa-star', 'tecnico': 'fa-user-tie', 'Público': 'fa-user' };
+            const colors = { 'admin': 'var(--amc-secondary)', 'diretor': 'var(--amc-primary)', 'gerente': 'var(--amc-primary)', 'tecnico': 'var(--amc-accent)' };
+            const icon = icons[role] || 'fa-user-tie';
+            const color = colors[role] || 'var(--amc-text-muted)';
+            badge.innerHTML = `<i class="fa ${icon}" style="color:${color};"></i> <span>${role}</span>`;
+        }
+
+        async function login() {
+            const e = document.getElementById('auth-email').value;
+            const p = document.getElementById('auth-password').value;
+            const { data, error } = await supabase.auth.signInWithPassword({ email: e, password: p });
+            if (error) { showToast('Erro', error.message, 'error'); return; }
+            currentUser = data.user;
+            await loadUserProfile(currentUser.id);
+            await fetchData();
+        }
+
+        async function register() {
+            const e = document.getElementById('auth-email').value;
+            const p = document.getElementById('auth-password').value;
+            const { error } = await supabase.auth.signUp({ email: e, password: p });
+            if (error) { showToast('Erro', error.message, 'error'); } else { showToast('Sucesso', 'Verifique seu e-mail.', 'success'); }
+        }
+
+        async function logout() { await realizarLogout(); }
+
+        async function changeRole(newRole) {
+            if (!currentUser) return;
+            showToast('Info', `Papel simulado: ${newRole}`, 'info');
+        }
+
+        // ─── Data Fetching ───
+        async function fetchData() {
+            await fetchNcoProjects();
+        }
+
+        async function fetchNcoProjects() {
+            // Usa !fk_name para evitar ambiguidade de múltiplas FKs
+            const { data, error } = await supabase
+                .from('demandas_pai')
+                .select(`
+                    *,
+                    execucao_nco!execucao_nco_id_demanda_pai_fkey(*),
+                    analise_npa!analise_npa_id_demanda_pai_fkey(*),
+                    projetos_npo!projetos_npo_id_demanda_pai_fkey(*),
+                    projetos_npe!projetos_npe_id_demanda_pai_fkey(*),
+                    projetos_ngc!projetos_ngc_id_demanda_pai_fkey(*),
+                    cat_bairros (nome_bairro, cat_regionais(nome_regional)),
+                    ruas_fortaleza:id_rua (nome)
+                `)
+                .eq('status_geral', 'Aprovado')
+                .order('created_at', { ascending: false });
+
+            if (error) { showToast('Erro', 'Erro ao carregar processos NCO: ' + error.message, 'error'); return; }
+            allNcoProjects = data || [];
+            applyFilters();
+        }
+
+        // ─── Filters & Rendering ───
+        let currentFilterTab = 'all';
+
+        function setFilterTab(filter) {
+            currentFilterTab = filter;
+            document.querySelectorAll('.filter-tab-btn').forEach(btn => btn.classList.remove('active'));
+            const btn = document.getElementById(`btn-filt-${filter}`);
+            if (btn) btn.classList.add('active');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('filter-search').value.toLowerCase().trim();
+            const status = document.getElementById('filter-status').value;
+
+            const filtered = allNcoProjects.filter(p => {
+                const nco = p.execucao_nco && p.execucao_nco[0];
+                const statusNco = nco ? (nco.status_nco || 'Aguardando Ordem de Serviço') : 'Aguardando Ordem de Serviço';
+
+                const protocolo = (p.protocolo_oficial || '').toLowerCase();
+                const endereco = (p.endereco || '').toLowerCase();
+                const rua = p.ruas_fortaleza ? p.ruas_fortaleza.nome.toLowerCase() : '';
+                const matchSearch = !search || protocolo.includes(search) || endereco.includes(search) || rua.includes(search);
+                const matchStatus = !status || statusNco === status;
+
+                let matchAssignment = true;
+                if (currentFilterTab === 'nco') {
+                    matchAssignment = p.nucleos_atribuidos && p.nucleos_atribuidos.includes('NCO');
+                } else if (currentFilterTab === 'npa') {
+                    matchAssignment = p.nucleos_atribuidos && p.nucleos_atribuidos.includes('NPA');
+                } else if (currentFilterTab === 'npo') {
+                    matchAssignment = p.nucleos_atribuidos && p.nucleos_atribuidos.includes('NPO');
+                } else if (currentFilterTab === 'npe') {
+                    matchAssignment = p.nucleos_atribuidos && p.nucleos_atribuidos.includes('NPE');
+                } else if (currentFilterTab === 'ngc') {
+                    matchAssignment = p.nucleos_atribuidos && p.nucleos_atribuidos.includes('NGC');
+                }
+
+                return matchSearch && matchStatus && matchAssignment;
+            });
+
+            renderTable(filtered);
+        }
+
+        function renderTable(projects) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            if (!projects.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Nenhum processo NCO encontrado.</td></tr>`;
+                return;
+            }
+
+            projects.forEach(p => {
+                const nco = p.execucao_nco && p.execucao_nco[0];
+                const statusNco = nco ? (nco.status_nco || 'Aguardando Ordem de Serviço') : 'Aguardando Ordem de Serviço';
+                const protocolo = p.protocolo_oficial || '—';
+                const solicitante = p.solicitante_oficial || '—';
+                const rua = p.ruas_fortaleza ? p.ruas_fortaleza.nome : '';
+                const bairro = p.cat_bairros ? p.cat_bairros.nome_bairro : '';
+                const localStr = p.endereco ? p.endereco : (rua ? `${rua}, ${bairro}` : (bairro || '—'));
+                const equipe = nco ? ((nco.equipe_nome || nco.equipe_amc_designada || nco.empresa_terceirizada) || '—') : '—';
+
+                const nucleos = p.nucleos_atribuidos || [];
+                let nucleosBadges = nucleos.length > 0
+                    ? nucleos.map(n => `<span style="display:inline-block;font-size:10px;padding:2px 6px;margin:2px;background:rgba(248,183,0,0.15);color:var(--amc-primary);border:1px solid rgba(248,183,0,0.3);font-weight:bold;border-radius:4px;">${n}</span>`).join('')
+                    : `<span style="display:inline-block;font-size:10px;padding:2px 6px;background:rgba(255,255,255,0.05);color:var(--amc-text-muted);border:1px solid rgba(255,255,255,0.1);border-radius:4px;">Sem atribuição</span>`;
+
+                const statusMap = {
+                    'Aguardando Ordem de Serviço': 'badge-aguardando',
+                    'Em Execução': 'badge-execucao',
+                    'Paralisada': 'badge-paralisada',
+                    'Medição Concluída': 'badge-concluida'
+                };
+                const statusClass = statusMap[statusNco] || 'badge-generic';
+
+                const tr = document.createElement('tr');
+                tr.className = 'clickable-row' + (p.prioridade_diretoria === true ? ' priority-row' : '');
+                tr.onclick = () => openNcoModal(p.id);
+                tr.innerHTML = `
+                    <td>
+                        <div style="font-weight:700; font-family:'Oswald',sans-serif; color:#fff; display:flex; align-items:center; gap:6px;">
+                            ${p.prioridade_diretoria === true ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Prioridade: ${p.prioridade_nome || 'Sim'}"></i>` : ''}
+                            ${protocolo}
+                            ${p.id_demanda_principal ? `<span class="badge-aggr" title="Processo Agregado">A</span>` : ''}
+                        </div>
+                        <div style="font-size:11px; color:var(--amc-text-muted); margin-top:2px;">${bairro || '—'}</div>
+                    </td>
+                    <td><span style="font-size:13px; color:rgba(255,255,255,0.85);">${localStr}</span></td>
+                    <td><span style="font-weight:500;">${solicitante}</span></td>
+                    <td><span class="badge ${statusClass}">${statusNco}</span></td>
+                    <td><span style="font-size:12px; color:rgba(255,255,255,0.75);">${equipe}</span></td>
+                    <td><div style="display:flex; flex-wrap:wrap; gap:2px;">${nucleosBadges}</div></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ─── Abas do Modal ───
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(pane => pane.classList.remove('active'));
+            const targetBtn = document.getElementById(`btn-${tabId}`);
+            if (targetBtn) targetBtn.classList.add('active');
+            const targetPane = document.getElementById(tabId);
+            if (targetPane) targetPane.classList.add('active');
+        }
+
+        function toggleNpoSubSection(elementId, btn) {
+            const el = document.getElementById(elementId);
+            const arrow = btn.querySelector('.arrow-icon');
+            if (el.style.display === 'block') {
+                el.style.display = 'none';
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            } else {
+                el.style.display = 'block';
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function renderNpoCollapsibleDetails(npo) {
+            if (!npo || !npo.detalhes_projeto) return '';
+            const det = npo.detalhes_projeto;
+            
+            let html = '';
+            const hasVal = (val) => val !== undefined && val !== null && val !== '' && val !== 0 && val !== '0' && val !== 0.0;
+            
+            const renderGrid = (obj, mapping) => {
+                let gridHtml = '';
+                for (const [key, label] of Object.entries(mapping)) {
+                    const val = obj[key];
+                    if (hasVal(val)) {
+                        gridHtml += `<div><span class="nuc-label" style="font-size:10px; color:var(--amc-text-muted); text-transform:uppercase;">${label}</span><span class="nuc-value" style="font-weight:600; color:#fff; font-size:13px;">${val}</span></div>`;
+                    }
+                }
+                return gridHtml;
+            };
+
+            // 1. Projeto Geométrico
+            const geom = det.geometrico || {};
+            const geomMapping = {
+                recapeamento: 'Recapeamento',
+                numero_projeto: 'Nº do Projeto Geométrico',
+                data_recapeamento: 'Data do Recapeamento',
+                travessia_elevada: 'Travessia Elevada (un)',
+                plato: 'Platô (un)',
+                lombada_fisica: 'Lombada Física (un)',
+                retirada_lombada: 'Retirada de Lombada (un)'
+            };
+            const geomGrid = renderGrid(geom, geomMapping);
+            if (geomGrid) {
+                html += `
+                    <div class="npo-sub-accordion">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-geom', this)">
+                            <span><i class="fa fa-ruler-combined" style="margin-right:6px; color:var(--amc-npo);"></i> Projeto Geométrico</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-geom" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${geomGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 2. Cruzamento & Semáforo
+            const cruz = det.cruzamento || {};
+            const cruzMapping = {
+                quant_sinalizacao_hz_vt: 'Sinalização Hz/Vt',
+                horizontal: 'Sinalização Horizontal (m²)',
+                vertical: 'Sinalização Vertical (un)',
+                horizontal_tachao: 'Sinalização Hz c/ Tachão',
+                horiz_vert_tachao: 'Sinalização Hz/Vt c/ Tachão',
+                implantar_semaforo: 'Implantar Semáforo (un)',
+                renovar_semaforo: 'Renovar Semáforo (un)',
+                desativar_semaforo: 'Desativar Semáforo (un)'
+            };
+            const cruzGrid = renderGrid(cruz, cruzMapping);
+            if (cruzGrid) {
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-cruz', this)">
+                            <span><i class="fa fa-traffic-light" style="margin-right:6px; color:var(--amc-npo);"></i> Cruzamento / Semáforo</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-cruz" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${cruzGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 3. Melhorias Urbanas
+            const sin = det.sinalizacao || {};
+            const sinMapping = {
+                sentido_unico_inversao: 'Sentido Único / Inversão',
+                sentido_duplo: 'Sentido Duplo',
+                inversao_preferencial: 'Inversão de Preferencial',
+                travessia_pedestre: 'Travessia de Pedestre (un)',
+                travessia_colorida: 'Travessia Colorida (un)',
+                faixa_x: 'Faixa em X (un)',
+                faixa_longa: 'Faixa de Pedestre Longa (un)',
+                projeto_escola: 'Projeto Escola',
+                esquina_segura: 'Esquina Segura (un)',
+                esquina_segura_renovacao: 'Esquina Segura Renovação (un)',
+                calcada_verde: 'Calçada Verde',
+                calcada_viva: 'Calçada Viva',
+                travessia_elevada_renovar: 'Travessia Elevada a Renovar (un)',
+                lombada_fisica_renovar: 'Lombada Física a Renovar (un)',
+                video: 'Pesquisa de Vídeo (un)',
+                fiscalizacao_eletronica: 'Fiscalização Eletrônica',
+                yellow_box: 'Área de Conflito (Yellow Box) (un)',
+                semaforo_colorido: 'Semáforo c/ Fundo Colorido (un)',
+                mot_box: 'Motobox (un)',
+                estacionamento_bicicleta: 'Estacionamento de Bicicleta',
+                paraciclo: 'Paraciclo',
+                ciclo: 'Ciclofaixa/Ciclovia',
+                motofaixa_faixa_azul: 'Motofaixa / Faixa Azul',
+                faixa_exclusiva: 'Faixa Exclusiva de Ônibus',
+                area_transito_calmo: 'Área de Trânsito Calmo',
+                transito_compartilhado: 'Trânsito Compartilhado',
+                rotatoria: 'Rotatória',
+                praca_viva: 'Praça Viva',
+                vlt: 'Cruzamento c/ VLT',
+                equipamento: 'Polo Gerador / Equipamento'
+            };
+            const sinGrid = renderGrid(sin, sinMapping);
+            if (sinGrid) {
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-sin', this)">
+                            <span><i class="fa fa-map-marked-alt" style="margin-right:6px; color:var(--amc-npo);"></i> Sinalização e Melhorias Urbanas</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-sin" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${sinGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 4. Vagas de Zona Azul e Especiais
+            const vza = det.vagas_zona_azul || {};
+            const vzaImp = vza.implantar || {};
+            const vzaRem = vza.remover || {};
+            const vzaApa = vza.apagar || {};
+            
+            const vd = det.vagas_diversas || {};
+            const vdImp = vd.implantar || {};
+            const vdRen = vd.renovar || {};
+            const vdApa = vd.apagar || {};
+            
+            const zAzulLabels = { za: 'Zona Azul', def: 'PCD', ido: 'Idoso', cd: 'Carga/Descarga' };
+            let zAzulRows = '';
+            for (const [key, label] of Object.entries(zAzulLabels)) {
+                const imp = vzaImp[key] || 0;
+                const rem = vzaRem[key] || 0;
+                const apa = vzaApa[key] || 0;
+                if (imp > 0 || rem > 0 || apa > 0) {
+                    zAzulRows += `
+                        <tr>
+                            <td style="padding:6px; font-size:12px; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.04);">${label}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${imp ? 'var(--amc-green)' : 'var(--amc-text-muted)'};">${imp || '—'}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${rem ? '#ff8b8b' : 'var(--amc-text-muted)'};">${rem || '—'}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${apa ? '#ff6b6b' : 'var(--amc-text-muted)'};">${apa || '—'}</td>
+                        </tr>
+                    `;
+                }
+            }
+            
+            const vdKeys = [
+                { key: "taxi", label: "Táxi" },
+                { key: "moto_taxi", label: "Moto Táxi" },
+                { key: "moto_app", label: "Moto Aluguel" },
+                { key: "moto", label: "Moto" },
+                { key: "deficiente", label: "Deficiente" },
+                { key: "idoso", label: "Idoso" },
+                { key: "carga_descarga", label: "Carga/Descarga" },
+                { key: "embarque_desembarque", label: "Emb/Desemb" },
+                { key: "embarque_desembarque_app", label: "Emb/Desemb App" },
+                { key: "viatura_policial", label: "Viatura" },
+                { key: "ambulancia", label: "Ambulância" },
+                { key: "veiculo_compartilhado", label: "Compartilhado" },
+                { key: "veiculo_particular", label: "Particular" },
+                { key: "onibus", label: "Ônibus" },
+                { key: "micro_onibus_turismo", label: "Micro Ônibus" },
+                { key: "transporte_escolar", label: "Escolar" },
+                { key: "veiculo_articulado_aluguel", label: "Veíc. Articulado" },
+                { key: "reboque_semi_reboque", label: "Reboque" },
+                { key: "caminhao", label: "Caminhão" },
+                { key: "carros_frete", label: "Carro Frete" },
+                { key: "estacao_coleta", label: "Estação Coleta" }
+            ];
+            
+            let vdRows = '';
+            vdKeys.forEach(item => {
+                const imp = vdImp[item.key] || 0;
+                const ren = vdRen[item.key] || 0;
+                const apa = vdApa[item.key] || 0;
+                if (imp > 0 || ren > 0 || apa > 0) {
+                    vdRows += `
+                        <tr>
+                            <td style="padding:6px; font-size:12px; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.04);">${item.label}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${imp ? 'var(--amc-green)' : 'var(--amc-text-muted)'};">${imp || '—'}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${ren ? 'var(--amc-primary)' : 'var(--amc-text-muted)'};">${ren || '—'}</td>
+                            <td style="padding:6px; font-size:12px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); color:${apa ? '#ff6b6b' : 'var(--amc-text-muted)'};">${apa || '—'}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (zAzulRows || vdRows) {
+                let tablesHtml = '';
+                if (zAzulRows) {
+                    tablesHtml += `
+                        <div style="font-size:10px; text-transform:uppercase; color:var(--amc-npo); font-weight:700; margin-bottom:6px;">Zona Azul</div>
+                        <table style="width:100%; border-collapse:collapse; margin-bottom:12px; border:1px solid rgba(255,255,255,0.06); font-size:12px; color:#fff;">
+                            <thead>
+                                <tr style="background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.06);">
+                                    <th style="padding:6px; font-size:10px; text-align:left; color:var(--amc-text-muted);">Tipo</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Impl.</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Remov.</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Apag.</th>
+                                </tr>
+                            </thead>
+                            <tbody>${zAzulRows}</tbody>
+                        </table>
+                    `;
+                }
+                if (vdRows) {
+                    tablesHtml += `
+                        <div style="font-size:10px; text-transform:uppercase; color:var(--amc-npo); font-weight:700; margin-bottom:6px;">Vagas Especiais (Diversas)</div>
+                        <table style="width:100%; border-collapse:collapse; border:1px solid rgba(255,255,255,0.06); font-size:12px; color:#fff;">
+                            <thead>
+                                <tr style="background:rgba(255,255,255,0.03); border-bottom:1px solid rgba(255,255,255,0.06);">
+                                    <th style="padding:6px; font-size:10px; text-align:left; color:var(--amc-text-muted);">Tipo</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Impl.</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Renov.</th>
+                                    <th style="padding:6px; font-size:10px; text-align:center; color:var(--amc-text-muted);">Apag.</th>
+                                </tr>
+                            </thead>
+                            <tbody>${vdRows}</tbody>
+                        </table>
+                    `;
+                }
+                
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-vagas', this)">
+                            <span><i class="fa fa-parking" style="margin-right:6px; color:var(--amc-npo);"></i> Vagas Especiais & Zona Azul</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-vagas" class="npo-sub-content">${tablesHtml}</div>
+                    </div>
+                `;
+            }
+
+            // 5. Quantitativos a Implantar
+            const qi = det.quantitativo_implantar || {};
+            const qiMapping = {
+                hz_mecanica: 'Sinalização Hz Mecânica (m²)',
+                hz_mecanica_term: 'Hz Mecânica Termoplástico (m²)',
+                hz_manual_term: 'Hz Manual Termoplástico (m²)',
+                hz_plastico_frio: 'Hz Plástico a Frio (m²)',
+                hz_manual: 'Hz Manual (m²)',
+                sonorizador: 'Sonorizador (un)',
+                placa: 'Placa (un)',
+                passagem_iluminada: 'Passagem Iluminada (un)',
+                pelicula: 'Película (m²)',
+                coluna: 'Coluna (un)',
+                coluna_cilindrica: 'Coluna Cilind/Cônica (un)',
+                gradil: 'Gradil (m)',
+                balizador: 'Balizador (un)',
+                zebras: 'Zebras (un)',
+                tacha_mono: 'Tacha Mono (un)',
+                tacha_bi: 'Tacha Bi (un)',
+                gelito: 'Gelito/Gelo Baiano (un)'
+            };
+            const qiGrid = renderGrid(qi, qiMapping);
+            if (qiGrid) {
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-qi', this)">
+                            <span><i class="fa fa-plus-circle" style="margin-right:6px; color:var(--amc-npo);"></i> Quantitativos a Implantar</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-qi" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${qiGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 6. Quantitativos a Retirar
+            const qr = det.quantitativo_retirar || {};
+            const qrMapping = {
+                balizador: 'Balizador (un)',
+                gelito: 'Gelito (un)',
+                tacha: 'Tacha (un)',
+                tachao: 'Tachão (un)',
+                coluna: 'Coluna (un)',
+                placa: 'Placa (un)',
+                sinalizacao_hz: 'Sinalização Horizontal (m²)',
+                extensao: 'Extensão / Ciclo (m)'
+            };
+            const qrGrid = renderGrid(qr, qrMapping);
+            if (qrGrid) {
+                html += `
+                    <div class="npo-sub-accordion" style="margin-top:8px;">
+                        <button type="button" class="npo-sub-header" onclick="toggleNpoSubSection('npo-sub-qr', this)">
+                            <span><i class="fa fa-minus-circle" style="margin-right:6px; color:var(--amc-npo);"></i> Quantitativos a Retirar</span>
+                            <i class="fa fa-chevron-down arrow-icon" style="transition: transform 0.2s;"></i>
+                        </button>
+                        <div id="npo-sub-qr" class="npo-sub-content">
+                            <div class="nuc-field-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">${qrGrid}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        function toggleQuantitativosFields(show) {
+            document.getElementById('nco-quantitativos-fields').style.display = show ? 'block' : 'none';
+        }
+
+        function toggleEquipeInputs(tipo, selectedValue = '') {
+            const selectNome = document.getElementById('nco-equipe-nome');
+            selectNome.innerHTML = '';
+
+            if (tipo === 'AMC') {
+                const equipes = [
+                    'Equipe AMC Centro', 'Equipe AMC Leste', 'Equipe AMC Oeste',
+                    'Equipe AMC Norte', 'Equipe AMC Sul', 'Equipe AMC Pintura / Sinalização Horizontal',
+                    'Equipe AMC Placas / Sinalização Vertical', 'Equipe AMC Semáforos', 'Equipe AMC Operação Rápida'
+                ];
+                equipes.forEach(eq => {
+                    const opt = document.createElement('option');
+                    opt.value = eq; opt.textContent = eq;
+                    selectNome.appendChild(opt);
+                });
+                selectNome.disabled = false;
+            } else if (tipo === 'Terceirizada') {
+                const empresas = [
+                    'Sinalize Ceará Ltda', 'Trânsito Seguro Engenharia S.A.',
+                    'Via Expressa Construtora Eireli', 'Mobilidade Urbana Obras e Serviços'
+                ];
+                empresas.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp; opt.textContent = emp;
+                    selectNome.appendChild(opt);
+                });
+                selectNome.disabled = false;
+            } else {
+                const opt = document.createElement('option');
+                opt.value = ''; opt.textContent = 'Nenhuma equipe designada';
+                selectNome.appendChild(opt);
+                selectNome.disabled = true;
+            }
+
+            if (selectedValue) selectNome.value = selectedValue;
+        }
+
+        function copyProjectedToAuthorized() {
+            if (!currentSelectedProject) {
+                showToast('Erro', 'Nenhuma demanda com dados de projeto vinculada.', 'error');
+                return;
+            }
+            
+            const npo = currentSelectedProject.projetos_npo ? (Array.isArray(currentSelectedProject.projetos_npo) ? currentSelectedProject.projetos_npo[0] : currentSelectedProject.projetos_npo) : null;
+            const ngc = currentSelectedProject.projetos_ngc ? (Array.isArray(currentSelectedProject.projetos_ngc) ? currentSelectedProject.projetos_ngc[0] : currentSelectedProject.projetos_ngc) : null;
+            const npa = currentSelectedProject.analise_npa ? (Array.isArray(currentSelectedProject.analise_npa) ? currentSelectedProject.analise_npa[0] : currentSelectedProject.analise_npa) : null;
+            const npe = currentSelectedProject.projetos_npe ? (Array.isArray(currentSelectedProject.projetos_npe) ? currentSelectedProject.projetos_npe[0] : currentSelectedProject.projetos_npe) : null;
+            
+            // Marcar a caixa de ajustar quantitativos
+            const checkbox = document.getElementById('nco-ajustar-quantitativos');
+            checkbox.checked = true;
+            toggleQuantitativosFields(true);
+            
+            // Copiar sinalização horizontal
+            if (npo && npo.quant_sinalizacao_horizontal_m2 != null) {
+                document.getElementById('nco-sinalizacao-h').value = npo.quant_sinalizacao_horizontal_m2;
+            }
+            
+            // Copiar sinalização vertical
+            if (npo && npo.quant_sinalizacao_vertical_unid != null) {
+                document.getElementById('nco-sinalizacao-v').value = npo.quant_sinalizacao_vertical_unid;
+            }
+            
+            // Copiar ciclofaixa / ciclovia (NGC extensão em km multiplicada por 1000 para virar metros!)
+            if (ngc && ngc.extensao_km != null) {
+                document.getElementById('nco-ciclofaixa').value = (parseFloat(ngc.extensao_km) * 1000).toFixed(1);
+            }
+            
+            // Copiar relatórios e medidas NPA/NPE
+            let medStr = '';
+            if (npa && npa.observacoes) {
+                medStr += `[NPA - Medidas Projetadas]:\n${npa.observacoes}\n\n`;
+            }
+            if (npe && npe.medidas_mitigadoras) {
+                let medNpe = '';
+                if (Array.isArray(npe.medidas_mitigadoras)) {
+                    medNpe = npe.medidas_mitigadoras.join(', ');
+                } else if (typeof npe.medidas_mitigadoras === 'object') {
+                    medNpe = JSON.stringify(npe.medidas_mitigadoras);
+                } else {
+                    medNpe = String(npe.medidas_mitigadoras);
+                }
+                medStr += `[NPE - Medidas Projetadas]:\n${medNpe}\n\n`;
+            }
+            if (medStr) {
+                const currentRel = document.getElementById('nco-relatorio').value;
+                if (!currentRel.includes('[NPA - Medidas Projetadas]')) {
+                    document.getElementById('nco-relatorio').value = medStr + currentRel;
+                }
+            }
+            
+            showToast('Sucesso', 'Quantitativos e referências copiados com sucesso!', 'success');
+        }
+
+        function updateProjectedLabels(p) {
+            const npo = p.projetos_npo ? (Array.isArray(p.projetos_npo) ? p.projetos_npo[0] : p.projetos_npo) : null;
+            const ngc = p.projetos_ngc ? (Array.isArray(p.projetos_ngc) ? p.projetos_ngc[0] : p.projetos_ngc) : null;
+
+            // Labels de referência do NCO
+            const horizontalVal = npo ? (npo.quant_sinalizacao_horizontal_m2 ?? '0.00') : '0.00';
+            const verticalVal = npo ? (npo.quant_sinalizacao_vertical_unid ?? '0') : '0';
+            const ciclofaixaVal = ngc ? ((parseFloat(ngc.extensao_km || 0) * 1000).toFixed(1)) : '0.0';
+
+            document.getElementById('nco-sinalizacao-h-projetada-ref').textContent = `[Projetado: ${horizontalVal} m²]`;
+            document.getElementById('nco-sinalizacao-v-projetada-ref').textContent = `[Projetado: ${verticalVal} un]`;
+            document.getElementById('nco-ciclofaixa-projetada-ref').textContent = `[Projetado: ${ciclofaixaVal} m]`;
+        }
+
+        function populatePreviewTabs(p) {
+            const container = document.getElementById('preview-consolidado-content');
+            if (!container) return;
+
+            const npa = p.analise_npa ? (Array.isArray(p.analise_npa) ? p.analise_npa[0] : p.analise_npa) : null;
+            const npo = p.projetos_npo ? (Array.isArray(p.projetos_npo) ? p.projetos_npo[0] : p.projetos_npo) : null;
+            const npe = p.projetos_npe ? (Array.isArray(p.projetos_npe) ? p.projetos_npe[0] : p.projetos_npe) : null;
+            const ngc = p.projetos_ngc ? (Array.isArray(p.projetos_ngc) ? p.projetos_ngc[0] : p.projetos_ngc) : null;
+
+            let html = '';
+
+            // ─── DITRAN Dispatch Card (sempre exibido primeiro) ───
+            const statusGeral = p.status_geral || '—';
+            const autorizadoParcialmente = p.autorizado_parcialmente;
+            const tipoExecucao = autorizadoParcialmente === true ? 'Parcial' : (autorizadoParcialmente === false ? 'Total (Execução completa de projeto)' : '—');
+            const despachoTexto = p.despacho_diretoria || '';
+            const prioridadeDiretoria = p.prioridade_diretoria === true;
+            const prioridadeNome = p.prioridade_diretoria ? 'Sim' : '';
+            const despachoColor = statusGeral === 'Aprovado' ? '#10b981' : (statusGeral === 'Indeferido' ? '#ef4444' : '#f59e0b');
+
+            html += `
+                <div class="nuc-preview-box" style="border-left: 4px solid ${despachoColor}; background: rgba(255,255,255,0.01); margin-bottom:1.25rem;">
+                    <div class="nuc-preview-title" style="color:${despachoColor};"><i class="fa fa-traffic-light"></i> DITRAN — Deliberação da Diretoria</div>
+                    <div class="nuc-field-grid">
+                        <div><span class="nuc-label">Deliberação / Decisão</span><span class="nuc-value" style="color:${despachoColor}; font-weight:700;">${statusGeral}</span></div>
+                        <div><span class="nuc-label">Tipo de Execução Autorizada</span><span class="nuc-value">${tipoExecucao}</span></div>
+                        ${prioridadeDiretoria ? `<div class="nuc-field-full"><span class="nuc-label" style="color:#ef4444;"><i class="fa fa-triangle-exclamation"></i> Prioridade Institucional</span><span class="nuc-value" style="color:#ff6b6b; font-weight:700;">${prioridadeNome}</span></div>` : ''}
+                        ${despachoTexto ? `<div class="nuc-field-full"><span class="nuc-label">Parecer / Despacho DITRAN</span><span class="nuc-value" style="white-space:pre-line; color:rgba(255,255,255,0.85);">${despachoTexto}</span></div>` : '<div class="nuc-field-full"><span style="color:var(--amc-text-muted); font-size:12px; padding: 4px 0; display:block;">Nenhum despacho registrado pela diretoria.</span></div>'}
+                    </div>
+                </div>
+            `;
+
+            // NPA Card
+            if (npa) {
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #38bdf8; background: rgba(255,255,255,0.01); margin-bottom:1.25rem;">
+                        <div class="nuc-preview-title nuc-npa"><i class="fa fa-chart-pie"></i> NPA — Planejamento e Análise</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Tipo de Localização</span><span class="nuc-value">${npa.tipo_localizacao || '—'}</span></div>
+                            <div><span class="nuc-label">Rua Principal</span><span class="nuc-value">${npa.rua_principal || '—'}</span></div>
+                            ${npa.tipo_localizacao === 'Cruzamento' ? 
+                                `<div><span class="nuc-label">Cruzamento com</span><span class="nuc-value">${npa.rua_cruzamento || '—'}</span></div>` : 
+                                `<div><span class="nuc-label">Limites</span><span class="nuc-value">${npa.rua_limite_a || '—'} a ${npa.rua_limite_b || '—'}</span></div>`
+                            }
+                            <div class="nuc-field-full"><span class="nuc-label">Título do Projeto NPA</span><span class="nuc-value">${npa.projeto_npa_titulo || npa.projeto_npa_nome || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Projeto NPA</span><span class="nuc-value">${npa.projeto_npa_numero || '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Observações da Análise</span><span class="nuc-value">${npa.observacoes || '—'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // NPO Card
+            if (npo) {
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #fb7185; background: rgba(255,255,255,0.01); margin-bottom:1.25rem;">
+                        <div class="nuc-preview-title nuc-npo"><i class="fa fa-list-check"></i> NPO — Projetos Operacionais</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Trecho/Local</span><span class="nuc-value">${npo.trecho || '—'}</span></div>
+                            <div><span class="nuc-label">Divisão / Área</span><span class="nuc-value">${npo.divisao_area || '—'}</span></div>
+                            <div><span class="nuc-label">Sinalização Horizontal Projetada</span><span class="nuc-value">${npo.quant_sinalizacao_horizontal_m2 ? npo.quant_sinalizacao_horizontal_m2 + ' m²' : '—'}</span></div>
+                            <div><span class="nuc-label">Sinalização Vertical Projetada</span><span class="nuc-value">${npo.quant_sinalizacao_vertical_unid ? npo.quant_sinalizacao_vertical_unid + ' un' : '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Título do Projeto NPO</span><span class="nuc-value">${npo.projeto_npo_titulo || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Projeto NPO</span><span class="nuc-value">${npo.projeto_npo_numero || '—'}</span></div>
+                            <div><span class="nuc-label">Técnico NPO</span><span class="nuc-value">${npo.tecnico_responsavel || '—'}</span></div>
+                        </div>
+                        <!-- Detalhes colapsáveis adicionais do NPO -->
+                        ${renderNpoCollapsibleDetails(npo)}
+                    </div>
+                `;
+            }
+
+            // NPE Card
+            if (npe) {
+                let medNpeStr = '—';
+                if (npe.medidas_mitigadoras) {
+                    if (Array.isArray(npe.medidas_mitigadoras)) {
+                        medNpeStr = npe.medidas_mitigadoras.join(', ');
+                    } else if (typeof npe.medidas_mitigadoras === 'object') {
+                        medNpeStr = JSON.stringify(npe.medidas_mitigadoras);
+                    } else {
+                        medNpeStr = String(npe.medidas_mitigadoras);
+                    }
+                }
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #a78bfa; background: rgba(255,255,255,0.01); margin-bottom:1.25rem;">
+                        <div class="nuc-preview-title nuc-npe"><i class="fa fa-folder-open"></i> NPE — Projetos Especiais</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Tipo de Estudo</span><span class="nuc-value">${npe.tipo_estudo || '—'}</span></div>
+                            <div><span class="nuc-label">Origem do Projeto</span><span class="nuc-value">${npe.origem_projeto || '—'}</span></div>
+                            <div><span class="nuc-label">Trecho</span><span class="nuc-value">${npe.detalhes_projeto ? (npe.detalhes_projeto.trecho || '—') : '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Título do Projeto NPE</span><span class="nuc-value">${npe.projeto_npe_titulo || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Projeto NPE</span><span class="nuc-value">${npe.projeto_npe_numero || '—'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Medidas Mitigadoras</span><span class="nuc-value">${medNpeStr}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Observações</span><span class="nuc-value">${npe.detalhes_projeto ? (npe.detalhes_projeto.observacao_projeto || '—') : '—'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // NGC Card
+            if (ngc) {
+                html += `
+                    <div class="nuc-preview-box" style="border-left: 4px solid #22d3ee; background: rgba(255,255,255,0.01); margin-bottom:1.25rem;">
+                        <div class="nuc-preview-title nuc-ngc"><i class="fa fa-bicycle"></i> NGC — Gestão Cicloviária</div>
+                        <div class="nuc-field-grid">
+                            <div><span class="nuc-label">Tipologia Cicloviária</span><span class="nuc-value">${ngc.tipologia || '—'}</span></div>
+                            <div><span class="nuc-label">Posição na Via</span><span class="nuc-value">${ngc.posicao_via || '—'}</span></div>
+                            <div><span class="nuc-label">Sentido de Circulação</span><span class="nuc-value">${ngc.sentido_circulacao || '—'}</span></div>
+                            <div><span class="nuc-label">Tipo de Pavimento</span><span class="nuc-value">${ngc.pavimento || '—'}</span></div>
+                            <div><span class="nuc-label">Extensão Projetada</span><span class="nuc-value">${ngc.extensao_km ? ngc.extensao_km + ' km' : '—'}</span></div>
+                            <div><span class="nuc-label">Orientação</span><span class="nuc-value">${ngc.orientacao || '—'}</span></div>
+                            <div><span class="nuc-label">Elementos de Separação</span><span class="nuc-value">${ngc.elementos_separacao || '—'}</span></div>
+                            <div><span class="nuc-label">Infraestrutura Protegida?</span><span class="nuc-value">${ngc.protegida ? 'Sim' : 'Não'}</span></div>
+                            <div class="nuc-field-full"><span class="nuc-label">Título do Projeto NGC</span><span class="nuc-value">${ngc.projeto_ngc_titulo || '—'}</span></div>
+                            <div><span class="nuc-label">Número do Projeto NGC</span><span class="nuc-value">${ngc.projeto_ngc_numero || '—'}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Documentos Consolidados
+            let docsHtml = '';
+            
+            // NPA
+            const npaProj = npa ? (npa.projeto_npa || npa.url_projeto_pdf) : null;
+            const npaPar = npa ? (npa.parecer_npa || npa.url_parecer_pdf) : null;
+            if (npaProj) docsHtml += `<a class="doc-link-btn" href="${npaProj}" target="_blank"><i class="fa fa-file-pdf" style="color:#ef4444;"></i> Projeto NPA</a>`;
+            if (npaPar) docsHtml += `<a class="doc-link-btn" href="${npaPar}" target="_blank"><i class="fa fa-file-invoice" style="color:#3b82f6;"></i> Parecer NPA</a>`;
+            
+            // NPO
+            const npoProj = npo ? (npo.projeto_npo || npo.url_projeto_pdf) : null;
+            const npoPar = npo ? (npo.parecer_npo || npo.url_parecer_pdf) : null;
+            if (npoProj) docsHtml += `<a class="doc-link-btn" href="${npoProj}" target="_blank"><i class="fa fa-file-pdf" style="color:#ef4444;"></i> Projeto NPO</a>`;
+            if (npoPar) docsHtml += `<a class="doc-link-btn" href="${npoPar}" target="_blank"><i class="fa fa-file-invoice" style="color:#3b82f6;"></i> Parecer NPO</a>`;
+            
+            // NPE
+            const npeProj = npe ? (npe.projeto_npe || npe.url_projeto_nce_pdf || npe.url_projeto_pdf) : null;
+            const npePar = npe ? (npe.parecer_npe || npe.url_parecer_pdf) : null;
+            const npeRist = npe ? npe.url_rist_pdf : null;
+            if (npeProj) docsHtml += `<a class="doc-link-btn" href="${npeProj}" target="_blank"><i class="fa fa-file-pdf" style="color:#ef4444;"></i> Projeto NPE</a>`;
+            if (npePar) docsHtml += `<a class="doc-link-btn" href="${npePar}" target="_blank"><i class="fa fa-file-invoice" style="color:#3b82f6;"></i> Parecer NPE</a>`;
+            if (npeRist) docsHtml += `<a class="doc-link-btn" href="${npeRist}" target="_blank"><i class="fa fa-file-pdf" style="color:#10b981;"></i> RIST NPE</a>`;
+            
+            // NGC
+            const ngcProj = ngc ? (ngc.projeto_ngc || ngc.url_projeto_pdf) : null;
+            const ngcPar = ngc ? (ngc.parecer_ngc || ngc.url_parecer_pdf) : null;
+            if (ngcProj) docsHtml += `<a class="doc-link-btn" href="${ngcProj}" target="_blank"><i class="fa fa-file-pdf" style="color:#ef4444;"></i> Projeto NGC</a>`;
+            if (ngcPar) docsHtml += `<a class="doc-link-btn" href="${ngcPar}" target="_blank"><i class="fa fa-file-invoice" style="color:#3b82f6;"></i> Parecer NGC</a>`;
+
+            html += `
+                <div class="nuc-preview-box" style="border-left: 4px solid var(--amc-primary); background: rgba(255,255,255,0.01);">
+                    <div class="nuc-preview-title" style="color:var(--amc-primary);"><i class="fa fa-folder-open"></i> Arquivos e Pareceres Anexados</div>
+                    <div class="nuc-field-full doc-view-row">
+                        ${docsHtml || '<span style="color:var(--amc-text-muted); font-size:12px;">Nenhum documento PDF anexado pelos núcleos</span>'}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // ─── Modal ───
+        async function openNcoModal(projectId = null) {
+            document.getElementById('nco-priority-banner').style.display = 'none';
+            currentSelectedProject = null;
+            
+            // Reset campos
+            document.getElementById('nco-record-id').value = '';
+            document.getElementById('nco-demanda-id').value = '';
+            document.getElementById('nco-status').value = 'Aguardando Ordem de Serviço';
+            document.getElementById('nco-numero-processo').value = '';
+            document.getElementById('nco-tipo-obra').value = '';
+            document.getElementById('nco-solicitante').value = '';
+            document.getElementById('nco-tecnico').value = '';
+            document.getElementById('nco-local-endereco').value = '';
+            document.getElementById('nco-empresa').value = '';
+            document.getElementById('nco-valor-medido').value = '';
+            document.getElementById('nco-percentual').value = 0;
+            document.getElementById('nco-percentual-display').textContent = '0%';
+            document.getElementById('nco-data-inicio').value = '';
+            document.getElementById('nco-data-fim').value = '';
+            document.getElementById('nco-relatorio').value = '';
+            document.getElementById('nco-ajustar-quantitativos').checked = false;
+            toggleQuantitativosFields(false);
+            ['nco-lombada','nco-plato','nco-travessia','nco-ciclofaixa','nco-sinalizacao-h','nco-sinalizacao-v','nco-barreira','nco-estacionamento','nco-calcada','nco-semaforo'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('nco-equipe-tipo').value = '';
+            toggleEquipeInputs('');
+            document.getElementById('info-panel').style.display = 'none';
+
+            // Reset labels projetados de referência
+            document.getElementById('nco-sinalizacao-h-projetada-ref').textContent = '';
+            document.getElementById('nco-sinalizacao-v-projetada-ref').textContent = '';
+            document.getElementById('nco-ciclofaixa-projetada-ref').textContent = '';
+
+            switchTab('tab-visualizacao');
+
+            if (!projectId) {
+                document.getElementById('modal-title').textContent = 'Novo Processo NCO';
+                document.getElementById('modal-subtitle').textContent = '';
+                const btnV = document.getElementById('btn-verify-local'); if (btnV) btnV.style.display = 'none';
+                document.getElementById('nco-modal').classList.add('show');
+                return;
+            }
+
+            const p = allNcoProjects.find(x => x.id === projectId);
+            if (!p) return;
+
+            currentSelectedProject = p;
+
+            if (p.prioridade_diretoria === true) {
+                const banner = document.getElementById('nco-priority-banner');
+                banner.innerHTML = `
+                    <div class="priority-banner" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                        <i class="fa fa-triangle-exclamation" style="font-size: 14px;"></i>
+                        <span><strong>Prioridade Institucional da Diretoria:</strong> Sim</span>
+                    </div>
+                `;
+                banner.style.display = 'block';
+            }
+            // Banner de Agregação
+            const aggrBnco = document.getElementById('nco-aggr-banner');
+            if (aggrBnco) aggrBnco.style.display = 'none';
+            if (p.id_demanda_principal) {
+                supabase.from('demandas_pai').select('protocolo_oficial').eq('id', p.id_demanda_principal).single().then(({ data: pd }) => { if (pd && aggrBnco) { document.getElementById('nco-aggr-banner-title').textContent = 'Este processo está agregado ao seguinte processo:'; document.getElementById('nco-aggr-banner-text').innerHTML = `<strong style="color:#fde68a;">${pd.protocolo_oficial}</strong><br><span style="font-size:11px;">O status deve ser gerenciado manualmente.</span>`; aggrBnco.style.display = 'flex'; } });
+            }
+            supabase.from('demandas_pai').select('protocolo_oficial').eq('id_demanda_principal', p.id).then(({ data: fd }) => { if (fd && fd.length > 0 && aggrBnco && aggrBnco.style.display === 'none') { document.getElementById('nco-aggr-banner-title').textContent = 'Processos agregados a este:'; document.getElementById('nco-aggr-banner-text').innerHTML = fd.map(f => `<strong style="color:#fde68a;">${f.protocolo_oficial}</strong>`).join(', ') + '<br><span style="font-size:11px;">Verifique e atualize os status manualmente.</span>'; aggrBnco.style.display = 'flex'; } });
+
+            const nco = p.execucao_nco && p.execucao_nco[0];
+            document.getElementById('nco-record-id').value = nco ? nco.id : '';
+            document.getElementById('nco-demanda-id').value = p.id;
+
+            // Campos gerais
+            document.getElementById('nco-status').value = nco ? (nco.status_nco || 'Aguardando Ordem de Serviço') : 'Aguardando Ordem de Serviço';
+            document.getElementById('nco-numero-processo').value = nco ? (nco.numero_processo || '') : '';
+            document.getElementById('nco-tipo-obra').value = nco ? (nco.tipo_obra || '') : '';
+            document.getElementById('nco-solicitante').value = nco ? (nco.solicitante || '') : (p.solicitante_oficial || '');
+            document.getElementById('nco-tecnico').value = nco ? (nco.tecnico_responsavel_nco || '') : '';
+            const rua = p.ruas_fortaleza ? p.ruas_fortaleza.nome : '';
+            const bairro = p.cat_bairros ? p.cat_bairros.nome_bairro : '';
+            document.getElementById('nco-local-endereco').value = nco ? (nco.endereco || '') : (p.endereco || (rua ? `${rua}, ${bairro}` : bairro) || '');
+            document.getElementById('nco-empresa').value = nco ? (nco.empresa_terceirizada || '') : '';
+            document.getElementById('nco-valor-medido').value = nco ? (nco.valor_medido_reais ? 'R$ ' + parseFloat(nco.valor_medido_reais).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : '') : '';
+            const perc = nco ? (nco.percentual_execucao || 0) : 0;
+            document.getElementById('nco-percentual').value = perc;
+            document.getElementById('nco-percentual-display').textContent = perc + '%';
+            document.getElementById('nco-data-inicio').value = nco && nco.data_inicio_obra ? nco.data_inicio_obra.split('T')[0] : '';
+            document.getElementById('nco-data-fim').value = nco && nco.data_fim_obra ? nco.data_fim_obra.split('T')[0] : '';
+            document.getElementById('nco-relatorio').value = nco ? (nco.relatorio_fiscalizacao || nco.observacoes || '') : '';
+
+            // Quantitativos de obras
+            const hasAdj = nco && (
+                nco.lombada_autorizada != null || nco.plato_autorizado != null ||
+                nco.travessia_pedestre_autorizada != null || nco.ciclofaixa_m_autorizada != null ||
+                nco.sinalizacao_horizontal_m2_autorizada != null || nco.sinalizacao_vertical_un_autorizada != null ||
+                nco.barreira_m_autorizada != null || nco.estacionamento_vagas_autorizado != null ||
+                nco.calcada_m_autorizada != null || nco.semaforo_autorizado != null
+            );
+            document.getElementById('nco-ajustar-quantitativos').checked = !!hasAdj;
+            toggleQuantitativosFields(!!hasAdj);
+            if (nco) {
+                const setVal = (id, val) => { if (val != null) document.getElementById(id).value = val; };
+                setVal('nco-lombada', nco.lombada_autorizada);
+                setVal('nco-plato', nco.plato_autorizado);
+                setVal('nco-travessia', nco.travessia_pedestre_autorizada);
+                setVal('nco-ciclofaixa', nco.ciclofaixa_m_autorizada);
+                setVal('nco-sinalizacao-h', nco.sinalizacao_horizontal_m2_autorizada);
+                setVal('nco-sinalizacao-v', nco.sinalizacao_vertical_un_autorizada);
+                setVal('nco-barreira', nco.barreira_m_autorizada);
+                setVal('nco-estacionamento', nco.estacionamento_vagas_autorizado);
+                setVal('nco-calcada', nco.calcada_m_autorizada);
+                setVal('nco-semaforo', nco.semaforo_autorizado);
+            }
+
+            // Equipe
+            document.getElementById('nco-equipe-tipo').value = nco ? (nco.equipe_tipo || '') : '';
+            toggleEquipeInputs(nco ? (nco.equipe_tipo || '') : '', nco ? (nco.equipe_nome || '') : '');
+
+            // Painel de informações
+            document.getElementById('modal-title').textContent = `Processo NCO — ${p.protocolo_oficial}`;
+            document.getElementById('modal-subtitle').textContent = p.tipo_solicitacao || '';
+            document.getElementById('info-protocolo').textContent = p.protocolo_oficial;
+            document.getElementById('info-tipo').textContent = p.tipo_solicitacao || '—';
+            document.getElementById('info-endereco').textContent = p.endereco || (rua ? `${rua}, ${bairro}` : bairro) || '—';
+
+            const nucleos = p.nucleos_atribuidos || [];
+            const infoNucleos = document.getElementById('info-nucleos');
+            infoNucleos.innerHTML = nucleos.length > 0
+                ? nucleos.map(n => `<span style="display:inline-block;font-size:10px;padding:2px 6px;background:rgba(248,183,0,0.15);color:var(--amc-primary);border:1px solid rgba(248,183,0,0.3);font-weight:bold;border-radius:4px;">${n}</span>`).join('')
+                : '<span style="color:var(--amc-text-muted); font-size:12px;">Não especificado</span>';
+            document.getElementById('info-panel').style.display = 'block';
+
+            populatePreviewTabs(p);
+            updateProjectedLabels(p);
+            // Btn Verificar no Local
+            let btnVNco = document.getElementById('btn-verify-local');
+            if (!btnVNco) { btnVNco = document.createElement('button'); btnVNco.id = 'btn-verify-local'; btnVNco.innerHTML = '<i class="fa fa-magnifying-glass-location"></i> Verificar no Local'; const mh = document.querySelector('#nco-modal .modal-header > div'); if (mh) mh.appendChild(btnVNco); }
+            const ru = p.ruas_fortaleza ? p.ruas_fortaleza.nome : ''; const ba = p.cat_bairros ? p.cat_bairros.nome_bairro : '';
+            btnVNco.onclick = () => openAggrModal(p.id, p.protocolo_oficial, ba, p.endereco || ru, p.cat_bairros && p.cat_bairros.cat_regionais ? p.cat_bairros.cat_regionais.nome_regional : '');
+            btnVNco.style.display = 'inline-flex';
+            document.getElementById('nco-modal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('nco-modal').classList.remove('show');
+        }
+
+        async function saveNco() {
+            const recordId = document.getElementById('nco-record-id').value;
+            const demandaId = document.getElementById('nco-demanda-id').value;
+
+            if (!demandaId) {
+                showToast('Atenção', 'Nenhuma demanda vinculada.', 'error');
+                return;
+            }
+
+            const ajustar = document.getElementById('nco-ajustar-quantitativos').checked;
+            const numVal = (id) => { const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; };
+            const intVal = (id) => { const v = parseInt(document.getElementById(id).value, 10); return isNaN(v) ? null : v; };
+
+            // Parse valor monetário
+            const valorStr = document.getElementById('nco-valor-medido').value.replace(/[^0-9,\.]/g, '').replace(',', '.');
+            const valorNum = parseFloat(valorStr) || 0;
+
+            const payload = {
+                id_demanda_pai: demandaId,
+                status_nco: document.getElementById('nco-status').value,
+                numero_processo: document.getElementById('nco-numero-processo').value.trim() || null,
+                tipo_obra: document.getElementById('nco-tipo-obra').value || null,
+                solicitante: document.getElementById('nco-solicitante').value.trim() || null,
+                tecnico_responsavel_nco: document.getElementById('nco-tecnico').value.trim() || null,
+                endereco: document.getElementById('nco-local-endereco').value.trim() || null,
+                empresa_terceirizada: document.getElementById('nco-empresa').value || null,
+                valor_medido_reais: valorNum,
+                percentual_execucao: parseInt(document.getElementById('nco-percentual').value, 10) || 0,
+                data_inicio_obra: document.getElementById('nco-data-inicio').value || null,
+                data_fim_obra: document.getElementById('nco-data-fim').value || null,
+                relatorio_fiscalizacao: document.getElementById('nco-relatorio').value.trim() || null,
+                // Quantitativos de obras
+                ajustar_quantitativos: ajustar,
+                lombada_autorizada: ajustar ? intVal('nco-lombada') : null,
+                plato_autorizado: ajustar ? intVal('nco-plato') : null,
+                travessia_pedestre_autorizada: ajustar ? intVal('nco-travessia') : null,
+                ciclofaixa_m_autorizada: ajustar ? numVal('nco-ciclofaixa') : null,
+                sinalizacao_horizontal_m2_autorizada: ajustar ? numVal('nco-sinalizacao-h') : null,
+                sinalizacao_vertical_un_autorizada: ajustar ? intVal('nco-sinalizacao-v') : null,
+                barreira_m_autorizada: ajustar ? numVal('nco-barreira') : null,
+                estacionamento_vagas_autorizado: ajustar ? intVal('nco-estacionamento') : null,
+                calcada_m_autorizada: ajustar ? numVal('nco-calcada') : null,
+                semaforo_autorizado: ajustar ? intVal('nco-semaforo') : null,
+                // Equipe
+                equipe_tipo: document.getElementById('nco-equipe-tipo').value || null,
+                equipe_nome: document.getElementById('nco-equipe-nome').value || null
+            };
+
+            let error;
+            if (recordId) {
+                const res = await supabase.from('execucao_nco').update(payload).eq('id', recordId);
+                error = res.error;
+            } else {
+                const res = await supabase.from('execucao_nco').upsert(payload, { onConflict: 'id_demanda_pai' });
+                error = res.error;
+            }
+
+            if (error) {
+                showToast('Erro', 'Falha ao salvar: ' + error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Processo NCO salvo com sucesso!', 'success');
+                closeModal();
+                await fetchNcoProjects();
+            }
+        }
+
+        // ─── Utilitários ───
+        function formatCurrencyInput(input) {
+            let val = input.value.replace(/[^0-9]/g, '');
+            if (!val) { input.value = ''; return; }
+            const num = parseInt(val, 10) / 100;
+            input.value = 'R$ ' + num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Aggregation
+        function toggleAggrFilter(field) {
+            const checkbox = document.getElementById(`aggr-use-${field}`);
+            const input = document.getElementById(`aggr-filter-${field}`);
+            if (checkbox && input) {
+                input.disabled = !checkbox.checked;
+            }
+        }
+
+        function openAggrModal(demandaId, protocolo, bairro, endereco, regional) {
+            document.getElementById('aggr-current-demanda-id').value = demandaId || '';
+            document.getElementById('aggr-current-protocolo').value = protocolo || '';
+            document.getElementById('aggr-modal-sub').textContent = `Processo atual: ${protocolo || '—'} · Pesquise outros processos que já contemplem este local.`;
+            
+            ['bairro', 'regional', 'endereco'].forEach(f => {
+                const cb = document.getElementById(`aggr-use-${f}`);
+                const inp = document.getElementById(`aggr-filter-${f}`);
+                if (cb) cb.checked = true;
+                if (inp) inp.disabled = false;
+            });
+
+            document.getElementById('aggr-filter-bairro').value = bairro || '';
+            document.getElementById('aggr-filter-regional').value = regional || '';
+            document.getElementById('aggr-filter-endereco').value = endereco || '';
+            document.getElementById('aggr-results-area').innerHTML = '<div class="aggr-empty"><i class="fa fa-circle-info" style="margin-right:6px;"></i>Ajuste os filtros e clique em Pesquisar.</div>';
+            document.getElementById('aggr-modal').classList.add('show');
+        }
+        function closeAggrModal() { document.getElementById('aggr-modal').classList.remove('show'); }
+        function escapeHtml(t) { if (!t) return ''; const m={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}; return t.replace(/[&<>"']/g,c=>m[c]); }
+        async function searchSimilarDemandas() {
+            const cId = document.getElementById('aggr-current-demanda-id').value;
+            const useBairro = document.getElementById('aggr-use-bairro').checked;
+            const useEndereco = document.getElementById('aggr-use-endereco').checked;
+            const useRegional = document.getElementById('aggr-use-regional').checked;
+
+            const bairro = document.getElementById('aggr-filter-bairro').value.trim();
+            const endereco = document.getElementById('aggr-filter-endereco').value.trim();
+            const regional = document.getElementById('aggr-filter-regional').value.trim();
+            document.getElementById('aggr-results-area').innerHTML = '<div class="aggr-empty"><i class="fa fa-spinner fa-spin" style="margin-right:6px;"></i>Buscando...</div>';
+            let q = supabase.from('demandas_pai').select(`id,protocolo_oficial,tipo_solicitacao,solicitante_oficial,endereco,nucleos_atribuidos,id_demanda_principal,cat_bairros(nome_bairro,cat_regionais(nome_regional)),ruas_fortaleza:id_rua(nome),projetos_npo!projetos_npo_id_demanda_pai_fkey(status_npo),execucao_nce!execucao_nce_id_demanda_pai_fkey(status_nce),execucao_nco!execucao_nco_id_demanda_pai_fkey(status_nco),projetos_npe!projetos_npe_id_demanda_pai_fkey(status_npe),analise_npa!analise_npa_id_demanda_pai_fkey(status_npa),projetos_ngc!projetos_ngc_id_demanda_pai_fkey(status_ngc)`);
+            if (useBairro && bairro) q = q.ilike('cat_bairros.nome_bairro', `%${bairro}%`);
+            if (useEndereco && endereco) q = q.or(`endereco.ilike.%${endereco}%,ruas_fortaleza.nome.ilike.%${endereco}%`);
+            const { data, error } = await q.order('created_at', { ascending: false }).limit(50);
+            if(error){document.getElementById('aggr-results-area').innerHTML=`<div class="aggr-empty" style="color:#f87171;">Erro:${escapeHtml(error.message)}</div>`;return;}
+            
+            let results = (data || []).filter(r => r.id !== cId);
+            if (useRegional && regional) {
+                results = results.filter(r => {
+                    const rReg = r.cat_bairros?.cat_regionais?.nome_regional || '';
+                    return rReg.toLowerCase().includes(regional.toLowerCase());
+                });
+            }
+            if(!results.length){document.getElementById('aggr-results-area').innerHTML='<div class="aggr-empty"><i class="fa fa-check-circle" style="color:#4ade80;margin-right:6px;"></i>Nenhum processo similar encontrado.</div>';return;}
+            let html=`<table id="aggr-results-table"><thead><tr><th>Processo</th><th>Endereço</th><th>Bairro</th><th>Solicitante</th><th>Núcleo/Status</th><th>Ação</th></tr></thead><tbody>`;
+            results.forEach(r=>{
+                const bn=r.cat_bairros?r.cat_bairros.nome_bairro:'—';
+                const en=r.endereco||(r.ruas_fortaleza?r.ruas_fortaleza.nome:'')||'—';
+                let sh='';
+                if(r.projetos_npo&&r.projetos_npo[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(248,183,0,.12);color:#f8b700;border-radius:4px;">NPO:${r.projetos_npo[0].status_npo}</span>`;
+                if(r.execucao_nce&&r.execucao_nce[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(167,139,250,.12);color:#a78bfa;border-radius:4px;">NCE:${r.execucao_nce[0].status_nce}</span>`;
+                if(r.execucao_nco&&r.execucao_nco[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(99,102,241,.12);color:#818cf8;border-radius:4px;">NCO:${r.execucao_nco[0].status_nco}</span>`;
+                if(r.projetos_npe&&r.projetos_npe[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(16,185,129,.12);color:#10b981;border-radius:4px;margin:1px;">NPE:${r.projetos_npe[0].status_npe}</span>`;
+                if(r.analise_npa&&r.analise_npa[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(59,130,246,.12);color:#3b82f6;border-radius:4px;margin:1px;">NPA:${r.analise_npa[0].status_npa}</span>`;
+                if(r.projetos_ngc&&r.projetos_ngc[0])sh+=`<span style="font-size:10px;padding:1px 5px;background:rgba(236,72,153,.12);color:#ec4899;border-radius:4px;margin:1px;">NGC:${r.projetos_ngc[0].status_ngc}</span>`;
+                if(!sh)sh=`<span style="font-size:10px;color:var(--amc-text-muted);">${(r.nucleos_atribuidos||[]).join(', ')||'—'}</span>`;
+                const ab=r.id_demanda_principal?`<span class="badge-aggr" title="Já agregado">A</span>`:'';
+                html+=`<tr><td style="font-family:'Oswald',sans-serif;color:var(--amc-nco);">${escapeHtml(r.protocolo_oficial)}${ab}</td><td>${escapeHtml(en)}</td><td>${escapeHtml(bn)}</td><td>${escapeHtml(r.solicitante_oficial||'—')}</td><td><div style="display:flex;flex-wrap:wrap;gap:2px;">${sh}</div></td><td><button class="aggr-action-btn" onclick="confirmAggr('${cId}','${r.id}','${escapeHtml(r.protocolo_oficial)}')"><i class="fa fa-link"></i> Agregar</button></td></tr>`;
+            });
+            html+='</tbody></table>'; document.getElementById('aggr-results-area').innerHTML=html;
+        }
+        async function confirmAggr(idAtual,idPrincipal,protPrincipal){const protAtual=document.getElementById('aggr-current-protocolo').value;if(!confirm(`Confirma a agregação?\nO processo "${protAtual}" será vinculado ao processo "${protPrincipal}".\nO status não será alterado automaticamente.`))return;const{error}=await supabase.from('demandas_pai').update({id_demanda_principal:idPrincipal}).eq('id',idAtual);if(error){showToast('Erro','Falha ao agregar: '+error.message,'error');return;}showToast('Sucesso',`${protAtual} agregado a ${protPrincipal}!`,'success');closeAggrModal();await fetchNcoProjects();}
+
+        function showToast(title, message, type = 'success') {
+            const t = document.getElementById('toast');
+            const ti = document.getElementById('toast-icon');
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-message').innerText = message;
+            t.className = 'toast show';
+            ti.className = 'fa fa-2x';
+            if (type === 'success') { t.classList.add('toast-success'); ti.classList.add('fa-check-circle'); ti.style.color = '#10b981'; }
+            else if (type === 'error') { t.classList.add('toast-error'); ti.classList.add('fa-times-circle'); ti.style.color = '#ef4444'; }
+            else { t.classList.add('toast-success'); ti.classList.add('fa-spinner', 'fa-spin'); ti.style.color = 'var(--amc-primary)'; }
+            setTimeout(() => t.classList.remove('show'), 5000);
+        }
+
+        // ─── Init ───
+        document.addEventListener('DOMContentLoaded', async () => {
+            lucide.createIcons();
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                await loadUserProfile(currentUser.id);
+            } else {
+                updateRoleBadge('Público');
+            }
+            await fetchData();
+        });
+    </script>
+</body>
+</html>
