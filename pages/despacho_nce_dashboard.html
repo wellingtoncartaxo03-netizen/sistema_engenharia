@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="pt-BR" class="dark">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>AMC — Dashboard Geral</title>
+    <title>AMC — Despacho e Execução (NCE)</title>
     
     <!-- Scripts Externos & Fontes -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -14,7 +14,7 @@
     
     <!-- Biblioteca Oficial do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="auth.js"></script>
+    <script src="../js/auth.js"></script>
 
     <style>
         :root {
@@ -28,6 +28,8 @@
             --amc-text-muted: #9ca3af;
             --amc-glow: rgba(248, 183, 0, 0.4);
             --amc-red-glow: rgba(241, 90, 34, 0.4);
+            --amc-blue-glow: rgba(48, 133, 214, 0.4);
+            --amc-green-glow: rgba(16, 185, 129, 0.4);
         }
 
         ::-webkit-scrollbar { display: none; }
@@ -60,7 +62,7 @@
         .ds-card {
             border-radius: 1.5rem;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 2.5rem;
+            padding: 2rem;
             position: relative;
             overflow: hidden;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -163,114 +165,168 @@
             pointer-events: none;
         }
 
-        /* --- Kanban Board --- */
-        .kanban-container {
+        /* --- Tabs --- */
+        .tab-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--amc-text-muted);
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn.active {
+            color: #000;
+            background: var(--amc-primary);
+            box-shadow: 0 4px 15px var(--amc-glow);
+        }
+
+        /* --- Grid layout of cards --- */
+        .cards-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.25rem;
-            flex-grow: 1;
-            margin-top: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.5rem;
             align-items: start;
         }
 
-        .kanban-column {
+        /* --- Card NCE --- */
+        .nce-card {
             border-radius: 1.25rem;
-            padding: 1.25rem;
-            min-height: 60vh;
-            display: flex;
-            flex-direction: column;
-            transition: background 0.3s;
-        }
-
-        .kanban-column.dragover {
-            background: rgba(248, 183, 0, 0.05);
-            border-color: var(--amc-primary);
-        }
-
-        .column-header {
-            font-family: 'Oswald', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 500;
-            border-bottom: 2px solid var(--amc-primary);
-            padding-bottom: 8px;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .column-count {
-            background: rgba(255,255,255,0.08);
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-family: 'Inter', sans-serif;
-            color: var(--amc-text-muted);
-        }
-
-        .column-cards {
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 1.5rem;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
             gap: 12px;
-            flex-grow: 1;
-            min-height: 200px;
         }
 
-        /* --- Kanban Card --- */
-        .kanban-card {
-            border-radius: 1rem;
-            padding: 1.25rem;
-            cursor: grab;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .kanban-card:hover {
-            transform: translateY(-3px);
+        .nce-card:hover {
+            transform: translateY(-4px);
             border-color: var(--amc-primary);
-            box-shadow: 0 5px 20px -5px var(--amc-glow);
+            box-shadow: 0 8px 25px -5px var(--amc-glow);
         }
 
-        .kanban-card:active {
-            cursor: grabbing;
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .card-protocol {
             font-family: 'Oswald', sans-serif;
-            font-size: 1.1rem;
+            font-size: 1.25rem;
             color: #fff;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            font-weight: 500;
         }
 
-        .card-tech {
-            font-size: 12px;
-            color: var(--amc-text-muted);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .badge-priority {
-            background: var(--amc-secondary);
-            color: #fff;
-            font-size: 9px;
-            text-transform: uppercase;
+        .card-badge {
+            font-size: 10px;
             font-weight: 700;
-            padding: 3px 6px;
-            border-radius: 4px;
-            box-shadow: 0 0 10px var(--amc-red-glow);
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 6px;
             display: inline-flex;
             align-items: center;
             gap: 4px;
         }
 
-        /* --- Modal de Edição --- */
+        .badge-priority {
+            background: rgba(241, 90, 34, 0.15);
+            color: var(--amc-secondary);
+            border: 1px solid var(--amc-secondary);
+            box-shadow: 0 0 10px var(--amc-red-glow);
+        }
+
+        .badge-status {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--amc-text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .status-aguardando {
+            background: rgba(248, 183, 0, 0.1);
+            color: var(--amc-primary);
+            border: 1px solid var(--amc-primary);
+        }
+
+        .status-campo {
+            background: rgba(48, 133, 214, 0.15);
+            color: var(--amc-accent);
+            border: 1px solid var(--amc-accent);
+        }
+
+        .status-concluido {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+
+        .status-pendencia {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+
+        .card-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 4px 0;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .info-row i {
+            margin-top: 3px;
+            color: var(--amc-primary);
+            width: 16px;
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--amc-text-muted);
+            font-weight: 600;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .scope-badge {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* --- Modal de Despacho --- */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -295,7 +351,7 @@
 
         .modal-content {
             width: 100%;
-            max-width: 700px;
+            max-width: 650px;
             border-radius: 1.5rem;
             max-height: 90vh;
             overflow-y: auto;
@@ -386,35 +442,6 @@
             grid-template-columns: 1fr 1fr;
             gap: 12px;
             font-size: 13px;
-        }
-
-        .info-label {
-            color: var(--amc-text-muted);
-            font-size: 11px;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        /* --- Upload Component --- */
-        .upload-zone {
-            border: 2px dashed rgba(255,255,255,0.15);
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: rgba(255, 255, 255, 0.01);
-        }
-
-        .upload-zone:hover {
-            border-color: var(--amc-primary);
-            background: rgba(248, 183, 0, 0.03);
-        }
-
-        .upload-icon {
-            color: var(--amc-primary);
-            font-size: 1.5rem;
-            margin-bottom: 8px;
         }
 
         /* Toast Notifications */
@@ -529,6 +556,29 @@
             background: rgba(255,255,255,0.05);
             border-color: var(--amc-primary);
         }
+
+        .btn-outline-amc:disabled {
+            border-color: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.2);
+            cursor: not-allowed;
+        }
+
+        .btn-primary-amc:disabled {
+            background: #555;
+            color: #888;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--amc-text-muted);
+            font-size: 15px;
+            border: 2px dashed rgba(255, 255, 255, 0.06);
+            border-radius: 1.5rem;
+            grid-column: 1 / -1;
+        }
     
         /* --- Sidebar Menu List Scrollbar (Checkpoint 4) --- */
         .menu-list {
@@ -560,14 +610,14 @@
         <div>
             <!-- Logo AMC -->
             <div class="logo-container">
-            <i class="fa fa-car-side fa-xl" style="color:var(--amc-primary, #F8B700);"></i>
+            <i class="fa fa-car-side fa-xl" style="color:var(--amc-nce, #a78bfa);"></i>
             <span class="logo-text">AMC — Engenharia</span>
         </div>
         <ul class="menu-list">
             <li class="menu-item" id="menu-admin"><a href="admin_usuarios.html" class="menu-link "><i class="fa fa-user-gear"></i><span>Gestão de Acesso</span></a></li>
-            <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link active"><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
+            <li class="menu-item" id="menu-dashboard-geral"><a href="dashboard_geral.html" class="menu-link "><i class="fa fa-chart-simple"></i><span>Dashboard Geral</span></a></li>
             <li class="menu-item" id="menu-triagem"><a href="triagem.html" class="menu-link "><i class="fa fa-file-signature"></i><span>Nova Demanda</span></a></li>
-            <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link "><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
+            <li class="menu-item" id="menu-nce-projetos"><a href="nce_dashboard.html" class="menu-link active"><i class="fa fa-building-columns"></i><span>NCE - Controle de Execução</span></a></li>
             <li class="menu-item" id="menu-nco"><a href="nco_dashboard.html" class="menu-link "><i class="fa fa-screwdriver-wrench"></i><span>NCO - Controle de Obras</span></a></li>
             <li class="menu-item" id="menu-npa"><a href="npa_dashboard.html" class="menu-link "><i class="fa fa-chart-pie"></i><span>NPA - Planejamento e Análise</span></a></li>
             <li class="menu-item" id="menu-npo"><a href="npo_dashboard.html" class="menu-link "><i class="fa fa-list-check"></i><span>NPO - Projetos Operacionais</span></a></li>
@@ -582,7 +632,7 @@
         <div class="auth-panel glass-dark">
             <div class="auth-title">
                 <i class="fa fa-user-shield"></i>
-                <span>Painel Geral</span>
+                <span>NCE — Despacho</span>
             </div>
             
             <div id="auth-unlogged">
@@ -620,150 +670,31 @@
     <!-- Área de Conteúdo Central -->
     <main>
         <div class="dashboard-header">
-            <h1 class="header-title">Dashboard Geral de Projetos</h1>
+            <h1 class="header-title">Despacho de Equipes</h1>
             <div class="header-status glass-dark" id="role-badge">
                 <i class="fa fa-info-circle"></i>
                 <span>Conectando ao banco de dados...</span>
             </div>
         </div>
 
-        <!-- Kanban Board Layout -->
-        <div class="kanban-container">
-            <!-- Coluna Recebido -->
-            <div class="kanban-column glass-dark" id="col-Recebido" ondragover="allowDrop(event)" ondragleave="dragLeave('Recebido')" ondrop="drop(event, 'Recebido')">
-                <div class="column-header">
-                    <span>Recebido</span>
-                    <span class="column-count" id="count-Recebido">0</span>
-                </div>
-                <div class="column-cards" id="cards-Recebido"></div>
-            </div>
+        <!-- Sistema de Abas (Tabs) -->
+        <div class="tab-container">
+            <button class="tab-btn active" id="tab-fila" onclick="switchTab('fila')">
+                <i class="fa fa-list-check"></i> Fila de Despacho
+            </button>
+            <button class="tab-btn" id="tab-historico" onclick="switchTab('historico')">
+                <i class="fa fa-clock-rotate-left"></i> Histórico de Conclusão
+            </button>
+        </div>
 
-            <!-- Coluna Análise -->
-            <div class="kanban-column glass-dark" id="col-Análise" ondragover="allowDrop(event)" ondragleave="dragLeave('Análise')" ondrop="drop(event, 'Análise')">
-                <div class="column-header">
-                    <span>Análise</span>
-                    <span class="column-count" id="count-Análise">0</span>
-                </div>
-                <div class="column-cards" id="cards-Análise"></div>
-            </div>
-
-            <!-- Coluna Projetando -->
-            <div class="kanban-column glass-dark" id="col-Projetando" ondragover="allowDrop(event)" ondragleave="dragLeave('Projetando')" ondrop="drop(event, 'Projetando')">
-                <div class="column-header">
-                    <span>Projetando</span>
-                    <span class="column-count" id="count-Projetando">0</span>
-                </div>
-                <div class="column-cards" id="cards-Projetando"></div>
-            </div>
-
-            <!-- Coluna Concluído -->
-            <div class="kanban-column glass-dark" id="col-Concluído" ondragover="allowDrop(event)" ondragleave="dragLeave('Concluído')" ondrop="drop(event, 'Concluído')">
-                <div class="column-header">
-                    <span>Concluído</span>
-                    <span class="column-count" id="count-Concluído">0</span>
-                </div>
-                <div class="column-cards" id="cards-Concluído"></div>
-            </div>
+        <!-- Grid de Cards Dinâmico -->
+        <div class="cards-grid" id="cards-container">
+            <div class="empty-state">Carregando demandas...</div>
         </div>
     </main>
 
-    <!-- Modal de Edição Técnica -->
-    <div id="edit-modal" class="modal-overlay">
-        <div class="modal-content glass">
-            <div class="modal-header">
-                <h3 style="font-family: 'Oswald', sans-serif; font-size: 1.5rem; margin: 0; color: var(--amc-primary);" id="modal-title-protocol">Projeto: INT-YY-XXX</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                
-                <!-- Informações de Leitura da Demanda Pai -->
-                <div class="info-panel">
-                    <h4 style="margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; color: var(--amc-primary);">Dados da Demanda</h4>
-                    <div class="info-grid">
-                        <div>
-                            <span class="info-label">Tipo:</span>
-                            <span id="info-tipo" style="color: #fff; font-weight: 500;">-</span>
-                        </div>
-                        <div>
-                            <span class="info-label">Solicitante:</span>
-                            <span id="info-solicitante" style="color: #fff; font-weight: 500;">-</span>
-                        </div>
-                        <div style="grid-column: span 2;">
-                            <span class="info-label">Localização:</span>
-                            <span id="info-local" style="color: #fff; font-weight: 500;">-</span>
-                        </div>
-                    </div>
-                </div>
 
-                <form id="project-form" onsubmit="saveProject(event)">
-                    <input type="hidden" id="edit-npo-id">
-
-                    <div class="form-row">
-                        <!-- Técnico Responsável -->
-                        <div class="form-group">
-                            <label for="tecnico_responsavel" class="form-label">Técnico Responsável</label>
-                            <input type="text" id="tecnico_responsavel" class="form-input" placeholder="Ex: Eng. Carlos Alberto" required>
-                        </div>
-                        <!-- Status NPO (Permite ajustar também pelo Modal) -->
-                        <div class="form-group">
-                            <label for="status_npo" class="form-label">Status do Projeto</label>
-                            <select id="status_npo" class="form-input">
-                                <option value="Recebido">Recebido</option>
-                                <option value="Análise">Análise</option>
-                                <option value="Projetando">Projetando</option>
-                                <option value="Concluído">Concluído</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Quantitativos Físicos -->
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="quant_horizontal" class="form-label">Sinalização Horizontal (m²)</label>
-                            <input type="number" step="0.01" id="quant_horizontal" class="form-input" placeholder="Ex: 12.5" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="quant_vertical" class="form-label">Sinalização Vertical (Unidades)</label>
-                            <input type="number" id="quant_vertical" class="form-input" placeholder="Ex: 3" min="0" required>
-                        </div>
-                    </div>
-
-                    <!-- Parecer Técnico -->
-                    <div class="form-group">
-                        <label for="parecer_tecnico" class="form-label">Parecer Técnico</label>
-                        <textarea id="parecer_tecnico" rows="4" class="form-input" style="resize: none;" placeholder="Descreva a viabilidade técnica e as especificações da sinalização..."></textarea>
-                    </div>
-
-                    <!-- Upload do PDF da Prancha -->
-                    <div class="form-group">
-                        <label class="form-label">Desenho / Prancha de Projeto (PDF)</label>
-                        <div class="upload-zone" onclick="document.getElementById('file-upload').click()">
-                            <i class="fa fa-cloud-upload-alt upload-icon"></i>
-                            <p style="font-size: 13px; margin: 0 0 4px 0; color: #fff;">Clique para anexar arquivo PDF</p>
-                            <p id="file-name-label" style="font-size: 11px; margin: 0; color: var(--amc-text-muted);">Nenhum arquivo selecionado</p>
-                        </div>
-                        <input type="file" id="file-upload" style="display: none;" accept="application/pdf" onchange="handleFileSelect(event)">
-                        
-                        <!-- Link de visualização se já existir PDF -->
-                        <div id="pdf-view-container" style="margin-top: 10px; display: none;">
-                            <a id="pdf-view-link" href="#" target="_blank" class="btn-amc btn-outline-amc" style="padding: 6px 14px; font-size: 11px;">
-                                <i class="fa fa-file-pdf" style="color: var(--amc-secondary);"></i>
-                                Visualizar Prancha Atual
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Botão Salvar -->
-                    <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 12px;">
-                        <button type="button" class="btn-amc btn-outline-amc" onclick="closeModal()">Cancelar</button>
-                        <button type="submit" class="btn-amc btn-primary-amc">Salvar Alterações</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast Notification -->
+    <!-- Toast Notification -->->
     <div id="toast" class="toast">
         <i id="toast-icon" class="fa fa-2x"></i>
         <div>
@@ -776,20 +707,19 @@
         // Supabase já inicializado pelo auth.js
 
         // Estado Global
-        let projectsData = [];
-        let selectedFile = null;
+        let currentTab = 'fila'; // 'fila' ou 'historico'
+        let demandsData = [];
         let currentUser = null;
         let currentUserProfile = null;
-        let draggedCardId = null;
 
         // Ao carregar a página
         window.addEventListener('DOMContentLoaded', async () => {
             lucide.createIcons();
             await checkSession();
-            await fetchProjects();
+            await fetchDemands();
         });
 
-        // Monitor de Autenticação do Supabase
+        // Monitor de Autenticação
         async function checkSession() {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
@@ -823,15 +753,21 @@
         // Atualizar Badge de Role
         function updateRoleBadge(role) {
             const badge = document.getElementById('role-badge');
+            const saveBtn = document.getElementById('btn-save-dispatch');
             let color = 'var(--amc-text-muted)';
             let icon = 'fa-user';
             
             if (role === 'Diretoria' || role === 'Gerência') {
                 color = 'var(--amc-secondary)';
                 icon = 'fa-user-shield';
+                if (saveBtn) saveBtn.removeAttribute('disabled');
             } else if (role === 'Técnico') {
                 color = 'var(--amc-accent)';
                 icon = 'fa-user-gear';
+                if (saveBtn) saveBtn.removeAttribute('disabled');
+            } else {
+                // Público ou sem permissão de escrita
+                if (saveBtn) saveBtn.setAttribute('disabled', 'true');
             }
 
             badge.style.border = `1px solid ${color}`;
@@ -855,14 +791,17 @@
             badge.style.border = '1px solid #ef4444';
             badge.style.color = '#ef4444';
             badge.innerHTML = `<i class="fa fa-exclamation-triangle"></i> <span>Acesso Restrito (Faça Login)</span>`;
+            
+            const saveBtn = document.getElementById('btn-save-dispatch');
+            if (saveBtn) saveBtn.setAttribute('disabled', 'true');
         }
 
         // Simular Login Rápido
         async function simulateQuickLogin() {
-            const testEmail = `projetista_${Math.floor(Math.random() * 10000)}@amc.fortaleza.br`;
+            const testEmail = `despachante_${Math.floor(Math.random() * 10000)}@amc.fortaleza.br`;
             const testPassword = 'amcTestPassword123';
 
-            showToast('Aguarde', 'Criando e autenticando projetista...', 'info');
+            showToast('Aguarde', 'Criando e autenticando técnico...', 'info');
 
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                 email: testEmail,
@@ -885,10 +824,9 @@
 
             setTimeout(async () => {
                 await checkSession();
-                // O perfil NPO é gerido por técnicos
                 await changeRole('Técnico');
-                showToast('Conectado', 'Projetista conectado com perfil Técnico!', 'success');
-                await fetchProjects();
+                showToast('Conectado', 'Conectado como Técnico!', 'success');
+                await fetchDemands();
             }, 1500);
         }
 
@@ -905,7 +843,7 @@
                 currentUser = data.user;
                 await checkSession();
                 showToast('Conectado', 'Acesso autorizado.', 'success');
-                await fetchProjects();
+                await fetchDemands();
             }
         }
 
@@ -941,294 +879,336 @@
             } else {
                 await loadUserProfile(currentUser.id);
                 showToast('Role Alterada', `Perfil alterado para: ${newRole}`, 'success');
-                await fetchProjects();
+                await fetchDemands();
             }
         }
 
-        // Carregar Projetos
-        async function fetchProjects() {
-            const { data, error } = await supabase
-                .from('projetos_npo')
-                .select(`
-                    id,
-                    tecnico_responsavel,
-                    status_npo,
-                    parecer_tecnico,
-                    url_projeto_pdf,
-                    quant_sinalizacao_horizontal_m2,
-                    quant_sinalizacao_vertical_unid,
-                    data_recebimento,
-                    data_despacho,
-                    demandas_pai (
-                        id,
-                        protocolo_oficial,
-                        solicitante_oficial,
-                        tipo_solicitacao,
-                        prioridade_diretoria,
-                        cat_bairros (nome_bairro, cat_regionais(nome_regional))
-                    )
-                `);
-
-            if (error) {
-                console.error("Erro ao buscar projetos:", error);
-                if (currentUser) {
-                    showToast('Erro RLS', 'Sem permissão para consultar projetos: ' + error.message, 'error');
-                }
-                renderKanban([]);
-            } else {
-                projectsData = data;
-                renderKanban(data);
-            }
-        }
-
-        // Renderizar Kanban
-        function renderKanban(projects) {
-            const columns = {
-                'Recebido': document.getElementById('cards-Recebido'),
-                'Análise': document.getElementById('cards-Análise'),
-                'Projetando': document.getElementById('cards-Projetando'),
-                'Concluído': document.getElementById('cards-Concluído')
-            };
-
-            const counts = {
-                'Recebido': 0,
-                'Análise': 0,
-                'Projetando': 0,
-                'Concluído': 0
-            };
-
-            // Limpar
-            Object.values(columns).forEach(col => col.innerHTML = '');
-
-            projects.forEach(project => {
-                const status = project.status_npo;
-                if (!columns[status]) return;
-
-                counts[status]++;
-                
-                const card = document.createElement('div');
-                card.className = 'kanban-card glass';
-                card.draggable = true;
-                card.setAttribute('id', `card-${project.id}`);
-                card.setAttribute('ondragstart', `dragStart(event, '${project.id}')`);
-                card.setAttribute('onclick', `openModal('${project.id}')`);
-
-                const prioridadeBadge = project.demandas_pai.prioridade_diretoria
-                    ? `<span class="badge-priority"><i class="fa fa-triangle-exclamation"></i> Prioritário</span>`
-                    : '';
-
-                card.innerHTML = `
-                    <div class="card-protocol">
-                        <span>${project.demandas_pai.protocolo_oficial}</span>
-                        ${prioridadeBadge}
-                    </div>
-                    <div class="card-tech">
-                        <i class="fa fa-pencil-ruler"></i>
-                        <span>${project.tecnico_responsavel || 'Designar técnico...'}</span>
-                    </div>
-                `;
-
-                columns[status].appendChild(card);
-            });
-
-            // Atualizar contadores
-            Object.keys(counts).forEach(key => {
-                document.getElementById(`count-${key}`).innerText = counts[key];
-            });
-        }
-
-        // --- Drag & Drop ---
-        function dragStart(e, id) {
-            draggedCardId = id;
-            e.dataTransfer.setData('text/plain', id);
-        }
-
-        function allowDrop(e) {
-            e.preventDefault();
-            const col = e.currentTarget;
-            col.classList.add('dragover');
-        }
-
-        function dragLeave(colId) {
-            document.getElementById(`col-${colId}`).classList.remove('dragover');
-        }
-
-        async function drop(e, targetStatus) {
-            e.preventDefault();
-            
-            const col = document.getElementById(`col-${targetStatus}`);
-            col.classList.remove('dragover');
-
-            const id = e.dataTransfer.getData('text/plain') || draggedCardId;
-            if (!id) return;
-
-            // 1. Procurar localmente
-            const project = projectsData.find(p => p.id === id);
-            if (!project) return;
-
-            // Se o status for o mesmo, ignora
-            if (project.status_npo === targetStatus) return;
-
-            // 2. Atualização Otimista local
-            const oldStatus = project.status_npo;
-            project.status_npo = targetStatus;
-            
-            // Atualizar data de despacho se mudar para concluído
-            let payload = { status_npo: targetStatus };
-            if (targetStatus === 'Concluído') {
-                payload.data_despacho = new Date().toISOString();
-                project.data_despacho = payload.data_despacho;
-            }
-
-            renderKanban(projectsData);
-
-            // 3. Atualizar no Supabase
-            const { error } = await supabase
-                .from('projetos_npo')
-                .update(payload)
-                .eq('id', id);
-
-            if (error) {
-                // Reverter em caso de erro
-                project.status_npo = oldStatus;
-                renderKanban(projectsData);
-                showToast('Erro RLS/Banco', 'Erro ao alterar status: ' + error.message, 'error');
-            } else {
-                showToast('Status Atualizado', `Projeto movido para ${targetStatus}`, 'success');
-            }
-        }
-
-        // --- Modal de Edição ---
-        function openModal(id) {
-            const project = projectsData.find(p => p.id === id);
-            if (!project) return;
-
-            document.getElementById('edit-npo-id').value = project.id;
-            document.getElementById('modal-title-protocol').innerText = `Projeto: ${project.demandas_pai.protocolo_oficial}`;
-            
-            // Dados da Demanda Pai
-            const bairro = project.demandas_pai.cat_bairros?.nome_bairro || 'Sem bairro';
-            const regional = project.demandas_pai.cat_bairros?.cat_regionais?.nome_regional || 'Sem regional';
-            document.getElementById('info-tipo').innerText = project.demandas_pai.tipo_solicitacao;
-            document.getElementById('info-solicitante').innerText = project.demandas_pai.solicitante_oficial;
-            document.getElementById('info-local').innerText = `${bairro} — ${regional}`;
-
-            // Campos do Formulário
-            document.getElementById('tecnico_responsavel').value = project.tecnico_responsavel || '';
-            document.getElementById('status_npo').value = project.status_npo;
-            document.getElementById('quant_horizontal').value = project.quant_sinalizacao_horizontal_m2 || 0;
-            document.getElementById('quant_vertical').value = project.quant_sinalizacao_vertical_unid || 0;
-            document.getElementById('parecer_tecnico').value = project.parecer_tecnico || '';
-
-            // Reset upload
-            selectedFile = null;
-            document.getElementById('file-name-label').innerText = 'Nenhum arquivo selecionado';
-
-            // Arquivo de prancha atual
-            const viewLink = document.getElementById('pdf-view-container');
-            if (project.url_projeto_pdf) {
-                viewLink.style.display = 'block';
-                document.getElementById('pdf-view-link').href = project.url_projeto_pdf;
-            } else {
-                viewLink.style.display = 'none';
-            }
-
-            document.getElementById('edit-modal').classList.add('show');
-        }
-
-        function closeModal() {
-            document.getElementById('edit-modal').classList.remove('show');
-        }
-
-        // Seleção de Arquivo
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                if (file.type !== 'application/pdf') {
-                    showToast('Erro de Formato', 'Apenas arquivos PDF são permitidos.', 'error');
-                    return;
-                }
-                selectedFile = file;
-                document.getElementById('file-name-label').innerText = file.name;
-            }
-        }
-
-        // Salvar Formulário do Modal
-        async function saveProject(e) {
-            e.preventDefault();
-
+        // Buscar execuções NCE com dados completos do projeto e demanda
+        async function fetchDemands() {
             if (!currentUser) {
-                showToast('Aviso', 'Você precisa fazer login para salvar.', 'error');
+                renderDemands([]);
                 return;
             }
 
-            const id = document.getElementById('edit-npo-id').value;
-            const tecnico = document.getElementById('tecnico_responsavel').value.trim();
-            const status = document.getElementById('status_npo').value;
-            const horiz = parseFloat(document.getElementById('quant_horizontal').value) || 0;
-            const vert = parseInt(document.getElementById('quant_vertical').value) || 0;
-            const parecer = document.getElementById('parecer_tecnico').value.trim();
+            const { data, error } = await supabase
+                .from('execucao_nce')
+                .select(`
+                    id,
+                    equipe_amc_designada,
+                    status_nce,
+                    data_programada_execucao,
+                    data_conclusao_real,
+                    observacoes_campo,
+                    id_projeto_nce,
+                    id_demanda_pai,
+                    projetos_npe:id_projeto_nce (
+                        id,
+                        url_projeto_nce_pdf,
+                        detalhes_projeto,
+                        demandas_pai:id_demanda_pai (
+                            protocolo_oficial,
+                            tipo_solicitacao,
+                            prioridade_diretoria,
+                            cat_bairros (nome_bairro, cat_regionais(nome_regional)),
+                            ruas_fortaleza:id_rua (nome)
+                        )
+                    )
+                `)
+                .order('data_programada_execucao', { ascending: true });
 
-            showToast('Salvando', 'Salvando dados no banco de dados...', 'info');
-
-            let pdfUrl = null;
-
-            // 1. Upload do Arquivo (se houver novo selecionado)
-            if (selectedFile) {
-                showToast('Upload', 'Fazendo upload da prancha de projeto...', 'info');
-                
-                const fileExt = selectedFile.name.split('.').pop();
-                const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-                const filePath = `pranchas/${fileName}`;
-
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('projetos_pdf')
-                    .upload(filePath, selectedFile);
-
-                if (uploadError) {
-                    showToast('Erro de Storage', 'Falha no upload do arquivo: ' + uploadError.message, 'error');
-                    return;
-                }
-
-                const { data: urlData } = supabase.storage
-                    .from('projetos_pdf')
-                    .getPublicUrl(filePath);
-                
-                pdfUrl = urlData.publicUrl;
-            }
-
-            // 2. Preparar Payload
-            const payload = {
-                tecnico_responsavel: tecnico,
-                status_npo: status,
-                quant_sinalizacao_horizontal_m2: horiz,
-                quant_sinalizacao_vertical_unid: vert,
-                parecer_tecnico: parecer
-            };
-
-            if (pdfUrl) {
-                payload.url_projeto_pdf = pdfUrl;
-            }
-
-            if (status === 'Concluído') {
-                payload.data_despacho = new Date().toISOString();
-            }
-
-            // 3. Atualizar no Banco
-            const { error: updateError } = await supabase
-                .from('projetos_npo')
-                .update(payload)
-                .eq('id', id);
-
-            if (updateError) {
-                showToast('Erro de Banco', 'Falha ao gravar alterações: ' + updateError.message, 'error');
+            if (error) {
+                console.error("Erro ao buscar execuções:", error);
+                showToast('Erro de Leitura', 'Erro ao carregar: ' + error.message, 'error');
+                renderDemands([]);
             } else {
-                showToast('Sucesso', 'Projeto técnico atualizado com sucesso!', 'success');
-                closeModal();
-                await fetchProjects();
+                demandsData = data || [];
+                renderDemands(demandsData);
             }
         }
 
+        // Alternar Abas (Tabs)
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-fila').className = tab === 'fila' ? 'tab-btn active' : 'tab-btn';
+            document.getElementById('tab-historico').className = tab === 'historico' ? 'tab-btn active' : 'tab-btn';
+            renderDemands(demandsData);
+        }
+
+        // Renderizar Cards Ricos de Execução
+        function renderDemands(demands) {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            if (!demands || demands.length === 0) {
+                container.innerHTML = `<div class="empty-state">Faça login para carregar os dados.</div>`;
+                return;
+            }
+
+            // Filtrar por aba
+            const filtered = demands.filter(d => {
+                const status = d.status_nce || 'Aguardando Programação';
+                if (currentTab === 'fila') return status !== 'Concluído';
+                return status === 'Concluído';
+            });
+
+            if (filtered.length === 0) {
+                const msg = currentTab === 'fila'
+                    ? 'Nenhuma obra pendente de execução no momento.'
+                    : 'Nenhuma obra concluída no histórico.';
+                container.innerHTML = `<div class="empty-state">${msg}</div>`;
+                return;
+            }
+
+            filtered.forEach(d => {
+                const nceStatus = d.status_nce || 'Aguardando Programação';
+                const equipe = d.equipe_amc_designada || null;
+                const dataProg = d.data_programada_execucao || null;
+                const dataConcl = d.data_conclusao_real || null;
+                const obsExistente = d.observacoes_campo || '';
+
+                // Dados do projeto NCE
+                const projeto = d.projetos_npe || null;
+                const det = projeto ? (projeto.detalhes_projeto || {}) : {};
+                const pdfUrl = projeto ? projeto.url_projeto_nce_pdf : null;
+
+                // Dados da demanda pai
+                const demanda = projeto ? projeto.demandas_pai : null;
+                const protocolo = demanda ? demanda.protocolo_oficial : '—';
+                const tipoDemanda = demanda ? demanda.tipo_solicitacao : '—';
+                const prioritario = demanda ? demanda.prioridade_diretoria : false;
+                const bairro = demanda && demanda.cat_bairros ? demanda.cat_bairros.nome_bairro : '—';
+                const regional = demanda && demanda.cat_bairros && demanda.cat_bairros.cat_regionais
+                    ? demanda.cat_bairros.cat_regionais.nome_regional : '';
+                const rua = demanda && demanda.ruas_fortaleza ? demanda.ruas_fortaleza.nome : '';
+
+                // Detalhes técnicos do NCE
+                const tipoImplantacao = det.tipo_implantacao || tipoDemanda || '—';
+                const descricaoSinal = det.descricao_sinalizacao || '—';
+                const trecho = det.trecho || '';
+                const enderecoFull = rua
+                    ? `${rua}, ${bairro}${regional ? ' — Reg. ' + regional : ''}`
+                    : `${bairro}${regional ? ' — Reg. ' + regional : ''}`;
+
+                // Quantitativos de Implantação
+                const qi = det.quantitativo_implantar || {};
+                const qiItems = [
+                    { label: 'Hz Mecânica', val: qi.hz_mecanica, unit: 'm²' },
+                    { label: 'Hz Manual', val: qi.hz_manual, unit: 'm²' },
+                    { label: 'Hz Plástico', val: qi.hz_plastico_frio, unit: 'm²' },
+                    { label: 'Placa', val: qi.placa, unit: 'un' },
+                    { label: 'Balizador', val: qi.balizador, unit: 'un' },
+                    { label: 'Tachão', val: qi.tacha_bi, unit: 'un' },
+                    { label: 'Sonorizador', val: qi.sonorizador, unit: 'un' },
+                    { label: 'Gradil', val: qi.gradil, unit: 'un' },
+                    { label: 'Coluna', val: qi.coluna, unit: 'un' },
+                ].filter(x => x.val && parseInt(x.val) > 0);
+
+                // Quantitativos de Retirada
+                const qr = det.quantitativo_retirar || {};
+                const qrItems = [
+                    { label: 'Placa', val: qr.placa, unit: 'un' },
+                    { label: 'Balizador', val: qr.balizador, unit: 'un' },
+                    { label: 'Tacha', val: qr.tacha, unit: 'un' },
+                    { label: 'Tachão', val: qr.tachao, unit: 'un' },
+                    { label: 'Coluna', val: qr.coluna, unit: 'un' },
+                    { label: 'Sinalização Hz', val: qr.sinalizacao_hz, unit: 'm²' },
+                    { label: 'Extensão', val: qr.extensao, unit: 'm' },
+                    { label: 'Gelito', val: qr.gelito, unit: 'un' },
+                ].filter(x => x.val && parseInt(x.val) > 0);
+
+                // Cruzamento
+                const cruz = det.cruzamento || {};
+                const cruzItems = [
+                    { label: 'Impl. Semáforo', val: cruz.implantar_semaforo, unit: 'un' },
+                    { label: 'Renov. Semáforo', val: cruz.renovar_semaforo, unit: 'un' },
+                    { label: 'Desativ. Semáforo', val: cruz.desativar_semaforo, unit: 'un' },
+                ].filter(x => x.val && parseInt(x.val) > 0);
+
+                // Sinalização (tipos)
+                const sin = det.sinalizacao || {};
+                const sinItems = [
+                    { label: 'Sentido Único', val: sin.sentido_unico_inversao },
+                    { label: 'Travessia Pedestre', val: sin.travessia_pedestre },
+                    { label: 'Travessia Colorida', val: sin.travessia_colorida },
+                    { label: 'Faixa X', val: sin.faixa_x },
+                    { label: 'Faixa Longa', val: sin.faixa_longa },
+                    { label: 'Projeto Escola', val: sin.projeto_escola },
+                    { label: 'Esquina Segura', val: sin.esquina_segura },
+                    { label: 'Yellow Box', val: sin.yellow_box },
+                    { label: 'Rotatória', val: sin.rotatoria },
+                ].filter(x => x.val && parseInt(x.val) > 0);
+
+                // Badges
+                let statusClass = 'status-aguardando';
+                if (nceStatus === 'Equipe em Campo') statusClass = 'status-campo';
+                if (nceStatus === 'Concluído') statusClass = 'status-concluido';
+                if (nceStatus === 'Pendência Técnica') statusClass = 'status-pendencia';
+
+                const dataProgStr = dataProg
+                    ? new Date(dataProg).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                    : 'Não agendada';
+                const dataConclStr = dataConcl
+                    ? new Date(dataConcl).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                    : null;
+
+                const badgesPriority = prioritario
+                    ? `<span class="card-badge badge-priority"><i class="fa fa-triangle-exclamation"></i> Prioritário</span>` : '';
+
+                // Build quantitativos markup
+                function badgeList(items, color) {
+                    return items.map(x => `<span class="scope-badge" style="border-color:rgba(${color},0.3);"><span style="color:rgba(${color},1);font-weight:600;">${x.val}</span> ${x.label} ${x.unit}</span>`).join('');
+                }
+
+                const implantarHTML = qiItems.length > 0
+                    ? `<div class="info-row" style="margin-top:4px;">
+                        <i class="fa fa-arrow-up-from-bracket" style="color:#10b981;"></i>
+                        <div>
+                            <span class="info-label">Implantações</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;">${badgeList(qiItems, '16,185,129')}</div>
+                        </div>
+                       </div>` : '';
+
+                const retiradaHTML = qrItems.length > 0
+                    ? `<div class="info-row" style="margin-top:4px;">
+                        <i class="fa fa-trash" style="color:#ef4444;"></i>
+                        <div>
+                            <span class="info-label">Retiradas</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;">${badgeList(qrItems, '239,68,68')}</div>
+                        </div>
+                       </div>` : '';
+
+                const cruzHTML = cruzItems.length > 0
+                    ? `<div class="info-row" style="margin-top:4px;">
+                        <i class="fa fa-traffic-light" style="color:#3085d6;"></i>
+                        <div>
+                            <span class="info-label">Semáforos</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;">${badgeList(cruzItems, '48,133,214')}</div>
+                        </div>
+                       </div>` : '';
+
+                const sinHTML = sinItems.length > 0
+                    ? `<div class="info-row" style="margin-top:4px;">
+                        <i class="fa fa-paint-roller" style="color:#a78bfa;"></i>
+                        <div>
+                            <span class="info-label">Sinalização Especial</span>
+                            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px;">${sinItems.map(x => `<span class="scope-badge">${x.label}: <strong>${x.val}</strong></span>`).join('')}</div>
+                        </div>
+                       </div>` : '';
+
+                const card = document.createElement('div');
+                card.className = 'nce-card glass';
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="card-protocol" style="color:var(--amc-primary);">${protocolo}</span>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            ${badgesPriority}
+                            <span class="card-badge ${statusClass}">${nceStatus}</span>
+                        </div>
+                    </div>
+
+                    <div class="card-divider" style="margin:10px 0;"></div>
+
+                    <!-- Tipo e Descrição -->
+                    <div class="info-row">
+                        <i class="fa fa-hammer"></i>
+                        <div>
+                            <span class="info-label">Tipo de Implantação</span>
+                            <span style="font-weight:600;">${tipoImplantacao}</span>
+                            ${descricaoSinal !== '—' ? `<span style="color:rgba(255,255,255,0.55);font-size:12px;display:block;">${descricaoSinal}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Localização -->
+                    <div class="info-row" style="margin-top:10px;">
+                        <i class="fa fa-location-dot"></i>
+                        <div>
+                            <span class="info-label">Endereço</span>
+                            <span>${enderecoFull}</span>
+                            ${trecho ? `<span style="color:rgba(255,255,255,0.55);font-size:12px;display:block;margin-top:2px;"><i class="fa fa-arrows-left-right" style="color:var(--amc-primary);"></i> Trecho: ${trecho}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="card-divider" style="margin:10px 0;"></div>
+
+                    <!-- Quantitativos -->
+                    ${implantarHTML}
+                    ${retiradaHTML}
+                    ${cruzHTML}
+                    ${sinHTML}
+
+                    <!-- Projeto PDF -->
+                    ${pdfUrl ? `
+                    <div class="info-row" style="margin-top:8px;">
+                        <i class="fa fa-file-pdf" style="color:var(--amc-secondary);"></i>
+                        <div>
+                            <span class="info-label">Projeto NCE</span>
+                            <a href="${pdfUrl}" target="_blank" style="color:var(--amc-secondary);text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:5px;" onclick="event.stopPropagation()">
+                                <i class="fa fa-external-link"></i> Abrir Projeto PDF
+                            </a>
+                        </div>
+                    </div>` : ''}
+
+                    <div class="card-divider" style="margin:10px 0;"></div>
+
+                    <!-- Programação -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                        <div class="info-row">
+                            <i class="fa fa-truck-pickup"></i>
+                            <div>
+                                <span class="info-label">Equipe</span>
+                                <span>${equipe || '<span style="color:var(--amc-text-muted);font-style:italic;">Não designada</span>'}</span>
+                            </div>
+                        </div>
+                        <div class="info-row">
+                            <i class="fa fa-calendar-days"></i>
+                            <div>
+                                <span class="info-label">Data Programada</span>
+                                <span>${dataProgStr}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${dataConclStr ? `
+                    <div class="info-row" style="margin-bottom:8px;">
+                        <i class="fa fa-circle-check" style="color:#10b981;"></i>
+                        <div>
+                            <span class="info-label">Concluída em</span>
+                            <span>${dataConclStr}</span>
+                        </div>
+                    </div>` : ''}
+
+                    <div class="card-divider" style="margin:10px 0;"></div>
+
+                    <!-- Observação de Campo (editável) -->
+                    <div>
+                        <label class="info-label" style="margin-bottom:6px;"><i class="fa fa-clipboard-question" style="color:var(--amc-primary);margin-right:4px;"></i>Retorno / Observação de Campo</label>
+                        <textarea id="obs-campo-${d.id}" rows="3" class="form-input" style="resize:none;font-size:12px;" placeholder="Registre aqui o retorno da equipe de campo...">${obsExistente}</textarea>
+                        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+                            <button class="btn-amc btn-outline-amc" style="padding:6px 14px;font-size:11px;" onclick="saveObservation('${d.id}')">
+                                <i class="fa fa-floppy-disk"></i> Salvar Observação
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Salvar Observação de Campo
+        async function saveObservation(execId) {
+            const obs = document.getElementById(`obs-campo-${execId}`)?.value || '';
+            const { error } = await supabase
+                .from('execucao_nce')
+                .update({ observacoes_campo: obs })
+                .eq('id', execId);
+            if (error) {
+                showToast('Erro', 'Falha ao salvar observação: ' + error.message, 'error');
+            } else {
+                showToast('Salvo!', 'Observação de campo registrada.', 'success');
+            }
+        }
         // Toast de Feedback Visual
         function showToast(title, message, type = 'success') {
             const toast = document.getElementById('toast');
