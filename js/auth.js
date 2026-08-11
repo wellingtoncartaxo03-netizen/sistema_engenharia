@@ -41,6 +41,13 @@ async function protegerRota() {
     atualizarSidebar(perfil);
 }
 
+// Função auxiliar para obter o nome da página sem extensão e caminhos
+function obterNomePaginaLimpo(pathname) {
+    const parts = pathname.split('/');
+    const lastPart = parts[parts.length - 1];
+    return lastPart.replace('.html', '').toLowerCase();
+}
+
 // Bloqueia acesso a páginas de outros núcleos
 function validarAcessoPagina(perfil) {
     const path = window.location.pathname;
@@ -50,24 +57,24 @@ function validarAcessoPagina(perfil) {
         return;
     }
 
-    // Mapeamento de arquivos HTML para núcleos correspondentes
+    // Mapeamento de arquivos correspondentes (sem extensão para suportar clean URLs)
     const mapeamentoRotas = {
-        'Triagem': ['triagem.html'],
-        'NPO': ['npo_dashboard.html'],
-        'NCE': ['nce_dashboard.html', 'despacho_nce_dashboard.html'],
-        'NCO': ['nco_dashboard.html'],
-        'NGC': ['ngc_dashboard.html'],
-        'NPE': ['npe_dashboard.html'],
-        'NPA': ['npa_dashboard.html'],
-        'Diretoria': ['diretoria_dashboard.html', 'ditran_dashboard.html']
+        'Triagem': ['triagem'],
+        'NPO': ['npo_dashboard'],
+        'NCE': ['nce_dashboard', 'despacho_nce_dashboard'],
+        'NCO': ['nco_dashboard'],
+        'NGC': ['ngc_dashboard'],
+        'NPE': ['npe_dashboard'],
+        'NPA': ['npa_dashboard'],
+        'Diretoria': ['diretoria_dashboard', 'ditran_dashboard']
     };
 
     const paginasPermitidas = mapeamentoRotas[perfil.nucleo_lotacao] || [];
     const todasPaginasMapeadas = Object.values(mapeamentoRotas).flat();
-    const paginaAtual = todasPaginasMapeadas.find(p => path.includes(p));
+    const paginaAtual = obterNomePaginaLimpo(path);
 
-    if (paginaAtual && !paginasPermitidas.includes(paginaAtual)) {
-        const defaultPage = paginasPermitidas[0];
+    if (todasPaginasMapeadas.includes(paginaAtual) && !paginasPermitidas.includes(paginaAtual)) {
+        const defaultPage = paginasPermitidas[0] + ".html";
         console.warn(`Acesso negado para o núcleo: ${perfil.nucleo_lotacao}. Redirecionando para ${defaultPage}`);
         window.location.href = defaultPage;
     }
@@ -128,18 +135,23 @@ async function realizarLogout() {
     }
 }
 
-// Inicia a validação da rota imediatamente se a página não for a de login
-if (!window.location.pathname.includes('login.html')) {
+// Inicia a validação da rota imediatamente se a página não for a de login ou raiz
+const paginaAtualLimpa = obterNomePaginaLimpo(window.location.pathname);
+if (paginaAtualLimpa !== 'login' && paginaAtualLimpa !== '') {
     protegerRota();
 }
 
 // Prevenção de cache em links da sidebar
 document.addEventListener('click', (e) => {
     const link = e.target.closest('a');
-    if (link && link.href && link.href.includes('.html') && !link.href.includes('logout') && !link.href.includes('#')) {
-        const url = new URL(link.href);
-        url.searchParams.set('t', Date.now());
-        link.href = url.toString();
+    if (link && link.href && (link.href.includes('.html') || !link.href.includes('.')) && !link.href.includes('logout') && !link.href.includes('#')) {
+        try {
+            const url = new URL(link.href);
+            url.searchParams.set('t', Date.now());
+            link.href = url.toString();
+        } catch (err) {
+            console.error("Erro ao aplicar cache buster:", err);
+        }
     }
 });
 
