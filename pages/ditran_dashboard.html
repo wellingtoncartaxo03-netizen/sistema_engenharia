@@ -1268,7 +1268,7 @@
                         solicitante_oficial: d.solicitante_oficial || '',
                         custo_estimado: parseFloat(d.custo_estimado) || 0,
                         status_geral: d.status_geral || 'Aguardando Aprovação',
-                        nome_rua: d.ruas_fortaleza?.nome || 'Logradouro não informado',
+                        nome_rua: d.endereco || d.ruas_fortaleza?.nome || 'Logradouro não informado',
                         nome_bairro: d.cat_bairros?.nome_bairro || 'Sem Bairro',
                         nome_regional: d.cat_bairros?.cat_regionais?.nome_regional || '—',
                         numero_projeto: npe?.projeto_npe_numero || detalhes.numero_projeto || '—',

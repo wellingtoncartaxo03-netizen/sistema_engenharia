@@ -727,7 +727,6 @@
                     cat_bairros (nome_bairro, cat_regionais(nome_regional)),
                     ruas_fortaleza:id_rua (nome)
                 `)
-                .eq('status_geral', 'Aprovado')
                 .order('created_at', { ascending: false });
 
             if (error) { showToast('Erro', 'Erro ao carregar processos NCO: ' + error.message, 'error'); return; }
