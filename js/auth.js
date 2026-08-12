@@ -57,6 +57,13 @@ function validarAcessoPagina(perfil) {
         return;
     }
 
+    const paginaAtual = obterNomePaginaLimpo(path);
+
+    // Nova Demanda (triagem) é de acesso global para todos os usuários autenticados
+    if (paginaAtual === 'triagem') {
+        return;
+    }
+
     // Mapeamento de arquivos correspondentes (sem extensão para suportar clean URLs)
     const mapeamentoRotas = {
         'Triagem': ['triagem'],
@@ -71,7 +78,6 @@ function validarAcessoPagina(perfil) {
 
     const paginasPermitidas = mapeamentoRotas[perfil.nucleo_lotacao] || [];
     const todasPaginasMapeadas = Object.values(mapeamentoRotas).flat();
-    const paginaAtual = obterNomePaginaLimpo(path);
 
     if (todasPaginasMapeadas.includes(paginaAtual) && !paginasPermitidas.includes(paginaAtual)) {
         const defaultPage = paginasPermitidas[0] + ".html";
@@ -90,7 +96,6 @@ function atualizarSidebar(perfil) {
 
         // Mapeamento de id do menu para núcleo correspondente
         const menuMapping = {
-            'menu-triagem': 'Triagem',
             'menu-npo': 'NPO',
             'menu-nce-projetos': 'NCE',
             'menu-nco': 'NCO',
