@@ -699,7 +699,7 @@
                 if (roleSel) roleSel.value = mappedRole;
 
                 // Exibe botão de adicionar tipo se o usuário for do núcleo técnico autorizado
-                const nucleosAutorizados = ['NPA', 'NPE', 'NCO', 'NCE', 'NPO', 'NGC'];
+                const nucleosAutorizados = ['NPA', 'NPE', 'NCO', 'NCE', 'NPO', 'NGC', 'Diretoria', 'Admin'];
                 const btnAddTipo = document.getElementById('btn-add-tipo');
                 if (btnAddTipo) {
                     if (nucleosAutorizados.includes(data.nucleo_lotacao)) {
