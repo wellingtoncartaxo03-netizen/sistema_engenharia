@@ -1527,6 +1527,58 @@
         }
 
         // Buscar Demandas no Banco
+        // --- Função Auxiliar de Badges com Cores por Status ---
+        function getNucleoBadgeHTML(nucleo, demand) {
+            if (!demand) return `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(255,255,255,0.05); color: var(--amc-text-muted); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">${nucleo}</span>`;
+            
+            let status = 'Não iniciado';
+            let color = 'rgba(255,255,255,0.4)';
+            let bg = 'rgba(255,255,255,0.03)';
+            let border = 'rgba(255,255,255,0.08)';
+
+            if (nucleo === 'NPO') {
+                const item = demand.projetos_npo ? (Array.isArray(demand.projetos_npo) ? demand.projetos_npo[0] : demand.projetos_npo) : null;
+                status = item ? (item.status_npo || 'Aguardando Recebimento') : 'Aguardando Recebimento';
+            } else if (nucleo === 'NCE') {
+                const item = demand.execucao_nce ? (Array.isArray(demand.execucao_nce) ? demand.execucao_nce[0] : demand.execucao_nce) : null;
+                status = item ? (item.status_nce || 'Aguardando Programação') : 'Aguardando Programação';
+            } else if (nucleo === 'NCO') {
+                const item = demand.execucao_nco ? (Array.isArray(demand.execucao_nco) ? demand.execucao_nco[0] : demand.execucao_nco) : null;
+                status = item ? (item.status_nco || 'Aguardando Obra') : 'Aguardando Obra';
+            } else if (nucleo === 'NPE') {
+                const item = demand.projetos_npe ? (Array.isArray(demand.projetos_npe) ? demand.projetos_npe[0] : demand.projetos_npe) : null;
+                status = item ? (item.status_npe || 'Aguardando Análise') : 'Aguardando Análise';
+            } else if (nucleo === 'NPA') {
+                const item = demand.analise_npa ? (Array.isArray(demand.analise_npa) ? demand.analise_npa[0] : demand.analise_npa) : null;
+                status = item ? (item.status_npa || 'Aguardando Triagem') : 'Aguardando Triagem';
+            } else if (nucleo === 'NGC') {
+                const item = demand.projetos_ngc ? (Array.isArray(demand.projetos_ngc) ? demand.projetos_ngc[0] : demand.projetos_ngc) : null;
+                status = item ? (item.status_ngc || 'Aguardando Análise') : 'Aguardando Análise';
+            }
+
+            const stLower = status.toLowerCase();
+            if (stLower.includes('concluí') || stLower.includes('concluido') || stLower === 'concluído' || stLower === 'medição concluída') {
+                color = '#10b981';
+                bg = 'rgba(16, 185, 129, 0.1)';
+                border = 'rgba(16, 185, 129, 0.25)';
+            } else if (stLower.includes('cancel') || stLower.includes('recus') || stLower.includes('arquiv')) {
+                color = '#ef4444';
+                bg = 'rgba(239, 68, 68, 0.1)';
+                border = 'rgba(239, 68, 68, 0.25)';
+            } else if (stLower.includes('aguard') || stLower === 'não iniciado') {
+                color = 'var(--amc-text-muted)';
+                bg = 'rgba(255, 255, 255, 0.03)';
+                border = 'rgba(255, 255, 255, 0.08)';
+            } else {
+                color = 'var(--amc-primary)';
+                bg = 'rgba(248, 183, 0, 0.1)';
+                border = 'rgba(248, 183, 0, 0.25)';
+            }
+
+            return `<span title="${nucleo}: ${status}" style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: ${bg}; color: ${color}; border: 1px solid ${border}; font-weight: bold; border-radius: 4px; cursor: help; transition: all 0.2s;">${nucleo}</span>`;
+        }
+
+        // Buscar Demandas no Banco
         async function fetchDemands() {
             const { data, error } = await supabase
                 .from('demandas_pai')
@@ -1573,7 +1625,12 @@
                         url_projeto_pdf,
                         projeto_npa_nome,
                         projeto_npa_numero
-                    )
+                    ),
+                    execucao_nce!execucao_nce_id_demanda_pai_fkey (status_nce),
+                    execucao_nco!execucao_nco_id_demanda_pai_fkey (status_nco),
+                    projetos_npo!projetos_npo_id_demanda_pai_fkey (status_npo),
+                    projetos_npe!projetos_npe_id_demanda_pai_fkey (status_npe),
+                    projetos_ngc!projetos_ngc_id_demanda_pai_fkey (status_ngc)
                 `)
                 .order('created_at', { ascending: false });
 
@@ -1595,7 +1652,7 @@
             tbody.innerHTML = '';
 
             if (demands.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="empty-state">Nenhuma demanda localizada.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-state">Nenhuma demanda localizada.</td></tr>`;
                 return;
             }
 
@@ -1646,9 +1703,9 @@
                 const nucleos = demand.nucleos_atribuidos ? demand.nucleos_atribuidos : [];
                 let nucleosBadges = '';
                 if (nucleos.length > 0) {
-                    nucleosBadges = nucleos.map(n => `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(248, 183, 0, 0.15); color: var(--amc-primary); border: 1px solid rgba(248, 183, 0, 0.3); font-weight: bold; border-radius: 4px;">${n}</span>`).join('');
+                    nucleosBadges = nucleos.map(n => getNucleoBadgeHTML(n, demand)).join('');
                 } else {
-                    nucleosBadges = `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(255,255,255,0.05); color: var(--amc-text-muted); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">NPO (Legado)</span>`;
+                    nucleosBadges = `<span style="display:inline-block; font-size:10px; padding:2px 6px; margin:2px; background: rgba(255,255,255,0.05); color: var(--amc-text-muted); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;">Sem atribuição</span>`;
                 }
 
                 // Prioridade
