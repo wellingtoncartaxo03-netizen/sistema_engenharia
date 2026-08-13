@@ -852,7 +852,20 @@
         .doc-link-row a { color: #10b981; text-decoration: none; display: flex; align-items: center; gap: 6px; }
         .doc-link-row a:hover { text-decoration: underline; }
         .upload-progress { height: 3px; border-radius: 99px; background: rgba(255,255,255,.06); margin-top: 6px; overflow: hidden; display: none; }
-        .upload-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--amc-primary), var(--amc-secondary)); border-radius: 99px; transition: width .3s; }
+        .priority-row {
+            border-left: 4px solid var(--amc-primary) !important;
+            background: rgba(248, 183, 0, 0.03) !important;
+        }
+        .priority-row:hover {
+            background: rgba(248, 183, 0, 0.06) !important;
+        }
+        .urgent-row {
+            border-left: 4px solid #ef4444 !important;
+            background: rgba(239, 68, 68, 0.04) !important;
+        }
+        .urgent-row:hover {
+            background: rgba(239, 68, 68, 0.08) !important;
+        }
     </style>
 </head>
 <body>
@@ -1142,9 +1155,15 @@
                             <div class="form-row" style="align-items: flex-end;">
                                 <div class="form-group">
                                     <label class="form-label">Prioridade da Diretoria</label>
-                                    <div style="display: flex; align-items: center; gap: 10px; height: 38px;">
-                                        <input type="checkbox" id="ditran-prioridade-diretoria" onchange="togglePriorityNameField(this.checked)" style="width: 18px; height: 18px; accent-color: var(--amc-primary); cursor: pointer;">
-                                        <span style="font-size: 13px; color: #fff;">Marcar como Prioridade Institucional</span>
+                                    <div style="display: flex; align-items: center; gap: 20px; height: 38px;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <input type="checkbox" id="ditran-prioridade-diretoria" onchange="onPriorityChange()" style="width: 18px; height: 18px; accent-color: var(--amc-primary); cursor: pointer;">
+                                            <span style="font-size: 13px; color: #fff;">Prioridade Institucional</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <input type="checkbox" id="ditran-prioridade-urgente" onchange="onUrgentChange()" style="width: 18px; height: 18px; accent-color: #ef4444; cursor: pointer;">
+                                            <span style="font-size: 13px; color: #f87171; font-weight: 600;">Urgente ⚠️</span>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -1307,6 +1326,7 @@
                         data_programada_execucao: nce?.data_programada_execucao ? new Date(nce.data_programada_execucao).toLocaleDateString('pt-BR') : '—',
                         prioridade_diretoria: d.prioridade_diretoria || false,
                         prioridade_nome: d.prioridade_nome || '',
+                        urgente: d.urgente || false,
                         id_demanda_principal: d.id_demanda_principal,
                         created_at: d.created_at,
                         raw: d // Mantém o objeto de dados completo
@@ -1472,10 +1492,20 @@
                 if (d.status_nce === 'Concluído') badgeNceClass = 'badge-status badge-sucesso';
                 else if (d.status_nce === 'Em Execução') badgeNceClass = 'badge-status badge-alerta';
 
+                let rowClass = 'clickable-row';
+                if (d.urgente === true) {
+                    rowClass += ' urgent-row';
+                } else if (d.prioridade_diretoria === true) {
+                    rowClass += ' priority-row';
+                }
+                tr.className = rowClass;
+
                 // Adiciona um ícone/badge de prioridade ao lado do protocolo
-                const prioridadeBadge = d.prioridade_diretoria 
-                    ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444; margin-right: 6px;" title="Prioritário: ${d.prioridade_nome || 'Sem Nome'}"></i>` 
-                    : '';
+                const prioridadeBadge = d.urgente === true
+                    ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444; margin-right: 6px;" title="Urgente: ${d.prioridade_nome || 'Sim'}"></i>`
+                    : (d.prioridade_diretoria
+                        ? `<i class="fa fa-triangle-exclamation" style="color:var(--amc-primary); margin-right: 6px;" title="Prioritário: ${d.prioridade_nome || 'Sem Nome'}"></i>`
+                        : '');
 
                 const enderecoCompleto = d.trecho ? `${d.nome_rua} <br><small style="color:var(--amc-text-muted)">Trecho: ${d.trecho}</small>` : d.nome_rua;
 
@@ -1908,6 +1938,26 @@
             setTimeout(() => { toast.classList.remove('show'); }, 4000);
         }
 
+        function onPriorityChange() {
+            const isPrioritario = document.getElementById('ditran-prioridade-diretoria').checked;
+            const urgentCheckbox = document.getElementById('ditran-prioridade-urgente');
+            if (!isPrioritario) {
+                // Se desmarcar prioridade, desmarca urgente também
+                urgentCheckbox.checked = false;
+            }
+            togglePriorityNameField(isPrioritario);
+        }
+
+        function onUrgentChange() {
+            const isUrgent = document.getElementById('ditran-prioridade-urgente').checked;
+            const priorityCheckbox = document.getElementById('ditran-prioridade-diretoria');
+            if (isUrgent) {
+                // Se marcar urgente, obrigatoriamente marca prioridade
+                priorityCheckbox.checked = true;
+            }
+            togglePriorityNameField(priorityCheckbox.checked);
+        }
+
         // Exibe/oculta a linha do seletor de prioridades no modal
         function togglePriorityNameField(isChecked) {
             const group = document.getElementById('prioridade-nome-group');
@@ -2006,7 +2056,9 @@
 
             // Configurar campos de prioridade
             const isPrioritario = d.prioridade_diretoria === true;
+            const isUrgente = d.urgente === true;
             document.getElementById('ditran-prioridade-diretoria').checked = isPrioritario;
+            document.getElementById('ditran-prioridade-urgente').checked = isUrgente;
             togglePriorityNameField(isPrioritario);
             document.getElementById('ditran-prioridade-nome').value = d.prioridade_nome || '';
 
@@ -2252,6 +2304,7 @@
 
             // Lógica de Prioridades
             const prioridadeDiretoria = document.getElementById('ditran-prioridade-diretoria').checked;
+            const urgente = document.getElementById('ditran-prioridade-urgente').checked;
             let prioridadeNome = '';
 
             if (prioridadeDiretoria) {
@@ -2286,7 +2339,8 @@
                         despacho_diretoria: despachoTexto,
                         prioridade_diretoria: prioridadeDiretoria,
                         prioridade_nome: prioridadeNome || null,
-                        url_parecer_ditran: document.getElementById('ditran-parecer-ditran').value || null
+                        url_parecer_ditran: document.getElementById('ditran-parecer-ditran').value || null,
+                        urgente: urgente
                     })
                     .eq('id', recordId);
 

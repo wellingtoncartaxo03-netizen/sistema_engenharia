@@ -257,7 +257,21 @@
         }
 
         .badge-priority {
-            background: var(--amc-secondary);
+            background: var(--amc-primary);
+            color: #000;
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 3px 6px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px var(--amc-glow);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-urgent {
+            background: #ef4444;
             color: #fff;
             font-size: 9px;
             text-transform: uppercase;
@@ -965,6 +979,7 @@
                         solicitante_oficial,
                         tipo_solicitacao,
                         prioridade_diretoria,
+                        urgente,
                         cat_bairros (nome_bairro, cat_regionais(nome_regional))
                     )
                 `);
@@ -1013,9 +1028,11 @@
                 card.setAttribute('ondragstart', `dragStart(event, '${project.id}')`);
                 card.setAttribute('onclick', `openModal('${project.id}')`);
 
-                const prioridadeBadge = project.demandas_pai.prioridade_diretoria
-                    ? `<span class="badge-priority"><i class="fa fa-triangle-exclamation"></i> Prioritário</span>`
-                    : '';
+                const prioridadeBadge = project.demandas_pai.urgente === true
+                    ? `<span class="badge-urgent"><i class="fa fa-triangle-exclamation"></i> Urgente</span>`
+                    : (project.demandas_pai.prioridade_diretoria
+                        ? `<span class="badge-priority"><i class="fa fa-triangle-exclamation"></i> Prioritário</span>`
+                        : '');
 
                 card.innerHTML = `
                     <div class="card-protocol">

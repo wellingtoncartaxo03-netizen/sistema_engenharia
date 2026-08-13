@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR" class="dark">
 <head>
     <meta charset="utf-8"/>
@@ -250,10 +250,25 @@
         }
 
         .badge-priority {
-            background: rgba(241, 90, 34, 0.15);
-            color: var(--amc-secondary);
-            border: 1px solid var(--amc-secondary);
-            box-shadow: 0 0 10px var(--amc-red-glow);
+            background: rgba(248, 183, 0, 0.15);
+            color: var(--amc-primary);
+            border: 1px solid var(--amc-primary);
+            box-shadow: 0 0 10px var(--amc-glow);
+        }
+
+        .badge-urgent {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+            box-shadow: 0 0 10px rgba(239,68,68,0.3);
+        }
+
+        .nce-card.priority-card {
+            border-left: 4px solid var(--amc-primary) !important;
+        }
+
+        .nce-card.urgent-card {
+            border-left: 4px solid #ef4444 !important;
         }
 
         .badge-status {
@@ -909,6 +924,7 @@
                             protocolo_oficial,
                             tipo_solicitacao,
                             prioridade_diretoria,
+                            urgente,
                             cat_bairros (nome_bairro, cat_regionais(nome_regional)),
                             ruas_fortaleza:id_rua (nome)
                         )
@@ -976,6 +992,7 @@
                 const protocolo = demanda ? demanda.protocolo_oficial : '—';
                 const tipoDemanda = demanda ? demanda.tipo_solicitacao : '—';
                 const prioritario = demanda ? demanda.prioridade_diretoria : false;
+                const urgente = demanda ? demanda.urgente : false;
                 const bairro = demanda && demanda.cat_bairros ? demanda.cat_bairros.nome_bairro : '—';
                 const regional = demanda && demanda.cat_bairros && demanda.cat_bairros.cat_regionais
                     ? demanda.cat_bairros.cat_regionais.nome_regional : '';
@@ -1051,8 +1068,15 @@
                     ? new Date(dataConcl).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
                     : null;
 
-                const badgesPriority = prioritario
-                    ? `<span class="card-badge badge-priority"><i class="fa fa-triangle-exclamation"></i> Prioritário</span>` : '';
+                const badgesPriority = urgente
+                    ? `<span class="card-badge badge-urgent"><i class="fa fa-triangle-exclamation"></i> Urgente</span>`
+                    : (prioritario
+                        ? `<span class="card-badge badge-priority"><i class="fa fa-triangle-exclamation"></i> Prioritário</span>`
+                        : '');
+
+                const cardClass = urgente
+                    ? 'nce-card glass-dark urgent-card'
+                    : (prioritario ? 'nce-card glass-dark priority-card' : 'nce-card glass-dark');
 
                 // Build quantitativos markup
                 function badgeList(items, color) {
@@ -1096,7 +1120,7 @@
                        </div>` : '';
 
                 const card = document.createElement('div');
-                card.className = 'nce-card glass';
+                card.className = cardClass;
 
                 card.innerHTML = `
                     <div class="card-header">

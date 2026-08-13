@@ -125,10 +125,17 @@
             color: #ffffff !important;
         }
         .priority-row {
+            border-left: 4px solid var(--amc-primary) !important;
+            background: rgba(248, 183, 0, 0.03) !important;
+        }
+        .priority-row:hover {
+            background: rgba(248, 183, 0, 0.06) !important;
+        }
+        .urgent-row {
             border-left: 4px solid #ef4444 !important;
             background: rgba(239, 68, 68, 0.04) !important;
         }
-        .priority-row:hover {
+        .urgent-row:hover {
             background: rgba(239, 68, 68, 0.08) !important;
         }
         /* Sub-accordions do NPO na Visualização Geral */
@@ -1583,12 +1590,23 @@
                 }
 
                 const tr = document.createElement('tr');
-                tr.className = 'clickable-row' + (p.prioridade_diretoria === true ? ' priority-row' : '');
+                let rowClass = 'clickable-row';
+                if (p.urgente === true) {
+                    rowClass += ' urgent-row';
+                } else if (p.prioridade_diretoria === true) {
+                    rowClass += ' priority-row';
+                }
+                tr.className = rowClass;
                 tr.onclick = () => openNceModal(p.id);
                 tr.innerHTML = `
                     <td>
                         <div style="font-weight:700; font-family:'Oswald',sans-serif; color:#fff; display:flex; align-items:center; gap:6px;">
-                            ${p.prioridade_diretoria === true ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Prioridade: ${p.prioridade_nome || 'Sim'}"></i>` : ''}
+                            ${p.urgente === true
+                                ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Urgente: ${p.prioridade_nome || 'Sim'}"></i>`
+                                : (p.prioridade_diretoria === true
+                                    ? `<i class="fa fa-triangle-exclamation" style="color:var(--amc-primary);" title="Prioridade: ${p.prioridade_nome || 'Sim'}"></i>`
+                                    : '')
+                            }
                             ${protocolo}
                             ${p.id_demanda_principal ? `<span class="badge-aggr" title="Processo Agregado">A</span>` : ''}
                         </div>

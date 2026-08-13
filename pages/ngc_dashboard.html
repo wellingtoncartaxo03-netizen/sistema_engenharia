@@ -458,10 +458,17 @@
             color: #ffffff !important;
         }
         .priority-row {
+            border-left: 4px solid var(--amc-primary) !important;
+            background: rgba(248, 183, 0, 0.03) !important;
+        }
+        .priority-row:hover {
+            background: rgba(248, 183, 0, 0.06) !important;
+        }
+        .urgent-row {
             border-left: 4px solid #ef4444 !important;
             background: rgba(239, 68, 68, 0.04) !important;
         }
-        .priority-row:hover {
+        .urgent-row:hover {
             background: rgba(239, 68, 68, 0.08) !important;
         }
 
@@ -1221,7 +1228,7 @@
                 *,
                 demandas_pai:id_demanda_pai (
                     protocolo_oficial, tipo_solicitacao, solicitante_oficial,
-                    endereco, nucleos_atribuidos, prioridade_diretoria, prioridade_nome, id_demanda_principal,
+                    endereco, nucleos_atribuidos, prioridade_diretoria, prioridade_nome, urgente, id_demanda_principal,
                     cat_bairros (nome_bairro, cat_regionais(nome_regional)),
                     ruas_fortaleza:id_rua (nome),
                     projetos_npo!id_demanda_pai (
@@ -1289,12 +1296,23 @@
             }
 
             const tr = document.createElement('tr');
-            tr.className = 'clickable-row' + (d && d.prioridade_diretoria === true ? ' priority-row' : '');
+            let rowClass = 'clickable-row';
+            if (d && d.urgente === true) {
+                rowClass += ' urgent-row';
+            } else if (d && d.prioridade_diretoria === true) {
+                rowClass += ' priority-row';
+            }
+            tr.className = rowClass;
             tr.onclick = () => openNgcModal(p.id);
             tr.innerHTML = `
                 <td>
                     <div style="font-weight:700; font-family:'Oswald',sans-serif; color:#fff; display:flex; align-items:center; gap:6px;">
-                        ${d && d.prioridade_diretoria === true ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Prioridade: ${d.prioridade_nome || 'Sim'}"></i>` : ''}
+                        ${d && d.urgente === true
+                            ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Urgente: ${d.prioridade_nome || 'Sim'}"></i>`
+                            : (d && d.prioridade_diretoria === true
+                                ? `<i class="fa fa-triangle-exclamation" style="color:var(--amc-primary);" title="Prioridade: ${d.prioridade_nome || 'Sim'}"></i>`
+                                : '')
+                        }
                         ${protocolo}
                         ${d && d.id_demanda_principal ? `<span class="badge-aggr" title="Processo Agregado">A</span>` : ''}
                     </div>
@@ -1393,14 +1411,27 @@
             if (p.demandas_pai && p.demandas_pai.prioridade_diretoria === true) {
                 const banner = document.getElementById('ngc-priority-banner');
                 if (banner) {
-                    banner.innerHTML = `
-                        <div class="priority-banner" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
-                            <i class="fa fa-triangle-exclamation" style="font-size: 14px;"></i>
-                            <span><strong>Prioridade Institucional da Diretoria:</strong> Sim</span>
-                        </div>
-                    `;
+                    const dp = p.demandas_pai;
+                    if (dp.urgente === true) {
+                        banner.innerHTML = `
+                            <div class="priority-banner" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                <i class="fa fa-triangle-exclamation" style="font-size: 14px; color: #ef4444;"></i>
+                                <span><strong>Prioridade Urgente da Diretoria:</strong> Sim ${dp.prioridade_nome ? `(${dp.prioridade_nome})` : ''}</span>
+                            </div>
+                        `;
+                    } else {
+                        banner.innerHTML = `
+                            <div class="priority-banner" style="background: rgba(248, 183, 0, 0.08); border: 1px solid rgba(248, 183, 0, 0.2); color: #f59e0b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                <i class="fa fa-triangle-exclamation" style="font-size: 14px; color: var(--amc-primary);"></i>
+                                <span><strong>Prioridade Institucional da Diretoria:</strong> Sim ${dp.prioridade_nome ? `(${dp.prioridade_nome})` : ''}</span>
+                            </div>
+                        `;
+                    }
                     banner.style.display = 'block';
                 }
+            } else {
+                const banner = document.getElementById('ngc-priority-banner');
+                if (banner) banner.style.display = 'none';
             }
             // Banner de Agregação
             const aggrBngc = document.getElementById('ngc-aggr-banner');

@@ -958,19 +958,22 @@
                 if (!d.latitude || !d.longitude) return;
 
                 // Definir Ícone
-                let colorClass = 'var(--amc-accent)'; // Azul: Geral
+                let colorClass = 'var(--amc-accent)'; 
                 let shadowColor = 'var(--amc-glow)';
 
-                if (d.prioridade_diretoria) {
-                    colorClass = 'var(--amc-secondary)'; // Laranja/Vermelho: Prioritário
-                    shadowColor = 'var(--amc-red-glow)';
-                } else if (d.status_geral === 'Aguardando Aprovação' || d.status_npo === 'Análise' || d.status_npo === 'Projetando') {
-                    colorClass = '#eab308'; // Amarelo: Em Projeto NPO
-                    shadowColor = 'rgba(234, 179, 8, 0.4)';
-                } else if (d.status_geral === 'Aprovado') {
-                    colorClass = '#10b981'; // Verde: Em execução (Aprovado)
-                    shadowColor = 'var(--amc-green-glow)';
-                }
+                if (d.urgente === true) {
+                     colorClass = '#ef4444'; // Vermelho: Urgente
+                     shadowColor = 'var(--amc-red-glow)';
+                 } else if (d.prioridade_diretoria === true) {
+                     colorClass = 'var(--amc-primary)'; // Amarelo: Prioridade
+                     shadowColor = 'var(--amc-glow)';
+                 } else if (d.status_geral === 'Aguardando Aprovação' || d.status_npo === 'Análise' || d.status_npo === 'Projetando') {
+                     colorClass = '#eab308'; // Amarelo: Em Projeto NPO
+                     shadowColor = 'rgba(234, 179, 8, 0.4)';
+                 } else if (d.status_geral === 'Aprovado') {
+                     colorClass = '#10b981'; // Verde: Em execução (Aprovado)
+                     shadowColor = 'var(--amc-green-glow)';
+                 }
 
                 // Ícone em FA
                 const pinIcon = L.divIcon({
@@ -1023,8 +1026,15 @@
                     currency: 'BRL'
                 }).format(d.custo_estimado || 0);
 
+                // Adiciona um ícone/badge de prioridade
+                const prioridadeBadge = d.urgente === true
+                    ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444; margin-right: 6px;" title="Urgente"></i>`
+                    : (d.prioridade_diretoria === true
+                        ? `<i class="fa fa-triangle-exclamation" style="color:var(--amc-primary); margin-right: 6px;" title="Prioridade Institucional"></i>`
+                        : '');
+
                 tr.innerHTML = `
-                    <td style="font-weight: 700;">${d.protocolo_oficial}</td>
+                    <td style="font-weight: 700; display: flex; align-items: center; gap: 6px;">${prioridadeBadge}${d.protocolo_oficial}</td>
                     <td>${d.tipo_solicitacao}</td>
                     <td>${d.solicitante_oficial}</td>
                     <td>${d.nome_bairro} (${d.nome_regional})</td>
