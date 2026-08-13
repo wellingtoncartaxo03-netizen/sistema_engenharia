@@ -841,6 +841,18 @@
         .aggr-action-btn:hover { background: rgba(245,158,11,.25); }
         .aggr-empty { text-align: center; padding: 2rem; color: var(--amc-text-muted); font-size: 13px; }
         #btn-verify-local { padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 8px; border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.08); color: #f59e0b; display: inline-flex; align-items: center; gap: 6px; }
+        /* --- Upload de Parecer PDF --- */
+        .upload-zone { border: 2px dashed rgba(248,183,0,.25); border-radius: 12px; padding: 1.25rem; text-align: center; cursor: pointer; transition: all .25s; background: rgba(248,183,0,.03); position: relative; overflow: hidden; }
+        .upload-zone:hover { border-color: var(--amc-primary); background: rgba(248,183,0,.07); }
+        .upload-zone.uploading { border-color: var(--amc-secondary); }
+        .upload-icon { font-size: 1.5rem; color: var(--amc-primary); margin-bottom: 6px; }
+        .upload-text { font-size: 12px; color: var(--amc-text-muted); }
+        .upload-text strong { color: var(--amc-primary); }
+        .doc-link-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2); font-size: 12px; }
+        .doc-link-row a { color: #10b981; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .doc-link-row a:hover { text-decoration: underline; }
+        .upload-progress { height: 3px; border-radius: 99px; background: rgba(255,255,255,.06); margin-top: 6px; overflow: hidden; display: none; }
+        .upload-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--amc-primary), var(--amc-secondary)); border-radius: 99px; transition: width .3s; }
     </style>
 </head>
 <body>
@@ -1153,6 +1165,22 @@
                             <div class="form-group" style="margin-top: 1.25rem;">
                                 <label for="ditran-despacho-texto" class="form-label">Despacho / Parecer Ditran</label>
                                 <textarea id="ditran-despacho-texto" class="form-input" rows="4" placeholder="Digite o parecer oficial do Ditran e as orientações para o NCE e NCO..."></textarea>
+                            </div>
+
+                            <!-- Upload de Parecer PDF DITRAN -->
+                            <input type="hidden" id="ditran-parecer-ditran">
+                            <div class="form-group" style="margin-top: 1.25rem;">
+                                <label class="form-label"><i class="fa fa-file-pdf"></i> Parecer / Documento PDF</label>
+                                <div class="upload-zone" id="zone-parecer-ditran" onclick="document.getElementById('file-parecer-ditran').click()">
+                                    <input type="file" id="file-parecer-ditran" accept="application/pdf" style="display:none;" onchange="uploadDitranParecer(this)">
+                                    <div class="upload-icon"><i class="fa fa-cloud-arrow-up"></i></div>
+                                    <div class="upload-text">Clique para <strong>anexar o Parecer DITRAN (PDF)</strong></div>
+                                    <div class="upload-progress" id="prog-parecer-ditran"><div class="upload-progress-fill" id="prog-parecer-ditran-fill"></div></div>
+                                </div>
+                                <div class="doc-link-row" id="parecer-ditran-link-row" style="display:none;">
+                                    <a id="parecer-ditran-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i> Ver Parecer Anexado</a>
+                                    <button type="button" style="font-size:11px; padding: 3px 10px; border-radius: 6px; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); color: #ef4444; cursor: pointer;" onclick="removeDitranParecer()"><i class="fa fa-trash"></i> Remover</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1964,6 +1992,18 @@
             document.getElementById('ditran-autorizado-parcialmente').value = String(d.autorizado_parcialmente ?? false);
             document.getElementById('ditran-despacho-texto').value = d.despacho_diretoria || '';
 
+            // Carrega PDF de parecer DITRAN
+            const parecerDitranUrl = d.url_parecer_ditran || '';
+            document.getElementById('ditran-parecer-ditran').value = parecerDitranUrl;
+            if (parecerDitranUrl) {
+                document.getElementById('zone-parecer-ditran').style.display = 'none';
+                document.getElementById('parecer-ditran-link-row').style.display = 'flex';
+                document.getElementById('parecer-ditran-link').href = parecerDitranUrl;
+            } else {
+                document.getElementById('zone-parecer-ditran').style.display = 'block';
+                document.getElementById('parecer-ditran-link-row').style.display = 'none';
+            }
+
             // Configurar campos de prioridade
             const isPrioritario = d.prioridade_diretoria === true;
             document.getElementById('ditran-prioridade-diretoria').checked = isPrioritario;
@@ -2245,7 +2285,8 @@
                         autorizado_parcialmente: autorizadoParcialmente,
                         despacho_diretoria: despachoTexto,
                         prioridade_diretoria: prioridadeDiretoria,
-                        prioridade_nome: prioridadeNome || null
+                        prioridade_nome: prioridadeNome || null,
+                        url_parecer_ditran: document.getElementById('ditran-parecer-ditran').value || null
                     })
                     .eq('id', recordId);
 
@@ -2260,6 +2301,51 @@
                 showToast('Erro', 'Falha ao salvar despacho: ' + err.message, 'error');
             }
         }
+
+        // ─── Upload de Parecer PDF — DITRAN ───
+        const DITRAN_BUCKET = 'nce-documentos';
+
+        async function uploadDitranParecer(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            if (file.size > 52428800) { showToast('Erro', 'O PDF excede o limite de 50MB.', 'error'); return; }
+            const demandaId = document.getElementById('ditran-record-id').value;
+            if (!demandaId) { showToast('Aviso', 'Selecione um processo antes do upload.', 'error'); return; }
+
+            const prog = document.getElementById('prog-parecer-ditran');
+            const fill = document.getElementById('prog-parecer-ditran-fill');
+            const zone = document.getElementById('zone-parecer-ditran');
+            prog.style.display = 'block'; zone.classList.add('uploading'); fill.style.width = '30%';
+
+            const ext = file.name.split('.').pop() || 'pdf';
+            const path = `ditran_documentos/${demandaId}/parecer_ditran_${Date.now()}.${ext}`;
+            const { data, error } = await supabase.storage.from(DITRAN_BUCKET).upload(path, file, { upsert: true, contentType: 'application/pdf' });
+
+            if (error) {
+                showToast('Erro no Upload', error.message, 'error');
+                prog.style.display = 'none'; zone.classList.remove('uploading'); return;
+            }
+
+            fill.style.width = '100%';
+            setTimeout(() => { prog.style.display = 'none'; fill.style.width = '0%'; }, 600);
+            zone.classList.remove('uploading');
+
+            const { data: { publicUrl } } = supabase.storage.from(DITRAN_BUCKET).getPublicUrl(path);
+            document.getElementById('ditran-parecer-ditran').value = publicUrl;
+            document.getElementById('parecer-ditran-link-row').style.display = 'flex';
+            document.getElementById('parecer-ditran-link').href = publicUrl;
+            zone.style.display = 'none';
+            showToast('Sucesso', 'Parecer PDF anexado!', 'success');
+        }
+
+        function removeDitranParecer() {
+            document.getElementById('ditran-parecer-ditran').value = '';
+            document.getElementById('parecer-ditran-link-row').style.display = 'none';
+            document.getElementById('zone-parecer-ditran').style.display = 'block';
+            document.getElementById('file-parecer-ditran').value = '';
+            showToast('Removido', 'Arquivo desanexado. Salve o despacho para confirmar.', 'info');
+        }
+
         // ─── DITRAN Report Logic — via reports.js (shared) ───
         const ditranReportConfig = {
             title: 'Diretoria (DITRAN)',

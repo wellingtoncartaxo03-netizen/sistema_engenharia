@@ -434,6 +434,18 @@
         .history-item:last-child { border-bottom: none; }
         .history-item strong { color: #10b981; }
         .history-motivo { font-size: 10px; color: var(--amc-text-muted); margin-left: 6px; }
+        /* --- Upload de Parecer PDF --- */
+        .upload-zone { border: 2px dashed rgba(99,217,152,.2); border-radius: 12px; padding: 1.25rem; text-align: center; cursor: pointer; transition: all .25s; background: rgba(99,217,152,.03); position: relative; overflow: hidden; }
+        .upload-zone:hover { border-color: var(--amc-nce); background: rgba(99,217,152,.07); }
+        .upload-zone.uploading { border-color: #10b981; }
+        .upload-icon { font-size: 1.5rem; color: var(--amc-nce); margin-bottom: 6px; }
+        .upload-text { font-size: 12px; color: var(--amc-text-muted); }
+        .upload-text strong { color: var(--amc-nce); }
+        .doc-link-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding: 8px 12px; border-radius: 8px; background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2); font-size: 12px; }
+        .doc-link-row a { color: #10b981; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+        .doc-link-row a:hover { text-decoration: underline; }
+        .upload-progress { height: 3px; border-radius: 99px; background: rgba(255,255,255,.06); margin-top: 6px; overflow: hidden; display: none; }
+        .upload-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--amc-nce), #10b981); border-radius: 99px; transition: width .3s; }
     </style>
 </head>
 <body>
@@ -863,6 +875,22 @@
                         <div class="form-group">
                             <label for="nce-observacoes" class="form-label">Observações / Parecer Técnico</label>
                             <textarea id="nce-observacoes" class="form-input" rows="3" placeholder="Insira observações relevantes sobre a análise do empreendimento..."></textarea>
+                        </div>
+
+                        <!-- Upload de Parecer PDF NCE -->
+                        <input type="hidden" id="nce-parecer-nce">
+                        <div class="form-group" style="margin-top: 1.25rem;">
+                            <label class="form-label"><i class="fa fa-file-pdf"></i> Parecer / Documento PDF</label>
+                            <div class="upload-zone" id="zone-parecer-nce" onclick="document.getElementById('file-parecer-nce').click()">
+                                <input type="file" id="file-parecer-nce" accept="application/pdf" style="display:none;" onchange="uploadNceParecer(this)">
+                                <div class="upload-icon"><i class="fa fa-cloud-arrow-up"></i></div>
+                                <div class="upload-text">Clique para <strong>anexar o Parecer NCE (PDF)</strong></div>
+                                <div class="upload-progress" id="prog-parecer-nce"><div class="upload-progress-fill" id="prog-parecer-nce-fill"></div></div>
+                            </div>
+                            <div class="doc-link-row" id="parecer-nce-link-row" style="display:none;">
+                                <a id="parecer-nce-link" href="#" target="_blank"><i class="fa fa-file-pdf"></i> Ver Parecer Anexado</a>
+                                <button type="button" style="font-size:11px; padding: 3px 10px; border-radius: 6px; background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.3); color: #ef4444; cursor: pointer;" onclick="removeNceParecer()"><i class="fa fa-trash"></i> Remover</button>
+                            </div>
                         </div>
                     </div>
 
@@ -3289,6 +3317,18 @@
                 document.getElementById('nce-local-endereco').value = nce ? (nce.endereco || '') : (p.endereco || (rua ? `${rua}, ${bairro}` : bairro) || '');
                 document.getElementById('nce-observacoes').value = nce ? (nce.observacoes || '') : '';
 
+                // Carrega PDF de parecer NCE
+                const parecerNceUrl = (nce && nce.url_parecer_nce) ? nce.url_parecer_nce : '';
+                document.getElementById('nce-parecer-nce').value = parecerNceUrl;
+                if (parecerNceUrl) {
+                    document.getElementById('zone-parecer-nce').style.display = 'none';
+                    document.getElementById('parecer-nce-link-row').style.display = 'flex';
+                    document.getElementById('parecer-nce-link').href = parecerNceUrl;
+                } else {
+                    document.getElementById('zone-parecer-nce').style.display = 'block';
+                    document.getElementById('parecer-nce-link-row').style.display = 'none';
+                }
+
                 // Sincroniza quantitativos de referência nos labels da tabela
                 updateProjectedLabels(p);
 
@@ -3393,6 +3433,50 @@
             document.getElementById('nce-modal').classList.remove('show');
         }
 
+        // ─── Upload de Parecer PDF — NCE ───
+        const NCE_BUCKET = 'nce-documentos';
+
+        async function uploadNceParecer(input) {
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            if (file.size > 52428800) { showToast('Erro', 'O PDF excede o limite de 50MB.', 'error'); return; }
+            const demandaId = document.getElementById('nce-demanda-id').value;
+            if (!demandaId) { showToast('Aviso', 'Selecione uma demanda antes do upload.', 'error'); return; }
+
+            const prog = document.getElementById('prog-parecer-nce');
+            const fill = document.getElementById('prog-parecer-nce-fill');
+            const zone = document.getElementById('zone-parecer-nce');
+            prog.style.display = 'block'; zone.classList.add('uploading'); fill.style.width = '30%';
+
+            const ext2 = file.name.split('.').pop() || 'pdf';
+            const path = `nce_documentos/${demandaId}/parecer_nce_${Date.now()}.${ext2}`;
+            const { data, error } = await supabase.storage.from(NCE_BUCKET).upload(path, file, { upsert: true, contentType: 'application/pdf' });
+
+            if (error) {
+                showToast('Erro no Upload', error.message, 'error');
+                prog.style.display = 'none'; zone.classList.remove('uploading'); return;
+            }
+
+            fill.style.width = '100%';
+            setTimeout(() => { prog.style.display = 'none'; fill.style.width = '0%'; }, 600);
+            zone.classList.remove('uploading');
+
+            const { data: { publicUrl } } = supabase.storage.from(NCE_BUCKET).getPublicUrl(path);
+            document.getElementById('nce-parecer-nce').value = publicUrl;
+            document.getElementById('parecer-nce-link-row').style.display = 'flex';
+            document.getElementById('parecer-nce-link').href = publicUrl;
+            zone.style.display = 'none';
+            showToast('Sucesso', 'Parecer PDF anexado!', 'success');
+        }
+
+        function removeNceParecer() {
+            document.getElementById('nce-parecer-nce').value = '';
+            document.getElementById('parecer-nce-link-row').style.display = 'none';
+            document.getElementById('zone-parecer-nce').style.display = 'block';
+            document.getElementById('file-parecer-nce').value = '';
+            showToast('Removido', 'Arquivo desanexado. Salve o despacho para confirmar.', 'info');
+        }
+
         async function saveNce() {
             const recordId = document.getElementById('nce-record-id').value;
             const demandaId = document.getElementById('nce-demanda-id').value;
@@ -3447,7 +3531,8 @@
                 equipe_tipo: equipeTipo,
                 equipe_nome: equipeNome,
                 data_execucao: dataExec,
-                turno_execucao: turnoExec
+                turno_execucao: turnoExec,
+                url_parecer_nce: document.getElementById('nce-parecer-nce').value || null
             };
 
             let error;
