@@ -826,19 +826,18 @@
                 <input type="text" id="filter-search" class="filter-input" placeholder="Digite o nº do processo ou projeto..." oninput="applyFilters()">
             </div>
             <div class="filter-group">
-                <span class="filter-label">Status NPO</span>
-                <select id="filter-status" class="filter-input" onchange="applyFilters()">
-                    <option value="">Todos</option>
-                    <option value="Aguardando Recebimento">Aguardando Recebimento</option>
-                    <option value="Recebido">Recebido</option>
-                    <option value="Em Análise">Em Análise</option>
-                    <option value="Deferido">Deferido</option>
-                    <option value="Indeferido">Indeferido</option>
-                    <option value="Sem Projeto">Sem Projeto</option>
-                    <option value="Contemplado">Contemplado</option>
-                    <option value="Concluído">Concluído</option>
+                <span class="filter-label">Filtrar por Núcleo</span>
+                <select id="filter-nucleo" class="filter-input" onchange="applyFilters()">
+                    <option value="NPO" selected>Designados para o NPO (Padrão)</option>
+                    <option value="Todos">Todos os Processos (Sem filtro)</option>
+                    <option value="NPA">NPA</option>
+                    <option value="NPE">NPE</option>
+                    <option value="NCO">NCO</option>
+                    <option value="NCE">NCE</option>
+                    <option value="NGC">NGC</option>
                 </select>
             </div>
+
             <div class="filter-group">
                 <span class="filter-label">Área NPO</span>
                 <select id="filter-area" class="filter-input" onchange="applyFilters()">
@@ -863,23 +862,22 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 13%">Processo</th>
-                        <th style="width: 12%">Nº do Projeto</th>
-                        <th style="width: 8%">Área</th>
-                        <th style="width: 20%">Local (Endereço)</th>
-                        <th style="width: 13%">Técnico</th>
-                        <th style="width: 8%">Tipo</th>
-                        <th style="width: 13%">Designação</th>
+                        <th style="width: 15%">Processo</th>
+                        <th style="width: 15%">Nº do Projeto</th>
+                        <th style="width: 35%">Local (Endereço)</th>
+                        <th style="width: 15%">Tipo</th>
+                        <th style="width: 12%">Designação</th>
                         <th style="width: 8%">Status NPO</th>
                     </tr>
                 </thead>
                 <tbody id="table-body">
                     <tr>
-                        <td colspan="7" class="empty-state">
+                        <td colspan="6" class="empty-state">
                             <i class="fa fa-spinner fa-spin fa-lg" style="margin-right:8px;"></i> Carregando projetos operacionais...
                         </td>
                     </tr>
                 </tbody>
+
             </table>
         </div>
     </main>
@@ -939,6 +937,8 @@
                         <div class="info-val" id="info-endereco-detalhado" style="color: var(--amc-npo); font-weight: 600;">—</div>
                     </div>
                 </div>
+                <div id="routing-container"></div>
+
 
                 <!-- DADOS GERAIS DO NPO (Sem div wrapper externo) -->
                     <!-- Vínculo de demanda (Modo Novo) -->
@@ -1677,6 +1677,7 @@
         let allDemandas = [];
         let allNpoProjects = [];
         let filteredNpoProjects = [];
+        let currentActiveProject = null;
         let allTechnicians = [];
 
         let vagasDiversasData = {
@@ -1953,7 +1954,7 @@
         // Filtros e Renderização
         function applyFilters() {
             const search = document.getElementById('filter-search').value.toLowerCase().trim();
-            const status = document.getElementById('filter-status').value;
+            const nucleoFilter = document.getElementById('filter-nucleo').value;
             const area = document.getElementById('filter-area').value;
             const tipo = document.getElementById('filter-tipo').value;
 
@@ -1972,17 +1973,22 @@
                 // Match texto
                 const matchesSearch = !search || protocolo.includes(search) || projeto.includes(search) || local.includes(search) || bairro.includes(search);
                 
-                // Match status
-                const matchesStatus = !status || p.status_npo === status;
-                
                 // Match area
                 const matchesArea = !area || p.divisao_area === area;
                 
                 // Match tipo
                 const matchesTipo = !tipo || (p.tipos_projeto && p.tipos_projeto.includes(tipo));
 
-                return matchesSearch && matchesStatus && matchesArea && matchesTipo;
+                // Match nucleo
+                let matchesNucleo = true;
+                if (nucleoFilter !== 'Todos') {
+                    const nucleos = d ? (d.nucleos_atribuidos || []) : [];
+                    matchesNucleo = nucleos.includes(nucleoFilter);
+                }
+
+                return matchesSearch && matchesArea && matchesTipo && matchesNucleo;
             });
+
 
             renderTable(filteredNpoProjects);
         }
@@ -1992,7 +1998,7 @@
             tbody.innerHTML = '';
             
             if (!projects.length) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum projeto NPO localizado.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum projeto NPO localizado.</td></tr>';
                 return;
             }
 
@@ -2000,7 +2006,6 @@
                 const d = p.demandas_pai;
                 const protocolo = d ? d.protocolo_oficial : '—';
                 const projeto = p.numero_projeto || '—';
-                const area = p.divisao_area || '—';
                 const rua = d ? (d.endereco || (d.ruas_fortaleza ? d.ruas_fortaleza.nome : '')) : '';
                 const bairro = d && d.cat_bairros ? d.cat_bairros.nome_bairro : '';
                 let local = rua ? `${rua}, ${bairro}` : (bairro || '—');
@@ -2009,11 +2014,10 @@
                 } else if (p.tipo_localizacao === 'Trecho' && p.rua_limite_a && p.rua_limite_b) {
                     local = `${rua} (entre ${p.rua_limite_a} e ${p.rua_limite_b}) (${bairro})`;
                 }
-                const tecnico = p.tecnico_responsavel || '—';
                 
                 const statusClass = getStatusBadgeClass(p.status_npo);
                 
-                const tipos = Array.isArray(p.tipos_projeto) ? p.tipos_projeto.join(', ') : '—';
+                const tipoSolicitacao = d ? (d.tipo_solicitacao || 'Não informado') : 'Não informado';
 
                 const nucleos = d && d.nucleos_atribuidos ? d.nucleos_atribuidos : [];
                 let nucleosBadges = '';
@@ -2044,15 +2048,14 @@
                         ${d && d.id_demanda_principal ? `<span class="badge-aggr" title="Processo Agregado a outro processo">A</span>` : ''}
                     </td>
                     <td style="font-weight:500;">${projeto}</td>
-                    <td><span class="badge b-generic">${area}</span></td>
                     <td style="font-size:13px;">${local}</td>
-                    <td>${tecnico}</td>
-                    <td style="font-size:12px;">${tipos}</td>
+                    <td style="font-size:12px;">${tipoSolicitacao}</td>
                     <td><div style="display:flex; flex-wrap:wrap; gap:2px;">${nucleosBadges}</div></td>
                     <td><span class="badge ${statusClass}">${p.status_npo}</span></td>
                 `;
                 tbody.appendChild(tr);
             });
+
         }
 
         function getStatusBadgeClass(s) {
@@ -2067,6 +2070,84 @@
                 'Concluído': 'b-concluido'
             }[s] || 'b-generic';
         }
+
+        function setupModalNpoWriteAccess(isDesignadoNpo) {
+            const btnSave = document.getElementById('btn-save');
+            const btnEdit = document.getElementById('btn-edit-mode');
+
+            if (btnSave) {
+                if (!isDesignadoNpo) {
+                    btnSave.style.display = 'none';
+                }
+            }
+            if (btnEdit) {
+                if (!isDesignadoNpo) {
+                    btnEdit.style.display = 'none';
+                }
+            }
+
+            // Oculta dropzones de upload
+            ['zone-projeto-npo', 'zone-parecer-npo'].forEach(id => {
+                const zone = document.getElementById(id);
+                if (zone) {
+                    if (!isDesignadoNpo) {
+                        zone.style.display = 'none';
+                    }
+                }
+            });
+
+            // Oculta botões de remover arquivos
+            const deleteButtons = document.querySelectorAll('#npo-modal .doc-link-row .btn-danger');
+            deleteButtons.forEach(btn => {
+                btn.style.display = isDesignadoNpo ? 'block' : 'none';
+            });
+
+            // Varre todos os inputs, selects e textareas do formulário
+            const modalInputs = document.querySelectorAll('#npo-modal input, #npo-modal select, #npo-modal textarea');
+            modalInputs.forEach(input => {
+                if (input.name === 'routing-sector') return;
+
+                input.disabled = !isDesignadoNpo;
+
+                const group = input.closest('.form-group');
+                if (group) {
+                    if (!isDesignadoNpo) {
+                        let isEmpty = false;
+                        if (input.type === 'checkbox') {
+                            isEmpty = !input.checked;
+                        } else if (input.type === 'file') {
+                            const linkRowId = input.id.replace('file-', '') + '-link-row';
+                            const linkRow = document.getElementById(linkRowId);
+                            isEmpty = !linkRow || linkRow.style.display === 'none';
+                        } else {
+                            isEmpty = !input.value || !input.value.trim();
+                        }
+
+                        if (isEmpty) {
+                            group.style.display = 'none';
+                        } else {
+                            group.style.display = '';
+                        }
+                    } else {
+                        group.style.display = '';
+                    }
+                }
+            });
+
+            // Se for designado NPO, garante que as dropzones de upload e link-rows sejam restauradas baseadas em arquivos
+            if (isDesignadoNpo) {
+                ['projeto-npo', 'parecer-npo'].forEach(field => {
+                    const linkRow = document.getElementById(`${field}-link-row`);
+                    const zone = document.getElementById(`zone-${field}`);
+                    if (linkRow && zone) {
+                        const hasFile = linkRow.style.display === 'block';
+                        zone.style.display = hasFile ? 'none' : 'block';
+                    }
+                });
+            }
+            window.setupModalNpoWriteAccess = setupModalNpoWriteAccess;
+        }
+
 
         // Modal Open / Reset
         async function openNpoModal(recordId) {
@@ -2093,6 +2174,9 @@
                 const el = document.getElementById(id);
                 if (el) el.innerText = '—';
             });
+            const rc = document.getElementById('routing-container');
+            if (rc) rc.innerHTML = '';
+
 
             // Reset checkboxes de tipos
             ['npo-tipo-sinalizacao', 'npo-tipo-recape', 'npo-tipo-tapa-buraco'].forEach(id => {
@@ -2164,6 +2248,7 @@
             document.getElementById('demanda-info').style.display = 'none';
 
             if (isNew) {
+                currentActiveProject = null;
                 document.getElementById('modal-title').textContent = 'Novo Projeto NPO';
                 updateAreaTag('NPO1');
                 
@@ -2175,11 +2260,14 @@
                 renderVagasDiversasInputs();
                 onStatusNpoChange();
                 setModalMode('edit');
+                setupModalNpoWriteAccess(true);
                 const btnV = document.getElementById('btn-verify-local');
                 if (btnV) btnV.style.display = 'none';
             } else {
                 const p = allNpoProjects.find(x => x.id === recordId);
                 if (!p) return;
+                currentActiveProject = p;
+
 
                 if (p.demandas_pai && p.demandas_pai.prioridade_diretoria === true) {
                     const banner = document.getElementById('npo-priority-banner');
@@ -2335,7 +2423,12 @@
                         const endDet = d.endereco || '';
                         endEl.innerText = endDet || rua || '—';
                     }
+
+                    if (window.renderSectorRouting) {
+                        window.renderSectorRouting(d.id);
+                    }
                 }
+
 
                 // Detalhes quantitativos do JSONB
                 const det = p.detalhes_projeto || {};
@@ -2475,7 +2568,10 @@
                 btnVerify.style.display = 'inline-flex';
 
                 setModalMode('view');
+                const isDesignadoNpo = p.demandas_pai && p.demandas_pai.nucleos_atribuidos && p.demandas_pai.nucleos_atribuidos.includes('NPO');
+                setupModalNpoWriteAccess(isDesignadoNpo);
             }
+
 
             document.getElementById('npo-modal').classList.add('show');
         }

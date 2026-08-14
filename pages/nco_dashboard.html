@@ -449,7 +449,9 @@
                             <div id="info-nucleos" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
                         </div>
                     </div>
+                    <div id="routing-container"></div>
                 </div>
+
 
                 <!-- Abas de Navegação -->
                 <div class="tabs-nav">
@@ -1545,7 +1547,12 @@
             });
             document.getElementById('nco-equipe-tipo').value = '';
             toggleEquipeInputs('');
+            
+            const rc = document.getElementById('routing-container');
+            if (rc) rc.innerHTML = '';
+
             document.getElementById('info-panel').style.display = 'none';
+
 
             // Reset labels projetados de referência
             document.getElementById('nco-sinalizacao-h-projetada-ref').textContent = '';
@@ -1660,6 +1667,11 @@
                 ? nucleos.map(n => `<span style="display:inline-block;font-size:10px;padding:2px 6px;background:rgba(248,183,0,0.15);color:var(--amc-primary);border:1px solid rgba(248,183,0,0.3);font-weight:bold;border-radius:4px;">${n}</span>`).join('')
                 : '<span style="color:var(--amc-text-muted); font-size:12px;">Não especificado</span>';
             document.getElementById('info-panel').style.display = 'block';
+
+            if (window.renderSectorRouting) {
+                window.renderSectorRouting(p.id);
+            }
+
 
             populatePreviewTabs(p);
             updateProjectedLabels(p);

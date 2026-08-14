@@ -160,3 +160,135 @@ document.addEventListener('click', (e) => {
     }
 });
 
+
+// ─── Funcionalidade de Redirecionamento Dinâmico de Setores (Coordenadores) ───
+window.renderSectorRouting = async function(demandaId) {
+    const container = document.getElementById('routing-container');
+    if (!container) return;
+
+    // Obtém o usuário logado para validar se é coordenador ou admin
+    const userLogado = JSON.parse(sessionStorage.getItem('usuario_logado') || '{}');
+    const isCoordenador = userLogado && (
+        userLogado.nivel_acesso === 'coordenador' || 
+        userLogado.nivel_acesso === 'diretor' || 
+        userLogado.nivel_acesso === 'admin'
+    );
+
+    container.innerHTML = `
+        <div style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                <span class="form-label" style="margin: 0; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--amc-text-muted, #9ca3af);">Encaminhamento (Setores)</span>
+                ${isCoordenador ? `
+                    <button type="button" id="btn-save-routing" onclick="window.saveSectorRouting('${demandaId}')" style="background: rgba(248, 183, 0, 0.12); border: 1px solid rgba(248, 183, 0, 0.25); color: var(--amc-primary, #F8B700); padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fa fa-route"></i> Atualizar Encaminhamento
+                    </button>
+                ` : ''}
+            </div>
+            <div id="routing-checkboxes-loader" style="font-size:12px; color:var(--amc-text-muted, #9ca3af); padding: 4px 0;">
+                <i class="fa fa-spinner fa-spin"></i> Carregando setores da demanda...
+            </div>
+            <div id="routing-checkboxes" style="display: none; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px;">
+                ${['NPA', 'NPE', 'NCO', 'NCE', 'NPO', 'NGC'].map(sec => `
+                    <label style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; cursor: ${isCoordenador ? 'pointer' : 'not-allowed'}; transition: all 0.2s; user-select: none;">
+                        <input type="checkbox" name="routing-sector" value="${sec}" ${!isCoordenador ? 'disabled' : ''} style="width: 15px; height: 15px; accent-color: var(--amc-primary, #F8B700); cursor: ${isCoordenador ? 'pointer' : 'not-allowed'};">
+                        <span style="font-size: 12px; font-weight: 600; color: #fff;">${sec}</span>
+                    </label>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    try {
+        const { data, error } = await window.supabase
+            .from('demandas_pai')
+            .select('nucleos_atribuidos')
+            .eq('id', demandaId)
+            .single();
+
+        if (error) throw error;
+
+        const assigned = data.nucleos_atribuidos || [];
+        document.querySelectorAll('input[name="routing-sector"]').forEach(chk => {
+            if (assigned.includes(chk.value)) {
+                chk.checked = true;
+            }
+        });
+
+        const loader = document.getElementById('routing-checkboxes-loader');
+        const checkboxes = document.getElementById('routing-checkboxes');
+        if (loader) loader.style.display = 'none';
+        if (checkboxes) checkboxes.style.display = 'grid';
+    } catch (err) {
+        console.error("Erro ao carregar setores da demanda:", err);
+        const loader = document.getElementById('routing-checkboxes-loader');
+        if (loader) {
+            loader.innerHTML = '<span style="color:#ef4444;"><i class="fa fa-triangle-exclamation"></i> Falha ao carregar setores da demanda</span>';
+        }
+    }
+};
+
+window.saveSectorRouting = async function(demandaId) {
+    const btn = document.getElementById('btn-save-routing');
+    const checked = Array.from(document.querySelectorAll('input[name="routing-sector"]:checked')).map(c => c.value);
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Salvando...';
+    }
+
+    try {
+        const { error } = await window.supabase
+            .from('demandas_pai')
+            .update({ nucleos_atribuidos: checked.length > 0 ? checked : null })
+            .eq('id', demandaId);
+
+        if (error) throw error;
+
+        if (typeof showToast === 'function') {
+            showToast('Sucesso', 'Encaminhamento de setores atualizado!', 'success');
+        } else if (window.showToast) {
+            window.showToast('Sucesso', 'Encaminhamento de setores atualizado!', 'success');
+        } else {
+            alert('Encaminhamento de setores atualizado com sucesso!');
+        }
+
+        // Tenta acionar o reload da página correspondente
+        const reloadFns = [
+            'fetchNpoProjects', 
+            'fetchNpeProjects', 
+            'fetchNgcProjects', 
+            'fetchNcoProjects', 
+            'fetchData', 
+            'fetchDemands', 
+            'loadConsolidatedData'
+        ];
+        
+        for (const fnName of reloadFns) {
+            if (typeof window[fnName] === 'function') {
+                await window[fnName]();
+                
+                if (fnName === 'fetchNpoProjects' && typeof window.setupModalNpoWriteAccess === 'function') {
+                    const hasNpo = checked.includes('NPO');
+                    window.setupModalNpoWriteAccess(hasNpo);
+                }
+                break;
+            }
+        }
+
+    } catch (err) {
+        console.error("Erro ao salvar encaminhamento:", err);
+        const errorMsg = err.message || '';
+        if (typeof showToast === 'function') {
+            showToast('Erro', 'Falha ao atualizar encaminhamento: ' + errorMsg, 'error');
+        } else {
+            alert('Falha ao atualizar encaminhamento: ' + errorMsg);
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-route"></i> Atualizar Encaminhamento';
+        }
+    }
+};
+
+

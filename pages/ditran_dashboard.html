@@ -1110,7 +1110,9 @@
                                 <span id="info-endereco" style="color:#fff; font-weight:500;"></span>
                             </div>
                         </div>
+                        <div id="routing-container"></div>
                     </div>
+
 
                     <!-- Abas de Navegação -->
                     <div class="tabs-nav">
@@ -2037,7 +2039,11 @@
             currentSelectedProject = p;
             const d = p.raw;
 
+            const rc = document.getElementById('routing-container');
+            if (rc) rc.innerHTML = '';
+
             document.getElementById('ditran-record-id').value = d.id;
+
             document.getElementById('ditran-status-geral').value = d.status_geral || 'Aguardando Aprovação';
             document.getElementById('ditran-autorizado-parcialmente').value = String(d.autorizado_parcialmente ?? false);
             document.getElementById('ditran-despacho-texto').value = d.despacho_diretoria || '';
@@ -2072,6 +2078,11 @@
             const bairro = d.cat_bairros ? d.cat_bairros.nome_bairro : '';
             document.getElementById('info-endereco').textContent = d.endereco || (rua ? `${rua}, ${bairro}` : bairro) || '—';
             document.getElementById('info-panel').style.display = 'block';
+
+            if (window.renderSectorRouting) {
+                window.renderSectorRouting(d.id);
+            }
+
 
             // Banner de Agregação
             const aggrBditran = document.getElementById('ditran-aggr-banner');

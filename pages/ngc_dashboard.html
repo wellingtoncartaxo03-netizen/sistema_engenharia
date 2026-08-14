@@ -863,7 +863,9 @@
                         <span id="info-data-implantacao" style="background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 4px 10px; font-weight:600; display:inline-block; font-size:12px;">—</span>
                     </div>
                 </div>
+                <div id="routing-container"></div>
             </div>
+
 
             <!-- Selector de demanda (quando modal é novo) -->
             <div class="form-group" id="demanda-selector-group">
@@ -1430,7 +1432,12 @@
         }
         document.getElementById('info-data-implantacao').innerText = dataImplStr;
         document.getElementById('info-panel').style.display = 'block';
+
+        if (window.renderSectorRouting) {
+            window.renderSectorRouting(d.id);
+        }
     }
+
 
     function openNgcModal(recordId) {
         const modal = document.getElementById('ngc-modal');
@@ -1458,8 +1465,12 @@
         hideFileLinkRow('parecer_ngc');
         hideFileLinkRow('projeto_ngc');
         
+        const rc = document.getElementById('routing-container');
+        if (rc) rc.innerHTML = '';
+
         document.getElementById('info-panel').style.display = 'none';
         document.getElementById('demanda-selector-group').style.display = 'block';
+
         document.getElementById('select-demanda').value = '';
 
         if (isNew) {

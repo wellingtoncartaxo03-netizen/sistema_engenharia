@@ -796,7 +796,9 @@
                             <div id="info-nucleos" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;"></div>
                         </div>
                     </div>
+                    <div id="routing-container"></div>
                 </div>
+
 
                 <!-- Seletor de Demanda (Novo Registro) -->
                 <div id="demanda-selector-group" class="form-section">
@@ -3314,7 +3316,11 @@
             toggleFormNovaVistoria(false);
             loadFiscaisSelect();
 
+            const rc = document.getElementById('routing-container');
+            if (rc) rc.innerHTML = '';
+
             document.getElementById('info-panel').style.display = 'none';
+
             document.getElementById('demanda-selector-group').style.display = isNew ? 'block' : 'none';
 
             // Abre na visualização por padrão se for processo existente, senão no despacho
@@ -3455,6 +3461,11 @@
                 }
                 document.getElementById('info-panel').style.display = 'block';
 
+                if (window.renderSectorRouting) {
+                    window.renderSectorRouting(p.id);
+                }
+
+
                 // Btn Verificar no Local
                 let btnVNce = document.getElementById('btn-verify-local');
                 if (!btnVNce) {
@@ -3497,7 +3508,12 @@
                 currentSelectedProject = null;
                 document.getElementById('auto-authorize-container').style.display = 'none';
             }
+
+            if (window.renderSectorRouting) {
+                window.renderSectorRouting(demandaId);
+            }
         }
+
 
         function closeModal() {
             document.getElementById('nce-modal').classList.remove('show');

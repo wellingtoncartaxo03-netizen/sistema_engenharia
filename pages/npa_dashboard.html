@@ -1158,6 +1158,8 @@
                     <div class="info-val" id="info-endereco-detalhado" style="color: var(--amc-primary); font-weight: 600;">—</div>
                 </div>
             </div>
+            <div id="routing-container"></div>
+
 
             <!-- Dados Específicos NPA (Editáveis) -->
             <form id="npa-form" onsubmit="saveNpaForm(event)">
@@ -1748,7 +1750,11 @@
             const demand = demandsData.find(d => d.id === id);
             if (!demand) return;
 
+            const rc = document.getElementById('routing-container');
+            if (rc) rc.innerHTML = '';
+
             document.getElementById('npa-priority-banner').style.display = 'none';
+
             isEditMode = false;
             
             let npa = null;
@@ -1829,7 +1835,12 @@
             badge.classList.add(badgeClass);
             badge.innerText = statusNpa;
 
+            if (window.renderSectorRouting) {
+                window.renderSectorRouting(demand.id);
+            }
+
             if (statusNpa === 'Aguardando Recebimento' && npa) {
+
                 supabase.from('analise_npa')
                     .update({ status_npa: 'Recebido' })
                     .eq('id', npa.id)

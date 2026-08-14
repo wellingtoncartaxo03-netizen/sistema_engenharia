@@ -742,7 +742,9 @@
                             <span id="info-data-status" style="background: rgba(192, 132, 252, 0.15); color: var(--amc-npe); border: 1px solid rgba(192, 132, 252, 0.25); border-radius: 6px; padding: 2px 8px; font-weight:600; display:inline-block; font-size:11px;">—</span>
                         </div>
                     </div>
+                    <div id="routing-container"></div>
                 </div>
+
 
                 <!-- Selector de demanda (quando modal é novo) -->
                 <div class="form-group" id="demanda-selector-group">
@@ -1179,7 +1181,11 @@
             hideFileLinkRow('parecer_npe');
             hideFileLinkRow('projeto_npe');
 
+            const rc = document.getElementById('routing-container');
+            if (rc) rc.innerHTML = '';
+
             if (!projectId) {
+
                 // New Project
                 title.textContent = 'Novo Projeto Especial';
                 subtitle.textContent = 'Associe uma demanda aprovada para iniciar a análise NPE.';
@@ -1252,6 +1258,11 @@
                 const lastStatusDate = p.updated_at || p.created_at;
                 document.getElementById('info-data-status').textContent = lastStatusDate ? new Date(lastStatusDate).toLocaleString('pt-BR') : '—';
 
+                if (d && window.renderSectorRouting) {
+                    window.renderSectorRouting(d.id);
+                }
+
+
                 // Load form inputs
                 document.getElementById('npe-status').value = p.status_npe;
                 document.getElementById('npe-tipo-estudo').value = p.tipo_estudo || '';
@@ -1300,7 +1311,12 @@
             document.getElementById('info-coords').textContent = `${d.latitude || '—'} / ${d.longitude || '—'}`;
             document.getElementById('info-data-entrada').textContent = new Date(d.created_at).toLocaleDateString('pt-BR');
             document.getElementById('info-data-status').textContent = 'Novo (Pendente)';
+
+            if (window.renderSectorRouting) {
+                window.renderSectorRouting(d.id);
+            }
         }
+
 
         function closeModal() {
             document.getElementById('npe-modal').classList.remove('show');
