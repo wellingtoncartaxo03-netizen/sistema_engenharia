@@ -12,7 +12,7 @@
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../js/auth.js?v=3"></script>
+    <script src="../js/auth.js?v=4"></script>
 
     <style>
         :root {
@@ -83,7 +83,47 @@
             box-sizing: border-box;
             border-right: 1px solid rgba(255,255,255,0.05);
             z-index: 100;
+            transition: left 0.3s ease-in-out !important;
         }
+
+        /* --- Sidebar Toggle Button & Dynamic Layout --- */
+        .sidebar-toggle-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 150;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .sidebar-toggle-btn:hover {
+            background: rgba(248, 183, 0, 0.15);
+            border-color: var(--amc-primary, #F8B700);
+            box-shadow: 0 0 12px rgba(248, 183, 0, 0.35);
+        }
+        .sidebar-collapsed aside {
+            left: -300px !important;
+        }
+        .sidebar-collapsed main {
+            margin-left: 0 !important;
+        }
+        .logo-container {
+            padding-left: 45px;
+            transition: padding-left 0.3s ease-in-out;
+        }
+        .sidebar-collapsed .logo-container {
+            padding-left: 0;
+        }
+
 
         .logo-container {
             display: flex;
@@ -132,7 +172,9 @@
             display: flex;
             flex-direction: column;
             gap: 2rem;
+            transition: margin-left 0.3s ease-in-out !important;
         }
+
 
         .hero-bg {
             position: fixed;
@@ -638,6 +680,16 @@
     </style>
 </head>
 <body>
+    <!-- Botão de Alternância da Sidebar -->
+    <button class="sidebar-toggle-btn" id="sidebar-toggle" onclick="toggleSidebar()" title="Recolher/Expandir Menu">
+        <i class="fa fa-bars"></i>
+    </button>
+
+    <script>
+        if (localStorage.getItem('sidebar-collapsed') === 'true') {
+            document.body.classList.add('sidebar-collapsed');
+        }
+    </script>
 <div class="hero-bg"></div>
 
 <!-- ══════════════════════ SIDEBAR ══════════════════════ -->
@@ -1565,6 +1617,13 @@
      function closeModal() {
          document.getElementById('ngc-modal').classList.remove('show');
      }
+
+     function toggleSidebar() {
+         const body = document.body;
+         const isCollapsed = body.classList.toggle('sidebar-collapsed');
+         localStorage.setItem('sidebar-collapsed', isCollapsed ? 'true' : 'false');
+     }
+
 
     // ─── Save ───
     async function saveNgcProject() {

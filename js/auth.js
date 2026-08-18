@@ -73,7 +73,7 @@ function validarAcessoPagina(perfil) {
         'NGC': ['ngc_dashboard'],
         'NPE': ['npe_dashboard'],
         'NPA': ['npa_dashboard'],
-        'Diretoria': ['diretoria_dashboard', 'ditran_dashboard']
+        'Diretoria': ['ditran_dashboard', 'diretoria_dashboard']
     };
 
     const paginasPermitidas = mapeamentoRotas[perfil.nucleo_lotacao] || [];

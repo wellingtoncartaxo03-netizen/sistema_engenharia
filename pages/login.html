@@ -247,7 +247,7 @@
         </div>
     </div>
 
-    <script src="../js/auth.js?v=3"></script>
+    <script src="../js/auth.js?v=4"></script>
     <script>
         // Mascara de CPF no input
         const inputIdentifier = document.getElementById('identifier');
@@ -354,13 +354,13 @@
                         'NGC': 'ngc_dashboard.html',
                         'NPE': 'nce_dashboard.html',
                         'NPA': 'npa_dashboard.html',
-                        'Diretoria': 'diretoria_dashboard.html',
+                        'Diretoria': 'ditran_dashboard.html',
                         'Admin': 'admin_usuarios.html'
                     };
-                    const destino = mapeamentoRotas[perfil.nucleo_lotacao] || 'diretoria_dashboard.html';
+                    const destino = mapeamentoRotas[perfil.nucleo_lotacao] || 'ditran_dashboard.html';
                     window.location.href = destino;
                 } else {
-                    window.location.href = 'diretoria_dashboard.html';
+                    window.location.href = 'ditran_dashboard.html';
                 }
             }, 1000);
         }

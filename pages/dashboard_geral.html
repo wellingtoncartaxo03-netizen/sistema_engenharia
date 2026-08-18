@@ -14,7 +14,7 @@
     
     <!-- Biblioteca Oficial do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../js/auth.js?v=3"></script>
+    <script src="../js/auth.js?v=4"></script>
 
     <style>
         :root {
@@ -80,7 +80,47 @@
             box-sizing: border-box;
             border-right: 1px solid rgba(255, 255, 255, 0.05);
             z-index: 100;
+            transition: left 0.3s ease-in-out !important;
         }
+
+        /* --- Sidebar Toggle Button & Dynamic Layout --- */
+        .sidebar-toggle-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 150;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .sidebar-toggle-btn:hover {
+            background: rgba(248, 183, 0, 0.15);
+            border-color: var(--amc-primary, #F8B700);
+            box-shadow: 0 0 12px rgba(248, 183, 0, 0.35);
+        }
+        .sidebar-collapsed aside {
+            left: -320px !important;
+        }
+        .sidebar-collapsed main {
+            margin-left: 0 !important;
+        }
+        .logo-container {
+            padding-left: 45px;
+            transition: padding-left 0.3s ease-in-out;
+        }
+        .sidebar-collapsed .logo-container {
+            padding-left: 0;
+        }
+
 
         .logo-container {
             display: flex;
@@ -137,7 +177,9 @@
             position: relative;
             display: flex;
             flex-direction: column;
+            transition: margin-left 0.3s ease-in-out !important;
         }
+
 
         /* --- Hero background glows --- */
         .hero-bg {
@@ -564,6 +606,16 @@
     </style>
 </head>
 <body>
+    <!-- Botão de Alternância da Sidebar -->
+    <button class="sidebar-toggle-btn" id="sidebar-toggle" onclick="toggleSidebar()" title="Recolher/Expandir Menu">
+        <i class="fa fa-bars"></i>
+    </button>
+
+    <script>
+        if (localStorage.getItem('sidebar-collapsed') === 'true') {
+            document.body.classList.add('sidebar-collapsed');
+        }
+    </script>
 
     <!-- Background Glows -->
     <div class="hero-bg"></div>
@@ -1155,6 +1207,12 @@
 
         function closeModal() {
             document.getElementById('edit-modal').classList.remove('show');
+        }
+
+        function toggleSidebar() {
+            const body = document.body;
+            const isCollapsed = body.classList.toggle('sidebar-collapsed');
+            localStorage.setItem('sidebar-collapsed', isCollapsed ? 'true' : 'false');
         }
 
         // Seleção de Arquivo
