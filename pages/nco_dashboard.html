@@ -870,8 +870,8 @@
                 const statusNco = nco ? (nco.status_nco || 'Aguardando Ordem de Serviço') : 'Aguardando Ordem de Serviço';
                 const protocolo = p.protocolo_oficial ? p.protocolo_oficial.toLowerCase() : '';
                 const solicitante = p.solicitante_oficial ? p.solicitante_oficial.toLowerCase() : '';
-                const rua = p.ruas_fortaleza ? p.ruas_fortaleza.nome.toLowerCase() : '';
-                const bairro = p.cat_bairros ? p.cat_bairros.nome_bairro.toLowerCase() : '';
+                const rua = p.ruas_fortaleza && p.ruas_fortaleza.nome ? p.ruas_fortaleza.nome.toLowerCase() : '';
+                const bairro = p.cat_bairros && p.cat_bairros.nome_bairro ? p.cat_bairros.nome_bairro.toLowerCase() : '';
                 const endereco = p.endereco ? p.endereco.toLowerCase() : '';
                 const localStr = endereco || (rua ? `${rua}, ${bairro}` : (bairro || ''));
                 const tipo = p.tipo_solicitacao ? p.tipo_solicitacao.toLowerCase() : '';

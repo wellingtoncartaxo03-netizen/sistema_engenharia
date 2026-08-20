@@ -969,10 +969,12 @@
 
             filteredData = rawData.filter(d => {
                 // Filtro da busca
-                const matchProtocol = d.protocolo_oficial.toLowerCase().includes(query);
+                const matchProtocol = (d.protocolo_oficial || '').toLowerCase().includes(query);
                 const matchSolicitante = (d.solicitante_oficial || '').toLowerCase().includes(query);
+                const matchBairro = (d.nome_bairro || '').toLowerCase().includes(query);
+                const matchRegional = (d.nome_regional || '').toLowerCase().includes(query);
 
-                const matchSearch = matchProtocol || matchSolicitante;
+                const matchSearch = matchProtocol || matchSolicitante || matchBairro || matchRegional;
 
                 // Filtro rápido de Chips
                 if (currentFilter === 'priority') {

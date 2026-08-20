@@ -635,6 +635,7 @@
                 <option value="all">Todos os Processos</option>
                 <option value="priority">Apenas Prioritários</option>
                 <option value="non-priority">Não Prioritários</option>
+                <option value="urgent">Urgentes</option>
             </select>
             <select id="filter-order" class="filter-input" onchange="applyFilters()" style="min-width: 150px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
                 <option value="newest">Mais Recentes</option>
@@ -1618,7 +1619,9 @@
                 const protocolo = (p.protocolo_oficial || '').toLowerCase();
                 const endereco = (p.endereco || '').toLowerCase();
                 const rua = p.ruas_fortaleza ? p.ruas_fortaleza.nome.toLowerCase() : '';
-                const matchSearch = !search || protocolo.includes(search) || endereco.includes(search) || rua.includes(search);
+                const solicitantePai = (p.solicitante_oficial || '').toLowerCase();
+                const solicitanteNce = nce && nce.solicitante ? nce.solicitante.toLowerCase() : '';
+                const matchSearch = !search || protocolo.includes(search) || endereco.includes(search) || rua.includes(search) || solicitantePai.includes(search) || solicitanteNce.includes(search);
 
                 // Filtro de status de execução
                 const matchStatus = !status || statusNce === status;
@@ -1629,6 +1632,8 @@
                     matchPriority = p.prioridade_diretoria === true;
                 } else if (priorityFilter === 'non-priority') {
                     matchPriority = !p.prioridade_diretoria || p.prioridade_diretoria === false;
+                } else if (priorityFilter === 'urgent') {
+                    matchPriority = p.urgente === true;
                 }
 
                 return matchSearch && matchStatus && matchPriority;

@@ -1447,9 +1447,13 @@
         const q = query.toLowerCase();
         const filtered = allNgcProjects.filter(p => {
             const d = p.demandas_pai;
-            const protocolo = d ? d.protocolo_oficial.toLowerCase() : '';
+            const protocolo = d ? (d.protocolo_oficial || '').toLowerCase() : '';
             const tipo = p.tipologia ? p.tipologia.toLowerCase() : '';
-            return protocolo.includes(q) || tipo.includes(q);
+            const solicitante = d ? (d.solicitante_oficial || '').toLowerCase() : '';
+            const endereco = d ? (d.endereco || '').toLowerCase() : '';
+            const rua = d && d.ruas_fortaleza ? (d.ruas_fortaleza.nome || '').toLowerCase() : '';
+            const bairro = d && d.cat_bairros ? (d.cat_bairros.nome_bairro || '').toLowerCase() : '';
+            return protocolo.includes(q) || tipo.includes(q) || solicitante.includes(q) || endereco.includes(q) || rua.includes(q) || bairro.includes(q);
         });
         renderTable(filtered);
     }

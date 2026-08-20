@@ -2021,9 +2021,10 @@
                     local += ' entre ' + p.rua_limite_a.toLowerCase() + ' e ' + p.rua_limite_b.toLowerCase();
                 }
                 const bairro = d && d.cat_bairros ? (d.cat_bairros.nome_bairro || '').toLowerCase() : '';
+                const solicitante = d ? (d.solicitante_oficial || '').toLowerCase() : '';
                 
                 // Match texto
-                const matchesSearch = !search || protocolo.includes(search) || projeto.includes(search) || local.includes(search) || bairro.includes(search);
+                const matchesSearch = !search || protocolo.includes(search) || projeto.includes(search) || local.includes(search) || bairro.includes(search) || solicitante.includes(search);
                 
                 // Match area
                 const matchesArea = !area || p.divisao_area === area;

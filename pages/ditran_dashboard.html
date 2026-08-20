@@ -1436,10 +1436,10 @@
 
             filteredData = rawData.filter(d => {
                 // 1. Busca textual geral
-                const matchSearch = d.protocolo_oficial.toLowerCase().includes(search) || 
-                                    d.nome_rua.toLowerCase().includes(search) || 
-                                    d.nome_bairro.toLowerCase().includes(search) || 
-                                    d.solicitante_oficial.toLowerCase().includes(search);
+                const matchSearch = (d.protocolo_oficial || '').toLowerCase().includes(search) || 
+                                    (d.nome_rua || '').toLowerCase().includes(search) || 
+                                    (d.nome_bairro || '').toLowerCase().includes(search) || 
+                                    (d.solicitante_oficial || '').toLowerCase().includes(search);
 
                 // 2. Filtro de Prioridade (Todos vs Prioritários vs Não Prioritários)
                 let matchPriority = true;
