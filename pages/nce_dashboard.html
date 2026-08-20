@@ -346,6 +346,8 @@
         .aggr-action-btn:hover { background: rgba(245,158,11,.25); }
         .aggr-empty { text-align: center; padding: 2rem; color: var(--amc-text-muted); font-size: 13px; }
         #btn-verify-local { padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 8px; border: 1px solid rgba(245,158,11,.4); background: rgba(245,158,11,.08); color: #f59e0b; display: inline-flex; align-items: center; gap: 6px; }
+        #btn-archive-process { padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 8px; border: 1px solid rgba(239,68,68,.4); background: rgba(239,68,68,.08); color: #ef4444; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; }
+        #btn-archive-process:hover { background: rgba(239,68,68,.2); }
 
         /* ─── EMPRESA / PREÇOS MODAL ─── */
         #btn-empresas-precos {
@@ -652,6 +654,7 @@
                 <option value="Equipe em Campo">Equipe em Campo</option>
                 <option value="Concluído">Concluído</option>
                 <option value="Cancelado">Cancelado</option>
+                <option value="Arquivado">Arquivado</option>
             </select>
         </div>
 
@@ -817,6 +820,18 @@
                 <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Painel de Arquivamento colapsável -->
+                <div id="nce-archive-panel" style="display:none; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 10px 0; color: #ef4444; font-size: 13px; font-weight: 700; text-transform: uppercase;"><i class="fa fa-archive"></i> Arquivar Processo</h4>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" style="font-size: 11px;">Motivo do Arquivamento</label>
+                        <textarea id="nce-archive-reason" class="form-input" style="height: 80px; resize: vertical;" placeholder="Digite o motivo do arquivamento..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button type="button" class="btn-amc" style="background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="toggleArchivePanel(false)">Cancelar</button>
+                        <button type="button" class="btn-amc" style="background: #ef4444; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="archiveProcessConfirm()">Confirmar Arquivamento</button>
+                    </div>
+                </div>
                 <!-- Banner de Prioridade -->
                 <div id="nce-priority-banner" style="display:none;"></div>
                 <!-- Banner de Agregação -->
@@ -905,6 +920,7 @@
                                     <option value="Equipe em Campo">Equipe em Campo</option>
                                     <option value="Concluído">Concluído</option>
                                     <option value="Cancelado">Cancelado</option>
+                                    <option value="Arquivado">Arquivado</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -3413,6 +3429,7 @@
                 document.getElementById('modal-title').textContent = 'Novo Processo NCE';
                 document.getElementById('modal-subtitle').textContent = 'Vincule uma demanda aprovada e preencha os dados do empreendimento.';
                 const btnV = document.getElementById('btn-verify-local'); if (btnV) btnV.style.display = 'none';
+                const btnA = document.getElementById('btn-archive-process'); if (btnA) btnA.style.display = 'none';
                 loadVistoriasHistory(null);
             } else {
                 const p = allNceProjects.find(x => x.id === projectId);
@@ -3460,6 +3477,10 @@
 
                 document.getElementById('nce-record-id').value = nce ? nce.id : '';
                 document.getElementById('nce-demanda-id').value = p.id;
+                
+                // Limpa painel de arquivamento
+                document.getElementById('nce-archive-panel').style.display = 'none';
+                document.getElementById('nce-archive-reason').value = '';
                 
                 // Carrega campos NCE
                 document.getElementById('nce-status').value = nce ? (nce.status_nce || 'Aguardando Programação') : 'Aguardando Programação';
@@ -3559,6 +3580,18 @@
                 const bairro2 = p.cat_bairros ? p.cat_bairros.nome_bairro : '';
                 btnVNce.onclick = () => openAggrModal(p.id, p.protocolo_oficial, bairro2, p.endereco || rua2, p.cat_bairros && p.cat_bairros.cat_regionais ? p.cat_bairros.cat_regionais.nome_regional : '');
                 btnVNce.style.display = 'inline-flex';
+
+                // Btn Arquivar
+                let btnArchive = document.getElementById('btn-archive-process');
+                if (!btnArchive) {
+                    btnArchive = document.createElement('button');
+                    btnArchive.id = 'btn-archive-process';
+                    btnArchive.innerHTML = '<i class="fa fa-archive"></i> Arquivar';
+                    const mh = document.querySelector('#nce-modal .modal-header > div');
+                    if (mh) mh.appendChild(btnArchive);
+                }
+                btnArchive.onclick = () => toggleArchivePanel(true);
+                btnArchive.style.display = 'inline-flex';
 
                 // Popula abas de leitura dos outros núcleos
                 populatePreviewTabs(p);
@@ -3722,6 +3755,58 @@
                 showToast('Erro', 'Falha ao salvar: ' + error.message, 'error');
             } else {
                 showToast('Sucesso', 'Processo NCE salvo com sucesso!', 'success');
+                closeModal();
+                await fetchNceProjects();
+            }
+        }
+
+        function toggleArchivePanel(show) {
+            const panel = document.getElementById('nce-archive-panel');
+            if (panel) {
+                panel.style.display = show ? 'block' : 'none';
+                if (show) {
+                    document.getElementById('nce-archive-reason').value = '';
+                    document.getElementById('nce-archive-reason').focus();
+                }
+            }
+        }
+
+        async function archiveProcessConfirm() {
+            const recordId = document.getElementById('nce-record-id').value;
+            const demandaId = document.getElementById('nce-demanda-id').value;
+            const reason = document.getElementById('nce-archive-reason').value.trim();
+
+            if (!reason) {
+                showToast('Atenção', 'Por favor, digite o motivo do arquivamento.', 'error');
+                return;
+            }
+
+            if (!recordId && !demandaId) {
+                showToast('Atenção', 'Selecione uma demanda antes de arquivar.', 'error');
+                return;
+            }
+
+            showToast('Arquivando...', 'Processando arquivamento...', 'info');
+
+            const payload = {
+                id_demanda_pai: demandaId || null,
+                status_nce: 'Arquivado',
+                observacoes: reason
+            };
+
+            let error;
+            if (recordId) {
+                const res = await supabase.from('execucao_nce').update(payload).eq('id', recordId);
+                error = res.error;
+            } else {
+                const res = await supabase.from('execucao_nce').upsert(payload, { onConflict: 'id_demanda_pai' });
+                error = res.error;
+            }
+
+            if (error) {
+                showToast('Erro', 'Falha ao arquivar: ' + error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Processo NCE arquivado com sucesso!', 'success');
                 closeModal();
                 await fetchNceProjects();
             }
