@@ -641,6 +641,9 @@
                 <option value="newest">Mais Recentes</option>
                 <option value="oldest">Mais Antigos</option>
             </select>
+            <select id="filter-type" class="filter-input" onchange="applyFilters()" style="min-width: 180px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
+                <option value="">Todos os tipos</option>
+            </select>
             <input type="text" id="filter-search" class="filter-input" placeholder="Buscar por protocolo, endereço..." oninput="applyFilters()" style="flex: 1; min-width: 200px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
             <select id="filter-status" class="filter-input" onchange="applyFilters()" style="min-width: 240px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
                 <option value="">Todos os status de execução</option>
@@ -1602,7 +1605,25 @@
 
             if (error) { showToast('Erro', 'Erro ao carregar processos NCE: ' + error.message, 'error'); return; }
             allNceProjects = data || [];
+            popularFiltroTipos();
             applyFilters();
+        }
+
+        function popularFiltroTipos() {
+            const select = document.getElementById('filter-type');
+            if (!select) return;
+            const valorAtual = select.value;
+            const tipos = [...new Set(allNceProjects.map(p => p.tipo_solicitacao).filter(Boolean))];
+            tipos.sort((a, b) => a.localeCompare(b));
+            
+            select.innerHTML = '<option value="">Todos os tipos</option>' + 
+                tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+                
+            if (tipos.includes(valorAtual)) {
+                select.value = valorAtual;
+            } else {
+                select.value = '';
+            }
         }
 
         // ─── Filters & Rendering ───
@@ -1611,6 +1632,7 @@
             const status = document.getElementById('filter-status').value;
             const priorityFilter = document.getElementById('filter-priority').value;
             const orderFilter = document.getElementById('filter-order').value;
+            const typeFilter = document.getElementById('filter-type').value;
 
             const filtered = allNceProjects.filter(p => {
                 const nce = p.execucao_nce ? (Array.isArray(p.execucao_nce) ? p.execucao_nce[0] : p.execucao_nce) : null;
@@ -1636,7 +1658,10 @@
                     matchPriority = p.urgente === true;
                 }
 
-                return matchSearch && matchStatus && matchPriority;
+                // Filtro de tipo
+                const matchType = !typeFilter || p.tipo_solicitacao === typeFilter;
+
+                return matchSearch && matchStatus && matchPriority && matchType;
             });
 
             // Ordenação (Mais Recentes vs Mais Antigos)
