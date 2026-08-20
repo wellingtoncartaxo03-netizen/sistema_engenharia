@@ -495,6 +495,182 @@
             background: transparent !important;
         }
 
+        /* --- Autocomplete Solicitante Oficial --- */
+        .solicitante-field-wrapper {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .solicitante-field-wrapper .autocomplete-container {
+            flex: 1;
+        }
+
+        .btn-incluir-solicitante {
+            flex-shrink: 0;
+            padding: 0 16px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(248, 183, 0, 0.12);
+            border: 1px solid rgba(248, 183, 0, 0.35);
+            color: var(--amc-primary);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-incluir-solicitante:hover {
+            background: rgba(248, 183, 0, 0.22);
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 12px rgba(248, 183, 0, 0.25);
+        }
+
+        /* --- Modal Novo Solicitante --- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal-card {
+            background: #0E0E12;
+            border: 1px solid rgba(248, 183, 0, 0.25);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(248, 183, 0, 0.06);
+            animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.93) translateY(10px); }
+            to   { opacity: 1; transform: scale(1)   translateY(0); }
+        }
+
+        .modal-title {
+            font-family: 'Oswald', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 400;
+            margin: 0 0 1.5rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-title i {
+            color: var(--amc-primary);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 1.5rem;
+        }
+
+        .btn-modal-cancel {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--amc-text-muted);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-modal-cancel:hover {
+            border-color: rgba(255,255,255,0.25);
+            color: #fff;
+        }
+
+        .btn-modal-save {
+            flex: 2;
+            padding: 12px;
+            border-radius: 10px;
+            background: var(--amc-primary);
+            border: none;
+            color: #000;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-modal-save:hover {
+            background: #ffcc33;
+            box-shadow: 0 4px 15px rgba(248, 183, 0, 0.4);
+        }
+
+        .btn-modal-save:disabled {
+            background: #444;
+            color: #777;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* --- Seções do Dropdown de Solicitante --- */
+        .suggestion-section-header {
+            padding: 6px 20px 4px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: default;
+            user-select: none;
+        }
+
+        .suggestion-section-header.catalogo {
+            color: rgba(248, 183, 0, 0.55);
+            border-bottom-color: rgba(248, 183, 0, 0.1);
+        }
+
+        .suggestion-section-header.historico {
+            color: rgba(160, 200, 255, 0.45);
+            border-bottom-color: rgba(160, 200, 255, 0.08);
+            margin-top: 4px;
+        }
+
+        .suggestion-item.historico-item {
+            color: rgba(200, 220, 255, 0.7);
+        }
+
+        .suggestion-item.historico-item:hover {
+            background: rgba(100, 160, 255, 0.12);
+            color: #c8dcff;
+        }
+
     </style>
 </head>
 <body>
@@ -616,7 +792,18 @@
                     </div>
                     <div class="form-group" style="flex: 1;">
                         <label for="solicitante_oficial" class="form-label">Solicitante Oficial (Público)</label>
-                        <input type="text" id="solicitante_oficial" class="form-input" placeholder="Ex: Cidadão, Vereador, Órgão Público" required>
+                        <div class="solicitante-field-wrapper">
+                            <div class="autocomplete-container" style="flex:1;">
+                                <input type="text" id="solicitante_oficial" class="form-input"
+                                    placeholder="Digite para buscar ou incluir..." autocomplete="off" required>
+                                <div id="solicitante-suggestions" class="autocomplete-suggestions"></div>
+                                <input type="hidden" id="solicitante_id">
+                            </div>
+                            <button type="button" class="btn-incluir-solicitante" id="btn-incluir-solicitante"
+                                onclick="abrirModalNovoSolicitante()" title="Incluir novo solicitante">
+                                <i class="fa fa-plus"></i> Incluir
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -722,6 +909,7 @@
             setupAutocomplete();
             setupStreetAutocomplete();
             setupCpfCnpjAutocomplete();
+            setupSolicitanteAutocomplete();
         });
 
         // Monitor de Autenticação do Supabase
@@ -1267,6 +1455,274 @@
                 toast.classList.remove('show');
             }, 5000);
         }
+
+        // ============================================================
+        // AUTOCOMPLETE — Solicitante Oficial (cat_solicitantes + histórico)
+        // ============================================================
+        let solicitantesList = []; // cache local do catálogo
+        let solicitanteSearchTimeout = null; // debounce para busca no histórico
+
+        async function carregarCatSolicitantes() {
+            const { data, error } = await supabaseClientInstance
+                .from('cat_solicitantes')
+                .select('id, nome, cpf_cnpj')
+                .order('nome', { ascending: true });
+            if (!error && data) solicitantesList = data;
+        }
+
+        function setupSolicitanteAutocomplete() {
+            const input = document.getElementById('solicitante_oficial');
+            const suggestionsDiv = document.getElementById('solicitante-suggestions');
+            if (!input || !suggestionsDiv) return;
+
+            // Carrega catálogo na inicialização
+            carregarCatSolicitantes();
+
+            input.addEventListener('input', () => {
+                const termo = input.value.trim();
+                document.getElementById('solicitante_id').value = '';
+
+                if (termo.length < 2) {
+                    suggestionsDiv.style.display = 'none';
+                    suggestionsDiv.innerHTML = '';
+                    clearTimeout(solicitanteSearchTimeout);
+                    return;
+                }
+
+                // Debounce: aguarda 300ms após última digitação
+                clearTimeout(solicitanteSearchTimeout);
+                solicitanteSearchTimeout = setTimeout(() => {
+                    renderSolicitanteDropdown(termo, suggestionsDiv);
+                }, 300);
+            });
+
+            // Fecha dropdown ao perder foco
+            input.addEventListener('blur', () => {
+                setTimeout(() => {
+                    suggestionsDiv.style.display = 'none';
+                }, 150);
+            });
+        }
+
+        async function renderSolicitanteDropdown(termo, suggestionsDiv) {
+            const termoLower = termo.toLowerCase();
+
+            // --- Seção 1: Catálogo (filtro local, já em cache) ---
+            const cadastrados = solicitantesList.filter(s =>
+                s.nome.toLowerCase().includes(termoLower)
+            ).slice(0, 8);
+
+            // Nomes já no catálogo (para excluir do histórico)
+            const nomesCadastrados = new Set(solicitantesList.map(s => s.nome.toLowerCase()));
+
+            // --- Seção 2: Histórico (query em tempo real) ---
+            let historico = [];
+            try {
+                const { data, error } = await supabaseClientInstance
+                    .from('demandas_pai')
+                    .select('solicitante_oficial')
+                    .ilike('solicitante_oficial', `%${termo}%`)
+                    .not('solicitante_oficial', 'is', null)
+                    .order('solicitante_oficial', { ascending: true })
+                    .limit(50); // busca mais para poder deduplicar
+
+                if (!error && data) {
+                    // Deduplica e remove os já cadastrados no catálogo
+                    const vistos = new Set();
+                    historico = data
+                        .map(d => d.solicitante_oficial.trim())
+                        .filter(nome => {
+                            const key = nome.toLowerCase();
+                            if (vistos.has(key) || nomesCadastrados.has(key)) return false;
+                            vistos.add(key);
+                            return true;
+                        })
+                        .slice(0, 8);
+                }
+            } catch (e) {
+                // falha silenciosa: histórico indisponível
+            }
+
+            // --- Monta o HTML do dropdown ---
+            let html = '';
+
+            if (cadastrados.length === 0 && historico.length === 0) {
+                html = '<div class="suggestion-item" style="color:rgba(255,255,255,0.35);cursor:default;"><i class="fa fa-search" style="margin-right:8px;"></i>Nenhum resultado. Use &quot;Incluir&quot; para cadastrar.</div>';
+            } else {
+                if (cadastrados.length > 0) {
+                    html += '<div class="suggestion-section-header catalogo"><i class="fa fa-user"></i> Cadastrados</div>';
+                    html += cadastrados.map(s => `
+                        <div class="suggestion-item" data-id="${s.id}" data-nome="${s.nome}" data-cpf="${s.cpf_cnpj || ''}" data-source="catalogo">
+                            <i class="fa fa-user" style="margin-right:8px;opacity:0.45;"></i>${s.nome}
+                            ${s.cpf_cnpj ? '<span style="margin-left:8px;font-size:11px;opacity:0.4;">' + s.cpf_cnpj + '</span>' : ''}
+                        </div>
+                    `).join('');
+                }
+
+                if (historico.length > 0) {
+                    html += '<div class="suggestion-section-header historico"><i class="fa fa-folder-open"></i> Do histórico</div>';
+                    html += historico.map(nome => `
+                        <div class="suggestion-item historico-item" data-nome="${nome}" data-source="historico">
+                            <i class="fa fa-history" style="margin-right:8px;opacity:0.45;"></i>${nome}
+                        </div>
+                    `).join('');
+                }
+            }
+
+            suggestionsDiv.innerHTML = html;
+            suggestionsDiv.style.display = 'block';
+
+            // Eventos de clique
+            suggestionsDiv.querySelectorAll('.suggestion-item[data-nome]').forEach(item => {
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    const source = item.dataset.source;
+                    if (source === 'catalogo') {
+                        selecionarSolicitante(item.dataset.id, item.dataset.nome, item.dataset.cpf);
+                    } else {
+                        // Histórico: preenche apenas o nome, sem CPF
+                        selecionarSolicitanteHistorico(item.dataset.nome);
+                    }
+                });
+            });
+        }
+
+        function selecionarSolicitante(id, nome, cpfCnpj) {
+            document.getElementById('solicitante_oficial').value = nome;
+            document.getElementById('solicitante_id').value = id;
+            document.getElementById('solicitante-suggestions').style.display = 'none';
+
+            // Preenche CPF/CNPJ automaticamente se disponível
+            if (cpfCnpj) {
+                const cpfInput = document.getElementById('solicitante_cpf_cnpj');
+                cpfInput.value = formatCpfCnpj(cpfCnpj.replace(/\D/g, ''));
+                cpfInput.style.transition = 'background 0.3s';
+                cpfInput.style.background = 'rgba(16, 185, 129, 0.15)';
+                setTimeout(() => { cpfInput.style.background = ''; }, 1000);
+            }
+
+            // Feedback visual no campo nome
+            const nomeInput = document.getElementById('solicitante_oficial');
+            nomeInput.style.transition = 'background 0.3s';
+            nomeInput.style.background = 'rgba(16, 185, 129, 0.15)';
+            setTimeout(() => { nomeInput.style.background = ''; }, 1000);
+        }
+
+        function selecionarSolicitanteHistorico(nome) {
+            document.getElementById('solicitante_oficial').value = nome;
+            document.getElementById('solicitante_id').value = '';
+            document.getElementById('solicitante-suggestions').style.display = 'none';
+
+            // Feedback visual sutil (azulado, diferente do catálogo)
+            const nomeInput = document.getElementById('solicitante_oficial');
+            nomeInput.style.transition = 'background 0.3s';
+            nomeInput.style.background = 'rgba(100, 160, 255, 0.12)';
+            setTimeout(() => { nomeInput.style.background = ''; }, 1000);
+        }
+
+        // ============================================================
+        // MODAL — Novo Solicitante
+        // ============================================================
+        function abrirModalNovoSolicitante() {
+            const nomeAtual = document.getElementById('solicitante_oficial').value.trim();
+            document.getElementById('modal-sol-nome').value = nomeAtual;
+            document.getElementById('modal-sol-cpf').value = '';
+            document.getElementById('modal-overlay-solicitante').classList.add('open');
+            document.getElementById('modal-sol-nome').focus();
+        }
+
+        function fecharModalSolicitante() {
+            document.getElementById('modal-overlay-solicitante').classList.remove('open');
+        }
+
+        async function salvarNovoSolicitante() {
+            const nome = document.getElementById('modal-sol-nome').value.trim();
+            const cpfCnpjRaw = document.getElementById('modal-sol-cpf').value.replace(/\D/g, '');
+            const cpfCnpj = cpfCnpjRaw || null;
+
+            if (!nome) {
+                document.getElementById('modal-sol-nome').style.border = '1px solid #ef4444';
+                return;
+            }
+
+            const btnSalvar = document.getElementById('btn-modal-sol-salvar');
+            btnSalvar.disabled = true;
+            btnSalvar.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Salvando...';
+
+            const { data, error } = await supabaseClientInstance
+                .from('cat_solicitantes')
+                .insert([{ nome, cpf_cnpj: cpfCnpj }])
+                .select()
+                .single();
+
+            btnSalvar.disabled = false;
+            btnSalvar.innerHTML = '<i class="fa fa-check"></i> Salvar';
+
+            if (error) {
+                showToast('Erro', 'Não foi possível salvar: ' + error.message, 'error');
+                return;
+            }
+
+            // Atualiza cache local e seleciona o novo registro
+            solicitantesList.push(data);
+            solicitantesList.sort((a, b) => a.nome.localeCompare(b.nome));
+            selecionarSolicitante(data.id, data.nome, data.cpf_cnpj || '');
+            fecharModalSolicitante();
+            showToast('Incluído', `"${nome}" cadastrado com sucesso!`, 'success');
+        }
+
+        // Fecha modal ao clicar no overlay
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('modal-overlay-solicitante');
+            if (overlay) {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) fecharModalSolicitante();
+                });
+            }
+
+            // Modal: limpa borda vermelha ao digitar
+            const nomeField = document.getElementById('modal-sol-nome');
+            if (nomeField) {
+                nomeField.addEventListener('input', () => {
+                    nomeField.style.border = '';
+                });
+            }
+
+            // Modal: Enter para salvar
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') fecharModalSolicitante();
+                if (e.key === 'Enter' && document.getElementById('modal-overlay-solicitante').classList.contains('open')) {
+                    salvarNovoSolicitante();
+                }
+            });
+        });
     </script>
+
+    <!-- Modal: Novo Solicitante Oficial -->
+    <div id="modal-overlay-solicitante" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-sol-titulo">
+        <div class="modal-card">
+            <h2 class="modal-title" id="modal-sol-titulo">
+                <i class="fa fa-user-plus"></i> Novo Solicitante
+            </h2>
+            <div class="form-group">
+                <label class="form-label" for="modal-sol-nome">Nome <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="modal-sol-nome" class="form-input"
+                    placeholder="Ex: Vereador João Silva / Secretaria de Obras"
+                    maxlength="200">
+            </div>
+            <div class="form-group" style="margin-top:1rem;">
+                <label class="form-label" for="modal-sol-cpf">CPF / CNPJ <span style="font-weight:400;opacity:0.5;">(opcional)</span></label>
+                <input type="text" id="modal-sol-cpf" class="form-input"
+                    placeholder="Ex: 000.000.000-00 ou 00.000.000/0001-00"
+                    maxlength="18">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="fecharModalSolicitante()">Cancelar</button>
+                <button type="button" class="btn-modal-save" id="btn-modal-sol-salvar" onclick="salvarNovoSolicitante()">
+                    <i class="fa fa-check"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
