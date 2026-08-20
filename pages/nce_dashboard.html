@@ -3433,14 +3433,14 @@
                 
                 // Carrega campos NCE
                 document.getElementById('nce-status').value = nce ? (nce.status_nce || 'Aguardando Programação') : 'Aguardando Programação';
-                document.getElementById('nce-numero-processo').value = nce ? (nce.numero_processo || '') : '';
+                document.getElementById('nce-numero-processo').value = (nce && nce.numero_processo) ? nce.numero_processo : (p.protocolo_oficial || '');
                 document.getElementById('nce-tipo-empreendimento').value = nce ? (nce.tipo_empreendimento || '') : '';
-                document.getElementById('nce-solicitante').value = nce ? (nce.solicitante || '') : (p.solicitante_oficial || '');
+                document.getElementById('nce-solicitante').value = (nce && nce.solicitante) ? nce.solicitante : (p.solicitante_oficial || '');
                 document.getElementById('nce-tecnico').value = nce ? (nce.tecnico_responsavel || '') : '';
                 
                 const rua = p.ruas_fortaleza ? p.ruas_fortaleza.nome : '';
                 const bairro = p.cat_bairros ? p.cat_bairros.nome_bairro : '';
-                document.getElementById('nce-local-endereco').value = nce ? (nce.endereco || '') : (p.endereco || (rua ? `${rua}, ${bairro}` : bairro) || '');
+                document.getElementById('nce-local-endereco').value = (nce && nce.endereco) ? nce.endereco : (p.endereco || (rua ? `${rua}, ${bairro}` : bairro) || '');
                 document.getElementById('nce-observacoes').value = nce ? (nce.observacoes || '') : '';
 
                 // Carrega PDF de parecer NCE
