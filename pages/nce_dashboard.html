@@ -495,6 +495,91 @@
         .doc-link-row a:hover { text-decoration: underline; }
         .upload-progress { height: 3px; border-radius: 99px; background: rgba(255,255,255,.06); margin-top: 6px; overflow: hidden; display: none; }
         .upload-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--amc-nce), #10b981); border-radius: 99px; transition: width .3s; }
+
+        /* Estilos da Programação Rápida */
+        #btn-nce-programacao {
+            display: none; /* controlado por JS */
+            align-items: center; gap: 8px;
+            padding: 9px 18px; border-radius: 99px;
+            background: rgba(167,139,250,0.1); border: 1px solid rgba(167,139,250,0.35);
+            color: var(--amc-nce); font-size: 12px; font-weight: 700;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;
+            transition: all 0.2s; font-family: 'Inter', sans-serif;
+        }
+        #btn-nce-programacao:hover { background: rgba(167,139,250,0.2); box-shadow: 0 0 15px var(--amc-nce-glow); }
+        #btn-nce-programacao.active { background: var(--amc-nce); color: #000; }
+        #btn-nce-programacao.active:hover { background: var(--amc-nce); box-shadow: 0 0 15px var(--amc-nce-glow); }
+
+        .prog-team-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 12px;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .prog-team-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(167, 139, 250, 0.25);
+        }
+        .prog-team-card.selected {
+            background: rgba(167, 139, 250, 0.06);
+            border-color: var(--amc-nce);
+            box-shadow: 0 0 10px rgba(167, 139, 250, 0.25);
+        }
+        .prog-category-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--amc-nce);
+            letter-spacing: 0.06em;
+            margin: 10px 0 6px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(167, 139, 250, 0.15);
+        }
+        .prog-mission-item {
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .btn-prog-action {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-size: 11px;
+        }
+        .btn-prog-assign {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .btn-prog-assign:hover {
+            background: #10b981;
+            color: #000;
+        }
+        .btn-prog-unassign {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .btn-prog-unassign:hover {
+            background: #ef4444;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -621,6 +706,9 @@
                 <button id="btn-nce-relatorio" onclick="openReportModalNCE()">
                     <i class="fa fa-file-invoice"></i> Relatório
                 </button>
+                <button id="btn-nce-programacao" onclick="toggleProgrammingView()" style="display: none;">
+                    <i class="fa fa-calendar-days"></i> Execução
+                </button>
                 <button id="btn-empresas-precos" onclick="openEmpresaModal()">
                     <i class="fa fa-building"></i> Empresas / Preços
                 </button>
@@ -656,6 +744,67 @@
                 <option value="Cancelado">Cancelado</option>
                 <option value="Arquivado">Arquivado</option>
             </select>
+        </div>
+
+        <!-- Painel de Programação Rápida -->
+        <div id="nce-programming-view" style="display: none; flex-direction: column; gap: 15px; margin-bottom: 1.5rem;">
+            <!-- Linha superior de controles da Programação -->
+            <div class="glass-dark" style="display: flex; gap: 15px; align-items: center; justify-content: space-between; padding: 12px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label class="form-label" style="margin-bottom: 0; font-weight: 700; color: var(--amc-nce);">Data de Execução:</label>
+                    <input type="date" id="prog-date" class="filter-input" style="height: 38px; box-sizing: border-box; padding: 8px 14px; width: 180px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px;" onchange="onProgDateChange()">
+                    <span id="prog-date-warning" style="display: none; font-size: 11px; color: #ef4444; margin-left: 10px;"><i class="fa fa-triangle-exclamation"></i> Data no passado</span>
+                </div>
+                <div id="prog-selected-team-info" style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.7);">
+                    Nenhuma equipe selecionada. Selecione uma equipe à esquerda.
+                </div>
+            </div>
+
+            <!-- Grid de Duas Colunas -->
+            <div style="display: grid; grid-template-columns: 35% 1fr; gap: 20px; min-height: 500px; align-items: stretch;">
+                
+                <!-- Coluna Esquerda: Equipes / Cronograma -->
+                <div class="glass" style="background: rgba(167, 139, 250, 0.02); border: 1px solid rgba(167, 139, 250, 0.1); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 15px;">
+                    <h3 style="font-family:'Oswald',sans-serif; font-size:1.2rem; color: var(--amc-nce); border-bottom: 1px solid rgba(167, 139, 250, 0.15); padding-bottom: 8px; margin: 0; display:flex; align-items:center; gap:8px;">
+                        <i class="fa fa-users-gear"></i> Equipes de Execução
+                    </h3>
+                    <div id="prog-teams-list" style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: 600px;">
+                        <!-- Injetado dinamicamente via JS -->
+                    </div>
+                    <!-- Botões de Ação (OS) -->
+                    <div style="display:flex; gap:10px; margin-top:14px; flex-shrink:0;">
+                        <button class="btn-save" onclick="generateOSFromProg('visualizar')" style="flex: 1; border-radius:8px; height:36px; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+                            <i class="fa fa-eye"></i> Visualizar OS
+                        </button>
+                        <button class="btn-save" onclick="generateOSFromProg('imprimir')" style="flex: 1; border-radius:8px; height:36px; background:rgba(167,139,250,0.15); border:1px solid rgba(167,139,250,0.3); color:#a78bfa; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+                            <i class="fa fa-print"></i> Imprimir OS
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Coluna Direita: Processos Disponíveis -->
+                <div class="glass" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 15px;">
+                    <h3 style="font-family:'Oswald',sans-serif; font-size:1.2rem; color: #fff; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px; margin: 0; display:flex; align-items:center; gap:8px;">
+                        <i class="fa fa-folder-open"></i> Processos Disponíveis
+                    </h3>
+                    <div style="overflow-y: auto; max-height: 600px;">
+                        <table id="prog-available-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                    <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 700; width: 60px;">Ação</th>
+                                    <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 700; width: 120px;">Processo</th>
+                                    <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 700;">Local</th>
+                                    <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 700;">Tipo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prog-available-tbody">
+                                <!-- Injetado dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
         </div>
 
         <!-- Tabela Principal -->
@@ -822,18 +971,23 @@
             <div class="modal-body">
                 <!-- Painel de Arquivamento colapsável -->
                 <div id="nce-archive-panel" style="display:none; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 1.5rem;">
-                    <h4 style="margin: 0 0 10px 0; color: #ef4444; font-size: 13px; font-weight: 700; text-transform: uppercase;"><i class="fa fa-archive"></i> Arquivar Processo</h4>
+                    <h4 id="nce-archive-panel-title" style="margin: 0 0 10px 0; color: #ef4444; font-size: 13px; font-weight: 700; text-transform: uppercase;"><i class="fa fa-archive"></i> Arquivar Processo</h4>
                     <div class="form-group" style="margin-bottom: 12px;">
-                        <label class="form-label" style="font-size: 11px;">Motivo do Arquivamento</label>
+                        <label id="nce-archive-panel-label" class="form-label" style="font-size: 11px;">Motivo do Arquivamento</label>
                         <textarea id="nce-archive-reason" class="form-input" style="height: 80px; resize: vertical;" placeholder="Digite o motivo do arquivamento..."></textarea>
                     </div>
                     <div style="display: flex; gap: 8px; justify-content: flex-end;">
                         <button type="button" class="btn-amc" style="background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="toggleArchivePanel(false)">Cancelar</button>
-                        <button type="button" class="btn-amc" style="background: #ef4444; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="archiveProcessConfirm()">Confirmar Arquivamento</button>
+                        <button type="button" id="nce-archive-panel-confirm" class="btn-amc" style="background: #ef4444; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="archiveProcessConfirm()">Confirmar Arquivamento</button>
                     </div>
                 </div>
                 <!-- Banner de Prioridade -->
                 <div id="nce-priority-banner" style="display:none;"></div>
+                <!-- Banner de Informação de Arquivamento -->
+                <div id="nce-archive-status-banner" style="display:none; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                    <i class="fa fa-archive"></i>
+                    <span><strong>Processo Arquivado:</strong> <span id="nce-archive-status-reason" style="color: rgba(255, 255, 255, 0.85);"></span></span>
+                </div>
                 <!-- Banner de Agregação -->
                 <div id="nce-aggr-banner" class="aggr-banner" style="display:none;">
                     <i class="fa fa-link"></i>
@@ -1661,8 +1815,15 @@
                 const solicitanteNce = nce && nce.solicitante ? nce.solicitante.toLowerCase() : '';
                 const matchSearch = !search || protocolo.includes(search) || endereco.includes(search) || rua.includes(search) || solicitantePai.includes(search) || solicitanteNce.includes(search);
 
-                // Filtro de status de execução
-                const matchStatus = !status || statusNce === status;
+                // Filtro de status de execução (Esconde 'Arquivado' por padrão se status for '')
+                let matchStatus = false;
+                if (status === 'Arquivado') {
+                    matchStatus = statusNce === 'Arquivado';
+                } else if (status === '') {
+                    matchStatus = statusNce !== 'Arquivado';
+                } else {
+                    matchStatus = statusNce === status;
+                }
 
                 // Filtro de prioridade
                 let matchPriority = true;
@@ -1687,7 +1848,11 @@
                 return orderFilter === 'oldest' ? dateA - dateB : dateB - dateA;
             });
 
-            renderTable(filtered);
+            if (typeof isProgrammingMode !== 'undefined' && isProgrammingMode) {
+                renderAvailableProjects(filtered);
+            } else {
+                renderTable(filtered);
+            }
         }
 
         function renderTable(projects) {
@@ -2997,6 +3162,11 @@
                 btn.style.display = isCoordenador ? 'inline-flex' : 'none';
             }
 
+            const btnProg = document.getElementById('btn-nce-programacao');
+            if (btnProg) {
+                btnProg.style.display = isCoordenador ? 'inline-flex' : 'none';
+            }
+
             // Exibir/ocultar botão de Nova Empresa com base no perfil
             const btnNovaEmp = document.getElementById('btn-nova-empresa');
             if (btnNovaEmp) {
@@ -3567,6 +3737,18 @@
                 }
 
 
+                // Banner de Arquivado
+                const isArchived = nce && nce.status_nce === 'Arquivado';
+                const statusBanner = document.getElementById('nce-archive-status-banner');
+                if (statusBanner) {
+                    if (isArchived) {
+                        document.getElementById('nce-archive-status-reason').textContent = nce.observacoes || 'Nenhum motivo registrado';
+                        statusBanner.style.display = 'flex';
+                    } else {
+                        statusBanner.style.display = 'none';
+                    }
+                }
+
                 // Btn Verificar no Local
                 let btnVNce = document.getElementById('btn-verify-local');
                 if (!btnVNce) {
@@ -3581,15 +3763,27 @@
                 btnVNce.onclick = () => openAggrModal(p.id, p.protocolo_oficial, bairro2, p.endereco || rua2, p.cat_bairros && p.cat_bairros.cat_regionais ? p.cat_bairros.cat_regionais.nome_regional : '');
                 btnVNce.style.display = 'inline-flex';
 
-                // Btn Arquivar
+                // Btn Arquivar / Desarquivar
                 let btnArchive = document.getElementById('btn-archive-process');
                 if (!btnArchive) {
                     btnArchive = document.createElement('button');
                     btnArchive.id = 'btn-archive-process';
-                    btnArchive.innerHTML = '<i class="fa fa-archive"></i> Arquivar';
                     const mh = document.querySelector('#nce-modal .modal-header > div');
                     if (mh) mh.appendChild(btnArchive);
                 }
+                
+                if (isArchived) {
+                    btnArchive.innerHTML = '<i class="fa fa-box-open"></i> Desarquivar';
+                    btnArchive.style.background = 'rgba(16,185,129,0.08)';
+                    btnArchive.style.borderColor = 'rgba(16,185,129,0.4)';
+                    btnArchive.style.color = '#10b981';
+                } else {
+                    btnArchive.innerHTML = '<i class="fa fa-archive"></i> Arquivar';
+                    btnArchive.style.background = '';
+                    btnArchive.style.borderColor = '';
+                    btnArchive.style.color = '';
+                }
+                
                 btnArchive.onclick = () => toggleArchivePanel(true);
                 btnArchive.style.display = 'inline-flex';
 
@@ -3765,8 +3959,39 @@
             if (panel) {
                 panel.style.display = show ? 'block' : 'none';
                 if (show) {
-                    document.getElementById('nce-archive-reason').value = '';
-                    document.getElementById('nce-archive-reason').focus();
+                    const status = document.getElementById('nce-status').value;
+                    const isCurrentlyArchived = status === 'Arquivado';
+                    
+                    const titleEl = document.getElementById('nce-archive-panel-title');
+                    const labelEl = document.getElementById('nce-archive-panel-label');
+                    const reasonInput = document.getElementById('nce-archive-reason');
+                    const confirmBtn = document.getElementById('nce-archive-panel-confirm');
+
+                    if (isCurrentlyArchived) {
+                        if (titleEl) titleEl.innerHTML = '<i class="fa fa-box-open"></i> Desarquivar Processo';
+                        if (labelEl) labelEl.textContent = 'Motivo do Desarquivamento';
+                        if (reasonInput) {
+                            reasonInput.placeholder = 'Digite a justificativa para o desarquivamento...';
+                            reasonInput.value = '';
+                            reasonInput.focus();
+                        }
+                        if (confirmBtn) {
+                            confirmBtn.textContent = 'Confirmar Desarquivamento';
+                            confirmBtn.style.background = '#10b981';
+                        }
+                    } else {
+                        if (titleEl) titleEl.innerHTML = '<i class="fa fa-archive"></i> Arquivar Processo';
+                        if (labelEl) labelEl.textContent = 'Motivo do Arquivamento';
+                        if (reasonInput) {
+                            reasonInput.placeholder = 'Digite o motivo do arquivamento...';
+                            reasonInput.value = '';
+                            reasonInput.focus();
+                        }
+                        if (confirmBtn) {
+                            confirmBtn.textContent = 'Confirmar Arquivamento';
+                            confirmBtn.style.background = '#ef4444';
+                        }
+                    }
                 }
             }
         }
@@ -3776,22 +4001,25 @@
             const demandaId = document.getElementById('nce-demanda-id').value;
             const reason = document.getElementById('nce-archive-reason').value.trim();
 
+            const currentStatus = document.getElementById('nce-status').value;
+            const isCurrentlyArchived = currentStatus === 'Arquivado';
+
             if (!reason) {
-                showToast('Atenção', 'Por favor, digite o motivo do arquivamento.', 'error');
+                showToast('Atenção', isCurrentlyArchived ? 'Por favor, digite o motivo do desarquivamento.' : 'Por favor, digite o motivo do arquivamento.', 'error');
                 return;
             }
 
             if (!recordId && !demandaId) {
-                showToast('Atenção', 'Selecione uma demanda antes de arquivar.', 'error');
+                showToast('Atenção', 'Selecione uma demanda antes de prosseguir.', 'error');
                 return;
             }
 
-            showToast('Arquivando...', 'Processando arquivamento...', 'info');
+            showToast('Salvando...', 'Processando alteração de status...', 'info');
 
             const payload = {
                 id_demanda_pai: demandaId || null,
-                status_nce: 'Arquivado',
-                observacoes: reason
+                status_nce: isCurrentlyArchived ? 'Aguardando Programação' : 'Arquivado',
+                observacoes: isCurrentlyArchived ? `Desarquivado: ${reason}` : reason
             };
 
             let error;
@@ -3804,9 +4032,9 @@
             }
 
             if (error) {
-                showToast('Erro', 'Falha ao arquivar: ' + error.message, 'error');
+                showToast('Erro', 'Falha ao salvar: ' + error.message, 'error');
             } else {
-                showToast('Sucesso', 'Processo NCE arquivado com sucesso!', 'success');
+                showToast('Sucesso', isCurrentlyArchived ? 'Processo desarquivado com sucesso!' : 'Processo arquivado com sucesso!', 'success');
                 closeModal();
                 await fetchNceProjects();
             }
@@ -3937,6 +4165,22 @@
 
         // Alias para compatibilidade com o botão HTML existente
         function openReportModalNCE() { openReportModal(nceReportConfig); }
+        
+        function generateOSFromProg(action) {
+            openReportModal(nceReportConfig);
+            window._repSwitchTab('os');
+            
+            document.getElementById('rep-period-type').value = 'day';
+            window._repToggleDates();
+            document.getElementById('rep-date-single').value = selectedProgDate;
+            
+            if (action === 'visualizar') {
+                window._repGenerate();
+            } else if (action === 'imprimir') {
+                window._repPrint();
+            }
+        }
+        
         // generateNceReport mantido como alias para compatibilidade (caso chamado de outro lugar)
         function generateNceReport() { window._repGenerate(); }
         function exportReportToCsv() { /* não suportado no modo shared — usar printReport */ }
@@ -3953,6 +4197,369 @@
             else if (type === 'error') { t.classList.add('toast-error'); ti.classList.add('fa-times-circle'); ti.style.color = '#ef4444'; }
             else { t.classList.add('toast-success'); ti.classList.add('fa-spinner', 'fa-spin'); ti.style.color = 'var(--amc-nce)'; }
             setTimeout(() => t.classList.remove('show'), 5000);
+        }
+
+        // ─── MÓDULO DE PROGRAMAÇÃO RÁPIDA (ATALHO) ───
+        let isProgrammingMode = false;
+        let selectedProgDate = '';
+        let selectedTeam = { tipo: '', nome: '' };
+
+        function initProgDate() {
+            if (!selectedProgDate) {
+                // Obter a data atual do fuso horário local
+                const d = new Date();
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                selectedProgDate = `${year}-${month}-${day}`;
+            }
+            const dateInput = document.getElementById('prog-date');
+            if (dateInput) {
+                dateInput.value = selectedProgDate;
+                checkProgDateWarning(selectedProgDate);
+            }
+        }
+
+        function checkProgDateWarning(dateStr) {
+            const warningSpan = document.getElementById('prog-date-warning');
+            if (!warningSpan) return;
+            const todayStr = new Date().toISOString().split('T')[0];
+            warningSpan.style.display = dateStr < todayStr ? 'inline' : 'none';
+        }
+
+        function onProgDateChange() {
+            const val = document.getElementById('prog-date').value;
+            if (!val) return;
+            selectedProgDate = val;
+            checkProgDateWarning(val);
+            
+            // Limpar a seleção de equipe ao mudar a data para evitar inconsistência
+            selectProgTeam('', '');
+            
+            renderProgrammingView();
+        }
+
+        function toggleProgrammingView() {
+            isProgrammingMode = !isProgrammingMode;
+            const btn = document.getElementById('btn-nce-programacao');
+            const normalFilters = document.querySelector('.filter-bar');
+            const normalTable = document.querySelector('.table-container');
+            const progView = document.getElementById('nce-programming-view');
+
+            if (isProgrammingMode) {
+                btn.innerHTML = '<i class="fa fa-table"></i> Visualizar Tabela';
+                btn.classList.add('active');
+                if (normalFilters) normalFilters.style.display = 'flex';
+                if (normalTable) normalTable.style.display = 'none';
+                progView.style.display = 'flex';
+                
+                initProgDate();
+                renderTeamsTable();
+                applyFilters();
+            } else {
+                btn.innerHTML = '<i class="fa fa-calendar-days"></i> Execução';
+                btn.classList.remove('active');
+                if (normalFilters) normalFilters.style.display = 'flex';
+                if (normalTable) normalTable.style.display = 'block';
+                progView.style.display = 'none';
+                
+                // Forçar atualização do dashboard normal
+                applyFilters();
+            }
+        }
+
+        function selectProgTeam(tipo, nome) {
+            selectedTeam = { tipo, nome };
+            const infoDiv = document.getElementById('prog-selected-team-info');
+            
+            // Remover a classe selected de todos os cards
+            document.querySelectorAll('.prog-team-card').forEach(c => c.classList.remove('selected'));
+            
+            if (tipo && nome) {
+                infoDiv.innerHTML = `Equipe Ativa: <strong style="color:var(--amc-nce);">${nome}</strong> (${tipo === 'AMC' ? 'Própria' : 'Terceirizada'})`;
+                // Adicionar classe selected ao card correspondente
+                const card = document.querySelector(`.prog-team-card[data-tipo="${tipo}"][data-nome="${nome}"]`);
+                if (card) card.classList.add('selected');
+            } else {
+                infoDiv.textContent = 'Nenhuma equipe selecionada. Selecione uma equipe à esquerda.';
+            }
+        }
+
+        function renderProgrammingView() {
+            renderTeamsTable();
+            applyFilters();
+        }
+
+        function renderTeamsTable() {
+            const container = document.getElementById('prog-teams-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // Definir equipes
+            const amcTeams = ['Equipe 1', 'Equipe 2', 'Equipe 3', 'Equipe 4'];
+            const tercTeams = [
+                'Sinalize Ceará Ltda', 
+                'Trânsito Seguro Engenharia S.A.', 
+                'Via Expressa Construtora Eireli', 
+                'Mobilidade Urbana Obras e Serviços'
+            ];
+
+            // Filtrar todos os agendamentos da data selecionada
+            const allocatedProjects = allNceProjects.filter(p => {
+                const nce = p.execucao_nce ? (Array.isArray(p.execucao_nce) ? p.execucao_nce[0] : p.execucao_nce) : null;
+                return nce && nce.data_execucao === selectedProgDate;
+            });
+
+            // Gerar HTML de uma categoria de equipes
+            const createCategoryHtml = (titulo, tipo, listaNomes) => {
+                let html = `<div class="prog-category-title">${titulo}</div>`;
+                listaNomes.forEach(nome => {
+                    const missions = allocatedProjects.filter(p => {
+                        const nce = p.execucao_nce ? (Array.isArray(p.execucao_nce) ? p.execucao_nce[0] : p.execucao_nce) : null;
+                        return nce && nce.equipe_tipo === tipo && nce.equipe_nome === nome;
+                    });
+
+                    let missionsHtml = '';
+                    if (missions.length > 0) {
+                        missions.forEach(m => {
+                            const nce = m.execucao_nce ? (Array.isArray(m.execucao_nce) ? m.execucao_nce[0] : m.execucao_nce) : null;
+                            const statusNce = nce ? (nce.status_nce || 'Programado') : 'Programado';
+                            const rua = m.ruas_fortaleza ? m.ruas_fortaleza.nome : '';
+                            const bairro = m.cat_bairros ? m.cat_bairros.nome_bairro : '';
+                            const localStr = m.endereco ? m.endereco : (rua ? `${rua}, ${bairro}` : (bairro || '—'));
+                            
+                            const iconHtml = m.urgente === true
+                                ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Urgente"></i> `
+                                : (m.prioridade_diretoria === true
+                                    ? `<i class="fa fa-triangle-exclamation" style="color:var(--amc-primary);" title="Prioritário"></i> `
+                                    : '');
+
+                            missionsHtml += `
+                                <div class="prog-mission-item">
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
+                                            ${iconHtml}${m.protocolo_oficial || '—'}
+                                        </div>
+                                        <div style="font-size: 10px; color: var(--amc-text-muted); margin-top: 2px;">${localStr}</div>
+                                        <div style="font-size: 9px; color: var(--amc-nce); font-weight: 600; margin-top: 1px;">${m.tipo_solicitacao || '—'}</div>
+                                    </div>
+                                    <button class="btn-prog-action btn-prog-unassign" onclick="unassignProcessFromTeam('${m.id}', event)" title="Cancelar agendamento (retornar para disponíveis)">
+                                        <i class="fa fa-arrow-right-long"></i>
+                                    </button>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        missionsHtml = `<div style="font-size: 11px; color: var(--amc-text-muted); font-style: italic; margin-top: 4px; padding-left: 5px;">Nenhuma missão programada</div>`;
+                    }
+
+                    const isSelected = selectedTeam.tipo === tipo && selectedTeam.nome === nome;
+
+                    html += `
+                        <div class="prog-team-card ${isSelected ? 'selected' : ''}" data-tipo="${tipo}" data-nome="${nome}" onclick="selectProgTeam('${tipo}', '${nome}')">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="radio" name="prog-active-team-radio" style="accent-color: var(--amc-nce); cursor: pointer;" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); selectProgTeam('${tipo}', '${nome}')">
+                                <span style="font-weight: 700; font-size: 13px; color: ${isSelected ? 'var(--amc-nce)' : '#fff'};">${nome}</span>
+                            </div>
+                            <div style="margin-top: 4px;">
+                                ${missionsHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+                return html;
+            };
+
+            container.innerHTML = createCategoryHtml('Própria AMC', 'AMC', amcTeams) + 
+                                  createCategoryHtml('Empresa Terceirizada', 'Terceirizada', tercTeams);
+        }
+
+        function renderAvailableProjects(filteredProjects) {
+            const tbody = document.getElementById('prog-available-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const listToFilter = filteredProjects || allNceProjects;
+
+            // Filtrar processos:
+            // 1. Excluir os que possuem status Concluído, Cancelado ou Arquivado.
+            // 2. Excluir os que já estão alocados para a data selecionada.
+            const available = listToFilter.filter(p => {
+                const nce = p.execucao_nce ? (Array.isArray(p.execucao_nce) ? p.execucao_nce[0] : p.execucao_nce) : null;
+                const statusNce = nce ? (nce.status_nce || 'Aguardando Programação') : 'Aguardando Programação';
+                
+                const isExcludedStatus = ['Concluído', 'Cancelado', 'Arquivado'].includes(statusNce);
+                if (isExcludedStatus) return false;
+
+                const isAllocatedToday = nce && nce.data_execucao === selectedProgDate;
+                if (isAllocatedToday) return false;
+
+                return true;
+            });
+
+            if (available.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="empty-state" style="text-align: center; padding: 2rem;">Nenhum processo disponível para programação.</td></tr>`;
+                return;
+            }
+
+            available.forEach(p => {
+                const nce = p.execucao_nce ? (Array.isArray(p.execucao_nce) ? p.execucao_nce[0] : p.execucao_nce) : null;
+                const rua = p.ruas_fortaleza ? p.ruas_fortaleza.nome : '';
+                const bairro = p.cat_bairros ? p.cat_bairros.nome_bairro : '';
+                const localStr = p.endereco ? p.endereco : (rua ? `${rua}, ${bairro}` : (bairro || '—'));
+
+                const iconHtml = p.urgente === true
+                    ? `<i class="fa fa-triangle-exclamation" style="color:#ef4444;" title="Urgente"></i> `
+                    : (p.prioridade_diretoria === true
+                        ? `<i class="fa fa-triangle-exclamation" style="color:var(--amc-primary);" title="Prioritário"></i> `
+                        : '');
+
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
+                tr.innerHTML = `
+                    <td style="padding: 8px 10px; vertical-align: middle;">
+                        <button class="btn-prog-action btn-prog-assign" onclick="assignProcessToTeam('${p.id}', this)" title="Agendar processo para a equipe selecionada">
+                            <i class="fa fa-arrow-left-long"></i>
+                        </button>
+                    </td>
+                    <td style="padding: 8px 10px; vertical-align: middle; font-weight: 700; font-family: 'Oswald', sans-serif; color: #fff;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            ${iconHtml}${p.protocolo_oficial || '—'}
+                        </div>
+                    </td>
+                    <td style="padding: 8px 10px; vertical-align: middle; color: rgba(255,255,255,0.85);">
+                        ${localStr}
+                        ${nce && nce.data_execucao ? `
+                            <div style="font-size: 9px; color: #f59e0b; margin-top: 2px;">
+                                <i class="fa fa-calendar-alt"></i> Agendado em: ${formatDateSafe(nce.data_execucao)}
+                            </div>
+                        ` : ''}
+                    </td>
+                    <td style="padding: 8px 10px; vertical-align: middle; color: var(--amc-text-muted); font-size: 11px;">
+                        ${p.tipo_solicitacao || '—'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function assignProcessToTeam(projectId, buttonEl) {
+            if (!selectedTeam.tipo || !selectedTeam.nome) {
+                showToast('Aviso', 'Por favor, selecione uma equipe na coluna da esquerda primeiro.', 'warning');
+                return;
+            }
+
+            if (!selectedProgDate) {
+                showToast('Aviso', 'Por favor, selecione uma data de execução válida.', 'warning');
+                return;
+            }
+
+            // Desabilitar botão temporariamente para evitar cliques repetidos
+            if (buttonEl) buttonEl.disabled = true;
+
+            showToast('Salvando...', 'Alocando processo à equipe...', 'info');
+
+            const p = allNceProjects.find(x => x.id === projectId);
+            const nce = p && p.execucao_nce ? (Array.isArray(p.execucao_nce) ? p.execucao_nce[0] : p.execucao_nce) : null;
+            const recordId = nce ? nce.id : null;
+
+            // Determinar o status com base na data (hoje -> Equipe em Campo, futuro -> Programado)
+            const todayStr = new Date().toISOString().split('T')[0];
+            let novoStatus = 'Programado';
+            if (selectedProgDate === todayStr) {
+                novoStatus = 'Equipe em Campo';
+            }
+
+            const payload = {
+                id_demanda_pai: projectId,
+                data_execucao: selectedProgDate,
+                equipe_tipo: selectedTeam.tipo,
+                equipe_nome: selectedTeam.nome,
+                status_nce: novoStatus
+            };
+
+            let error;
+            let updatedNceRecord = null;
+
+            if (recordId) {
+                const res = await supabase.from('execucao_nce').update(payload).eq('id', recordId).select();
+                error = res.error;
+                if (res.data) updatedNceRecord = res.data[0];
+            } else {
+                const res = await supabase.from('execucao_nce').upsert(payload, { onConflict: 'id_demanda_pai' }).select();
+                error = res.error;
+                if (res.data) updatedNceRecord = res.data[0];
+            }
+
+            if (error) {
+                showToast('Erro', 'Falha ao agendar: ' + error.message, 'error');
+                if (buttonEl) buttonEl.disabled = false;
+            } else {
+                showToast('Sucesso', 'Processo agendado com sucesso!', 'success');
+                
+                // Atualizar dados localmente em allNceProjects
+                if (p) {
+                    if (updatedNceRecord) {
+                        p.execucao_nce = [updatedNceRecord];
+                    } else {
+                        // Backup caso select() não retorne
+                        p.execucao_nce = [{
+                            id: recordId || 'temp-id-' + Date.now(),
+                            ...payload
+                        }];
+                    }
+                }
+
+                renderProgrammingView();
+            }
+        }
+
+        async function unassignProcessFromTeam(projectId, event) {
+            if (event) event.stopPropagation();
+
+            const confirmCancel = confirm('Tem certeza que deseja cancelar o agendamento deste processo para este dia? O status retornará para "Aguardando Programação".');
+            if (!confirmCancel) return;
+
+            showToast('Salvando...', 'Cancelando agendamento...', 'info');
+
+            const p = allNceProjects.find(x => x.id === projectId);
+            const nce = p && p.execucao_nce ? (Array.isArray(p.execucao_nce) ? p.execucao_nce[0] : p.execucao_nce) : null;
+            const recordId = nce ? nce.id : null;
+
+            if (!recordId) {
+                showToast('Erro', 'Não foi possível encontrar o registro da execução para cancelar.', 'error');
+                return;
+            }
+
+            const payload = {
+                data_execucao: null,
+                turno_execucao: null,
+                equipe_tipo: null,
+                equipe_nome: null,
+                status_nce: 'Aguardando Programação'
+            };
+
+            const { data, error } = await supabase.from('execucao_nce').update(payload).eq('id', recordId).select();
+
+            if (error) {
+                showToast('Erro', 'Falha ao cancelar: ' + error.message, 'error');
+            } else {
+                showToast('Sucesso', 'Agendamento cancelado!', 'success');
+                
+                // Atualizar dados localmente em allNceProjects
+                if (p) {
+                    if (data && data[0]) {
+                        p.execucao_nce = [data[0]];
+                    } else {
+                        p.execucao_nce = [{
+                            ...nce,
+                            ...payload
+                        }];
+                    }
+                }
+
+                renderProgrammingView();
+            }
         }
 
         // ─── Init ───

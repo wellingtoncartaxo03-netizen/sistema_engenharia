@@ -201,8 +201,8 @@
                             <div id="rep-format-group">
                                 <label class="form-label">Formato</label>
                                 <select id="rep-format" class="form-input">
+                                    <option value="completo" selected>Completo</option>
                                     <option value="resumido">Resumido</option>
-                                    <option value="completo">Completo</option>
                                 </select>
                             </div>
                             <!-- Grupo de Filtro de Critério Individual (Injetado) -->
