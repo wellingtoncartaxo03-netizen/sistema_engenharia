@@ -909,6 +909,27 @@
         .urgent-row:hover {
             background: rgba(239, 68, 68, 0.08) !important;
         }
+
+        /* --- Botão de Arquivamento --- */
+        #btn-archive-process {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: var(--amc-text-muted);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        #btn-archive-process:hover {
+            background: rgba(239,68,68,0.1);
+            border-color: rgba(239,68,68,0.4);
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -1058,6 +1079,7 @@
                 <option value="all">Todos os Processos</option>
                 <option value="priority">Apenas Prioritários</option>
                 <option value="non-priority">Não Prioritários</option>
+                <option value="urgent">Urgentes</option>
             </select>
             <select id="filter-order" class="filter-input" onchange="filterData()" style="min-width: 150px; height: 38px; box-sizing: border-box; padding: 8px 14px;">
                 <option value="newest">Mais Recentes</option>
@@ -1071,6 +1093,7 @@
                 <option value="Equipe em Campo">Equipe em Campo</option>
                 <option value="Concluído">Concluído</option>
                 <option value="Cancelado">Cancelado</option>
+                <option value="Arquivado">Arquivados</option>
             </select>
             <button class="btn-amc btn-outline-amc" id="btn-toggle-filters" onclick="toggleAdvancedFilters()" title="Filtros Avançados" style="height: 38px; width: 38px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0;">
                 <i class="fa fa-sliders"></i>
@@ -1141,6 +1164,26 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="ditran-record-id">
+
+                    <!-- Banner de Arquivamento -->
+                    <div id="ditran-archive-status-banner" style="display:none; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1rem; align-items: center; gap: 8px; font-size: 13px;">
+                        <i class="fa fa-archive"></i>
+                        <span><strong>Processo Arquivado:</strong> <span id="ditran-archive-status-reason" style="color: rgba(255, 255, 255, 0.85);"></span></span>
+                    </div>
+
+                    <!-- Painel de Arquivamento/Desarquivamento -->
+                    <div id="ditran-archive-panel" style="display:none; background: rgba(10,10,12,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;">
+                        <p id="ditran-archive-panel-title" style="margin: 0 0 10px 0; font-size: 13px; font-weight: 700; color: #ef4444; display: flex; align-items: center; gap: 8px;"><i class="fa fa-archive"></i> Arquivar Processo</p>
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label id="ditran-archive-panel-label" class="form-label">Motivo do Arquivamento</label>
+                            <textarea id="ditran-archive-reason" class="form-input" rows="2" placeholder="Informe o motivo..."></textarea>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" class="btn-cancel" style="padding: 6px 14px; font-size: 12px;" onclick="toggleArchivePanel(false)">Cancelar</button>
+                            <button type="button" class="btn-save" id="ditran-archive-panel-confirm" style="padding: 6px 14px; font-size: 12px; background: #ef4444;" onclick="archiveProcessConfirm()">Confirmar Arquivamento</button>
+                        </div>
+                    </div>
+
                     <div id="ditran-aggr-banner" class="aggr-banner" style="display:none;">
                         <i class="fa fa-link"></i>
                         <div><strong id="ditran-aggr-banner-title">Processo Agregado</strong><div id="ditran-aggr-banner-text" style="color:rgba(253,230,138,.75);font-size:12px;"></div></div>
@@ -1428,6 +1471,7 @@
             const priorityFilter = document.getElementById('filter-priority').value;
             const orderFilter = document.getElementById('filter-order').value;
             const statusFilter = document.getElementById('filter-status').value;
+            const showArchived = statusFilter === 'Arquivado';
             
             const dateStart = document.getElementById('filter-date-start').value;
             const dateEnd = document.getElementById('filter-date-end').value;
@@ -1441,18 +1485,25 @@
                                     (d.nome_bairro || '').toLowerCase().includes(search) || 
                                     (d.solicitante_oficial || '').toLowerCase().includes(search);
 
-                // 2. Filtro de Prioridade (Todos vs Prioritários vs Não Prioritários)
+                // 2. Filtro de Prioridade (Todos vs Prioritários vs Não Prioritários vs Urgentes)
                 let matchPriority = true;
                 if (priorityFilter === 'priority') {
                     matchPriority = d.prioridade_diretoria === true;
                 } else if (priorityFilter === 'non-priority') {
                     matchPriority = d.prioridade_diretoria !== true;
+                } else if (priorityFilter === 'urgent') {
+                    matchPriority = d.urgente === true;
                 }
 
-                // 3. Filtro de Status NCE
+                // 3. Filtro de Status NCE / Arquivamento
                 let matchStatus = true;
-                if (statusFilter) {
-                    matchStatus = d.status_nce === statusFilter;
+                const isArchived = d.status_geral === 'Arquivado';
+                if (showArchived) {
+                    matchStatus = isArchived;
+                } else if (statusFilter && !showArchived) {
+                    matchStatus = !isArchived && d.status_nce === statusFilter;
+                } else {
+                    matchStatus = !isArchived;
                 }
 
                 // 4. Período de Data
@@ -1906,6 +1957,72 @@
 
         function closeModal() {
             document.getElementById('ditran-modal').classList.remove('show');
+            const btnArchive = document.getElementById('btn-archive-process');
+            if (btnArchive) btnArchive.style.display = 'none';
+        }
+
+        function toggleArchivePanel(show) {
+            const panel = document.getElementById('ditran-archive-panel');
+            const reason = document.getElementById('ditran-archive-reason');
+            const btnArchive = document.getElementById('btn-archive-process');
+
+            const isUnarchiving = btnArchive && btnArchive.textContent.includes('Desarquivar');
+
+            if (show) {
+                if (isUnarchiving) {
+                    document.getElementById('ditran-archive-panel-title').innerHTML = '<i class="fa fa-box-open"></i> Desarquivar Processo';
+                    document.getElementById('ditran-archive-panel-label').textContent = 'Motivo do Desarquivamento';
+                    document.getElementById('ditran-archive-panel-confirm').textContent = 'Confirmar Desarquivamento';
+                    document.getElementById('ditran-archive-panel-confirm').style.background = '#10b981';
+                } else {
+                    document.getElementById('ditran-archive-panel-title').innerHTML = '<i class="fa fa-archive"></i> Arquivar Processo';
+                    document.getElementById('ditran-archive-panel-label').textContent = 'Motivo do Arquivamento';
+                    document.getElementById('ditran-archive-panel-confirm').textContent = 'Confirmar Arquivamento';
+                    document.getElementById('ditran-archive-panel-confirm').style.background = '#ef4444';
+                }
+                panel.style.display = 'block';
+                reason.focus();
+            } else {
+                panel.style.display = 'none';
+                reason.value = '';
+            }
+        }
+
+        async function archiveProcessConfirm() {
+            const demandaId = document.getElementById('ditran-record-id').value;
+            const reasonVal = document.getElementById('ditran-archive-reason').value.trim();
+            const btnArchive = document.getElementById('btn-archive-process');
+
+            const isUnarchiving = btnArchive && btnArchive.textContent.includes('Desarquivar');
+
+            if (!reasonVal) {
+                alert('Por favor, informe a justificativa.');
+                return;
+            }
+
+            const confirmationMsg = isUnarchiving
+                ? 'Deseja realmente desarquivar este processo?'
+                : 'Deseja realmente arquivar este processo?';
+
+            if (!confirm(confirmationMsg)) return;
+
+            const targetStatus = isUnarchiving ? 'Aguardando Aprovação' : 'Arquivado';
+
+            const res = await supabase
+                .from('demandas_pai')
+                .update({
+                    status_geral: targetStatus,
+                    despacho_diretoria: reasonVal
+                })
+                .eq('id', demandaId);
+
+            if (res.error) {
+                showToast('Erro', 'Falha ao salvar: ' + res.error.message, 'error');
+            } else {
+                showToast('Sucesso', isUnarchiving ? 'Processo desarquivado com sucesso!' : 'Processo arquivado com sucesso!', 'success');
+                closeModal();
+                await loadConsolidatedData();
+            }
         }
 
         function toggleSidebar() {
@@ -2098,6 +2215,16 @@
             currentSelectedProject = p;
             const d = p.raw;
 
+            // Reset do Painel de Arquivamento
+            const archivePanel = document.getElementById('ditran-archive-panel');
+            if (archivePanel) archivePanel.style.display = 'none';
+            const archiveReason = document.getElementById('ditran-archive-reason');
+            if (archiveReason) archiveReason.value = '';
+            const archiveBanner = document.getElementById('ditran-archive-status-banner');
+            if (archiveBanner) archiveBanner.style.display = 'none';
+            const btnArchiveInit = document.getElementById('btn-archive-process');
+            if (btnArchiveInit) btnArchiveInit.style.display = 'none';
+
             const rc = document.getElementById('routing-container');
             if (rc) rc.innerHTML = '';
 
@@ -2156,6 +2283,37 @@
             if (!btnVDitran) { btnVDitran = document.createElement('button'); btnVDitran.id = 'btn-verify-local'; btnVDitran.innerHTML = '<i class="fa fa-magnifying-glass-location"></i> Verificar no Local'; const mh = document.querySelector('#ditran-modal .modal-header > div'); if (mh) mh.appendChild(btnVDitran); }
             btnVDitran.onclick = () => openAggrModal(d.id, d.protocolo_oficial, bairro, d.endereco || rua, d.cat_bairros && d.cat_bairros.cat_regionais ? d.cat_bairros.cat_regionais.nome_regional : '');
             btnVDitran.style.display = 'inline-flex';
+
+            // Arquivamento
+            const statusGeral = d.status_geral || 'Aguardando Aprovação';
+            const isArchived = statusGeral === 'Arquivado';
+            if (isArchived) {
+                document.getElementById('ditran-archive-status-reason').textContent = d.despacho_diretoria || 'Sem justificativa.';
+                if (archiveBanner) archiveBanner.style.display = 'flex';
+            } else {
+                if (archiveBanner) archiveBanner.style.display = 'none';
+            }
+
+            let btnArchive = document.getElementById('btn-archive-process');
+            if (!btnArchive) {
+                btnArchive = document.createElement('button');
+                btnArchive.id = 'btn-archive-process';
+                const mh = document.querySelector('#ditran-modal .modal-header > div');
+                if (mh) mh.appendChild(btnArchive);
+            }
+            if (isArchived) {
+                btnArchive.innerHTML = '<i class="fa fa-box-open"></i> Desarquivar';
+                btnArchive.style.background = 'rgba(16,185,129,0.08)';
+                btnArchive.style.borderColor = 'rgba(16,185,129,0.4)';
+                btnArchive.style.color = '#10b981';
+            } else {
+                btnArchive.innerHTML = '<i class="fa fa-archive"></i> Arquivar';
+                btnArchive.style.background = '';
+                btnArchive.style.borderColor = '';
+                btnArchive.style.color = '';
+            }
+            btnArchive.onclick = () => toggleArchivePanel(true);
+            btnArchive.style.display = 'inline-flex';
 
             populatePreviewTabs(d);
             switchTab('tab-visualizacao');

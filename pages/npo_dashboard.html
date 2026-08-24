@@ -2700,7 +2700,6 @@
                 setupModalNpoWriteAccess(isDesignadoNpo);
 
                 // Arquivamento
-                const statusNpo = p.status_npo || 'Aguardando Recebimento';
                 const isArchived = statusNpo === 'Arquivado';
                 const bannerArchive = document.getElementById('npo-archive-status-banner');
                 if (isArchived) {
@@ -3561,7 +3560,7 @@
 
             showToast('Sucesso', `Processo ${protocoloAtual} agregado a ${protocoloPrincipal} com sucesso!`, 'success');
             closeAggrModal();
-            await fetchProjects(); // recarrega tabela para exibir badge A
+            await fetchNpoProjects(); // recarrega tabela para exibir badge A
             // Reabre o modal para mostrar o banner atualizado
             const projeto = allNpoProjects.find(p => p.id_demanda_pai === idAtual);
             if (projeto) openNpoModal(projeto.id);
