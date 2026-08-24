@@ -521,6 +521,8 @@
             display: inline-flex; align-items: center; gap: 6px;
         }
         #btn-verify-local:hover { background: rgba(245,158,11,.18); border-color: #f59e0b; }
+        #btn-archive-process { padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; border-radius: 8px; border: 1px solid rgba(239,68,68,.4); background: rgba(239,68,68,.08); color: #ef4444; display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; }
+        #btn-archive-process:hover { background: rgba(239,68,68,.2); }
         
         .modal-close { background: transparent; border: none; color: var(--amc-text-muted); cursor: pointer; font-size: 1.4rem; transition: color .2s; }
         .modal-close:hover { color: #fff; }
@@ -907,6 +909,28 @@
                     <option value="Tapa Buraco">Tapa Buraco</option>
                 </select>
             </div>
+            <div class="filter-group">
+                <span class="filter-label">Status NPO</span>
+                <select id="filter-status" class="filter-input" onchange="applyFilters()">
+                    <option value="">Todos os status</option>
+                    <option value="Aguardando Recebimento">Aguardando Recebimento</option>
+                    <option value="Recebido">Recebido</option>
+                    <option value="Em Análise">Em Análise</option>
+                    <option value="Deferido">Deferido</option>
+                    <option value="Indeferido">Indeferido</option>
+                    <option value="Concluído">Concluído</option>
+                    <option value="Arquivado">Arquivado</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Prioridade</span>
+                <select id="filter-priority" class="filter-input" onchange="applyFilters()">
+                    <option value="">Todos os Processos</option>
+                    <option value="priority">Prioridades</option>
+                    <option value="common">Não prioritários</option>
+                    <option value="urgent">Urgentes</option>
+                </select>
+            </div>
         </div>
 
         <!-- Tabela -->
@@ -949,8 +973,27 @@
             </div>
 
             <div class="modal-body">
+                <!-- Painel de Arquivamento colapsável -->
+                <div id="npo-archive-panel" style="display:none; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 1.5rem;">
+                    <h4 id="npo-archive-panel-title" style="margin: 0 0 10px 0; color: #ef4444; font-size: 13px; font-weight: 700; text-transform: uppercase;"><i class="fa fa-archive"></i> Arquivar Processo</h4>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label id="npo-archive-panel-label" class="form-label" style="font-size: 11px;">Motivo do Arquivamento</label>
+                        <textarea id="npo-archive-reason" class="form-input" style="height: 80px; resize: vertical;" placeholder="Digite o motivo do arquivamento..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button type="button" class="btn-amc" style="background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="toggleArchivePanel(false)">Cancelar</button>
+                        <button type="button" id="npo-archive-panel-confirm" class="btn-amc" style="background: #ef4444; color: #fff; border: none; padding: 6px 14px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;" onclick="archiveProcessConfirm()">Confirmar Arquivamento</button>
+                    </div>
+                </div>
+
                 <!-- Banner de Prioridade DITRAN -->
                 <div id="npo-priority-banner" style="display:none;"></div>
+
+                <!-- Banner de Informação de Arquivamento -->
+                <div id="npo-archive-status-banner" style="display:none; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #ff6b6b; padding: 10px 14px; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                    <i class="fa fa-archive"></i>
+                    <span><strong>Processo Arquivado:</strong> <span id="npo-archive-status-reason" style="color: rgba(255, 255, 255, 0.85);"></span></span>
+                </div>
 
                 <!-- Banner de Agregação -->
                 <div id="npo-aggr-banner" class="aggr-banner" style="display:none;">
@@ -2009,9 +2052,12 @@
             const nucleoFilter = document.getElementById('filter-nucleo').value;
             const area = document.getElementById('filter-area').value;
             const tipo = document.getElementById('filter-tipo').value;
+            const status = document.getElementById('filter-status').value;
+            const priorityFilter = document.getElementById('filter-priority').value;
 
             filteredNpoProjects = allNpoProjects.filter(p => {
                 const d = p.demandas_pai;
+                const statusNpo = p.status_npo || 'Aguardando Recebimento';
                 const protocolo = d ? (d.protocolo_oficial || '').toLowerCase() : '';
                 const projeto = (p.numero_projeto || '').toLowerCase();
                 let local = d && d.ruas_fortaleza ? (d.ruas_fortaleza.nome || '').toLowerCase() : '';
@@ -2039,9 +2085,28 @@
                     matchesNucleo = nucleos.includes(nucleoFilter);
                 }
 
-                return matchesSearch && matchesArea && matchesTipo && matchesNucleo;
-            });
+                // Match status
+                let matchesStatus = false;
+                if (status === 'Arquivado') {
+                    matchesStatus = statusNpo === 'Arquivado';
+                } else if (status === '') {
+                    matchesStatus = statusNpo !== 'Arquivado';
+                } else {
+                    matchesStatus = statusNpo === status;
+                }
 
+                // Match priority
+                let matchesPriority = true;
+                if (priorityFilter === 'priority') {
+                    matchesPriority = d && d.prioridade_diretoria === true;
+                } else if (priorityFilter === 'common') {
+                    matchesPriority = !d || !d.prioridade_diretoria || d.prioridade_diretoria === false;
+                } else if (priorityFilter === 'urgent') {
+                    matchesPriority = d && d.urgente === true;
+                }
+
+                return matchesSearch && matchesArea && matchesTipo && matchesNucleo && matchesStatus && matchesPriority;
+            });
 
             renderTable(filteredNpoProjects);
         }
@@ -2206,6 +2271,16 @@
         async function openNpoModal(recordId) {
             const isNew = !recordId;
             vagasDiversasData = { implantar: {}, renovar: {}, apagar: {} };
+
+            // Reset do Painel de Arquivamento
+            const archivePanel = document.getElementById('npo-archive-panel');
+            if (archivePanel) archivePanel.style.display = 'none';
+            const archiveReason = document.getElementById('npo-archive-reason');
+            if (archiveReason) archiveReason.value = '';
+            const archiveBanner = document.getElementById('npo-archive-status-banner');
+            if (archiveBanner) archiveBanner.style.display = 'none';
+            const btnArchiveInit = document.getElementById('btn-archive-process');
+            if (btnArchiveInit) btnArchiveInit.style.display = 'none';
 
             if (document.getElementById('npo-priority-banner')) {
                 document.getElementById('npo-priority-banner').style.display = 'none';
@@ -2623,6 +2698,38 @@
                 setModalMode('view');
                 const isDesignadoNpo = p.demandas_pai && p.demandas_pai.nucleos_atribuidos && p.demandas_pai.nucleos_atribuidos.includes('NPO');
                 setupModalNpoWriteAccess(isDesignadoNpo);
+
+                // Arquivamento
+                const statusNpo = p.status_npo || 'Aguardando Recebimento';
+                const isArchived = statusNpo === 'Arquivado';
+                const bannerArchive = document.getElementById('npo-archive-status-banner');
+                if (isArchived) {
+                    document.getElementById('npo-archive-status-reason').textContent = p.parecer_tecnico || 'Sem justificativa.';
+                    if (bannerArchive) bannerArchive.style.display = 'flex';
+                } else {
+                    if (bannerArchive) bannerArchive.style.display = 'none';
+                }
+
+                let btnArchive = document.getElementById('btn-archive-process');
+                if (!btnArchive) {
+                    btnArchive = document.createElement('button');
+                    btnArchive.id = 'btn-archive-process';
+                    const modalHeader = document.getElementById('modal-sub-header');
+                    if (modalHeader) modalHeader.appendChild(btnArchive);
+                }
+                if (isArchived) {
+                    btnArchive.innerHTML = '<i class="fa fa-box-open"></i> Desarquivar';
+                    btnArchive.style.background = 'rgba(16,185,129,0.08)';
+                    btnArchive.style.borderColor = 'rgba(16,185,129,0.4)';
+                    btnArchive.style.color = '#10b981';
+                } else {
+                    btnArchive.innerHTML = '<i class="fa fa-archive"></i> Arquivar';
+                    btnArchive.style.background = '';
+                    btnArchive.style.borderColor = '';
+                    btnArchive.style.color = '';
+                }
+                btnArchive.onclick = () => toggleArchivePanel(true);
+                btnArchive.style.display = 'inline-flex';
             }
 
 
@@ -2631,6 +2738,8 @@
 
         function closeModal() {
             document.getElementById('npo-modal').classList.remove('show');
+            const btnArchive = document.getElementById('btn-archive-process');
+            if (btnArchive) btnArchive.style.display = 'none';
         }
 
         function toggleSidebar() {
@@ -3188,6 +3297,77 @@
                 showToast('Erro ao Salvar', error.message, 'error');
             } else {
                 showToast('Sucesso', 'Projeto salvo com sucesso!', 'success');
+                closeModal();
+                await fetchNpoProjects();
+            }
+        }
+
+        function toggleArchivePanel(show) {
+            const panel = document.getElementById('npo-archive-panel');
+            const reason = document.getElementById('npo-archive-reason');
+            const btnArchive = document.getElementById('btn-archive-process');
+            
+            const isArchived = btnArchive && btnArchive.textContent.includes('Desarquivar');
+            
+            if (show) {
+                if (isArchived) {
+                    document.getElementById('npo-archive-panel-title').innerHTML = '<i class="fa fa-box-open"></i> Desarquivar Processo';
+                    document.getElementById('npo-archive-panel-label').textContent = 'Motivo do Desarquivamento';
+                    document.getElementById('npo-archive-panel-confirm').textContent = 'Confirmar Desarquivamento';
+                    document.getElementById('npo-archive-panel-confirm').style.background = '#10b981';
+                } else {
+                    document.getElementById('npo-archive-panel-title').innerHTML = '<i class="fa fa-archive"></i> Arquivar Processo';
+                    document.getElementById('npo-archive-panel-label').textContent = 'Motivo do Arquivamento';
+                    document.getElementById('npo-archive-panel-confirm').textContent = 'Confirmar Arquivamento';
+                    document.getElementById('npo-archive-panel-confirm').style.background = '#ef4444';
+                }
+                panel.style.display = 'block';
+                reason.focus();
+            } else {
+                panel.style.display = 'none';
+                reason.value = '';
+            }
+        }
+
+        async function archiveProcessConfirm() {
+            const recordId = document.getElementById('npo-record-id').value;
+            const demandaId = document.getElementById('npo-demanda-id').value;
+            const reasonVal = document.getElementById('npo-archive-reason').value.trim();
+            const btnArchive = document.getElementById('btn-archive-process');
+            
+            const isUnarchiving = btnArchive && btnArchive.textContent.includes('Desarquivar');
+            
+            if (!reasonVal) {
+                alert('Por favor, informe a justificativa.');
+                return;
+            }
+            
+            const confirmationMsg = isUnarchiving 
+                ? 'Deseja realmente desarquivar este processo?' 
+                : 'Deseja realmente arquivar este processo?';
+                
+            if (!confirm(confirmationMsg)) return;
+            
+            const targetStatus = isUnarchiving ? 'Aguardando Recebimento' : 'Arquivado';
+            
+            let res;
+            if (recordId) {
+                res = await supabase.from('projetos_npo').update({
+                    status_npo: targetStatus,
+                    parecer_tecnico: reasonVal
+                }).eq('id', recordId);
+            } else {
+                res = await supabase.from('projetos_npo').insert({
+                    id_demanda_pai: demandaId,
+                    status_npo: targetStatus,
+                    parecer_tecnico: reasonVal
+                });
+            }
+            
+            if (res.error) {
+                showToast('Erro', 'Falha ao salvar: ' + res.error.message, 'error');
+            } else {
+                showToast('Sucesso', isUnarchiving ? 'Processo desarquivado com sucesso!' : 'Processo arquivado com sucesso!', 'success');
                 closeModal();
                 await fetchNpoProjects();
             }
