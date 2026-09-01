@@ -1136,23 +1136,38 @@
                         <span id="ditran-vist-avail-count" style="font-size: 11px; color: var(--amc-text-muted);">0 disponíveis</span>
                     </div>
 
-                    <!-- Filtros específicos para Processos Disponíveis -->
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <input type="text" id="ditran-vist-search" class="filter-input" placeholder="Buscar por protocolo, rua, solicitante..." oninput="renderDitranVistAvailable()" style="flex: 1; min-width: 180px; height: 36px; padding: 6px 12px; font-size: 12px;">
-                        <select id="ditran-vist-regional" class="filter-input" onchange="onDitranVistRegionalChange()" style="width: 150px; height: 36px; padding: 6px 12px; font-size: 12px;">
-                            <option value="">Todas as Regionais</option>
-                        </select>
-                        <select id="ditran-vist-bairro" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 160px; height: 36px; padding: 6px 12px; font-size: 12px;">
-                            <option value="">Todos os Bairros</option>
-                        </select>
-                        <select id="ditran-vist-type" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 150px; height: 36px; padding: 6px 12px; font-size: 12px;">
-                            <option value="">Todos os tipos</option>
-                        </select>
-                        <select id="ditran-vist-priority" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 140px; height: 36px; padding: 6px 12px; font-size: 12px;">
-                            <option value="all">Todas as prioridades</option>
-                            <option value="priority">Apenas Prioritários</option>
-                            <option value="urgent">Urgentes</option>
-                        </select>
+                    <!-- Filtros de Processos Disponíveis (3 Fixos + Gaveta Expansível) -->
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                        <!-- Linha Principal Fixa (3 Filtros + Botão Expansor) -->
+                        <div style="display: flex; gap: 10px; align-items: center; width: 100%;">
+                            <input type="text" id="ditran-vist-search" class="filter-input" placeholder="Buscar por protocolo, rua, solicitante..." oninput="renderDitranVistAvailable()" style="flex: 1; min-width: 160px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                            <select id="ditran-vist-regional" class="filter-input" onchange="onDitranVistRegionalChange()" style="width: 155px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                                <option value="">Todas as Regionais</option>
+                            </select>
+                            <select id="ditran-vist-bairro" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 165px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                                <option value="">Todos os Bairros</option>
+                            </select>
+                            <button type="button" id="btn-ditran-vist-toggle-adv" onclick="toggleDitranVistAdvFilters()" class="btn-amc" style="height: 36px; padding: 0 14px; border-radius: 8px; font-size: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; transition: all 0.2s;" title="Mais Filtros">
+                                <i class="fa fa-sliders"></i> <span>Filtros</span>
+                            </button>
+                        </div>
+
+                        <!-- Gaveta Expansível de Filtros Avançados -->
+                        <div id="ditran-vist-adv-panel" style="display: none; gap: 10px; align-items: center; background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                            <div style="flex: 1; display: flex; gap: 10px; align-items: center;">
+                                <select id="ditran-vist-type" class="filter-input" onchange="renderDitranVistAvailable()" style="flex: 1; height: 34px; padding: 6px 12px; font-size: 12px;">
+                                    <option value="">Todos os tipos</option>
+                                </select>
+                                <select id="ditran-vist-priority" class="filter-input" onchange="renderDitranVistAvailable()" style="flex: 1; height: 34px; padding: 6px 12px; font-size: 12px;">
+                                    <option value="all">Todas as prioridades</option>
+                                    <option value="priority">Apenas Prioritários</option>
+                                    <option value="urgent">Urgentes</option>
+                                </select>
+                            </div>
+                            <button type="button" onclick="clearDitranVistFilters()" class="btn-amc" style="height: 34px; padding: 0 12px; border-radius: 6px; font-size: 11px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;" title="Limpar todos os filtros">
+                                <i class="fa fa-rotate-left"></i> Limpar
+                            </button>
+                        </div>
                     </div>
 
                     <div style="overflow-y: auto; max-height: 550px;">
@@ -2874,6 +2889,67 @@
             renderDitranVistAvailable();
         }
 
+        function toggleDitranVistAdvFilters() {
+            const panel = document.getElementById('ditran-vist-adv-panel');
+            const btn = document.getElementById('btn-ditran-vist-toggle-adv');
+            if (!panel || !btn) return;
+
+            const isHidden = (panel.style.display === 'none' || panel.style.display === '');
+            if (isHidden) {
+                panel.style.display = 'flex';
+                updateDitranVistToggleBtnStyle();
+            } else {
+                panel.style.display = 'none';
+                updateDitranVistToggleBtnStyle();
+            }
+        }
+
+        function updateDitranVistToggleBtnStyle() {
+            const btn = document.getElementById('btn-ditran-vist-toggle-adv');
+            const panel = document.getElementById('ditran-vist-adv-panel');
+            if (!btn) return;
+
+            const typeFilter = document.getElementById('ditran-vist-type')?.value || '';
+            const priorityFilter = document.getElementById('ditran-vist-priority')?.value || 'all';
+            const hasActiveAdv = (typeFilter !== '' || priorityFilter !== 'all');
+            const isOpen = panel && panel.style.display === 'flex';
+
+            if (isOpen) {
+                btn.style.background = 'rgba(248, 183, 0, 0.15)';
+                btn.style.borderColor = 'rgba(248, 183, 0, 0.3)';
+                btn.style.color = '#f8b700';
+                btn.innerHTML = `<i class="fa fa-sliders"></i> <span>Filtros</span>`;
+            } else if (hasActiveAdv) {
+                btn.style.background = 'rgba(248, 183, 0, 0.15)';
+                btn.style.borderColor = 'rgba(248, 183, 0, 0.3)';
+                btn.style.color = '#f8b700';
+                btn.innerHTML = `<i class="fa fa-sliders"></i> <span>Filtros</span> <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#f8b700; margin-left:2px;"></span>`;
+            } else {
+                btn.style.background = 'rgba(255, 255, 255, 0.05)';
+                btn.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                btn.style.color = '#fff';
+                btn.innerHTML = `<i class="fa fa-sliders"></i> <span>Filtros</span>`;
+            }
+        }
+
+        function clearDitranVistFilters() {
+            const searchInput = document.getElementById('ditran-vist-search');
+            const regSelect = document.getElementById('ditran-vist-regional');
+            const bairroSelect = document.getElementById('ditran-vist-bairro');
+            const typeSelect = document.getElementById('ditran-vist-type');
+            const priorSelect = document.getElementById('ditran-vist-priority');
+
+            if (searchInput) searchInput.value = '';
+            if (regSelect) regSelect.value = '';
+            populateDitranVistBairros('');
+            if (bairroSelect) bairroSelect.value = '';
+            if (typeSelect) typeSelect.value = '';
+            if (priorSelect) priorSelect.value = 'all';
+
+            updateDitranVistToggleBtnStyle();
+            renderDitranVistAvailable();
+        }
+
         function selectVistTeam(teamName) {
             selectedVistTeam = teamName;
             const infoDiv = document.getElementById('ditran-vist-selected-team-info');
@@ -2992,6 +3068,8 @@
 
                 return true;
             });
+
+            updateDitranVistToggleBtnStyle();
 
             if (countSpan) countSpan.innerText = `${available.length} disponíveis`;
 
