@@ -1138,11 +1138,17 @@
 
                     <!-- Filtros específicos para Processos Disponíveis -->
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <input type="text" id="ditran-vist-search" class="filter-input" placeholder="Buscar por protocolo, rua, bairro, solicitante..." oninput="renderDitranVistAvailable()" style="flex: 1; min-width: 200px; height: 36px; padding: 6px 12px; font-size: 12px;">
-                        <select id="ditran-vist-type" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 170px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                        <input type="text" id="ditran-vist-search" class="filter-input" placeholder="Buscar por protocolo, rua, solicitante..." oninput="renderDitranVistAvailable()" style="flex: 1; min-width: 180px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                        <select id="ditran-vist-regional" class="filter-input" onchange="onDitranVistRegionalChange()" style="width: 150px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                            <option value="">Todas as Regionais</option>
+                        </select>
+                        <select id="ditran-vist-bairro" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 160px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                            <option value="">Todos os Bairros</option>
+                        </select>
+                        <select id="ditran-vist-type" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 150px; height: 36px; padding: 6px 12px; font-size: 12px;">
                             <option value="">Todos os tipos</option>
                         </select>
-                        <select id="ditran-vist-priority" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 170px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                        <select id="ditran-vist-priority" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 140px; height: 36px; padding: 6px 12px; font-size: 12px;">
                             <option value="all">Todas as prioridades</option>
                             <option value="priority">Apenas Prioritários</option>
                             <option value="urgent">Urgentes</option>
@@ -2797,20 +2803,75 @@
         }
 
         function initDitranVistoriaFilters() {
+            // 1. Tipos de Solicitação
             const typeSelect = document.getElementById('ditran-vist-type');
-            if (!typeSelect) return;
-            typeSelect.innerHTML = '<option value="">Todos os tipos</option>';
-            const types = new Set();
+            if (typeSelect) {
+                typeSelect.innerHTML = '<option value="">Todos os tipos</option>';
+                const types = new Set();
+                rawData.forEach(p => {
+                    const t = p.tipo_solicitacao || p.raw?.tipo_solicitacao || p.raw?.tipos_solicitacao?.nome_tipo;
+                    if (t && t.trim()) types.add(t.trim());
+                });
+                Array.from(types).sort().forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t;
+                    opt.textContent = t;
+                    typeSelect.appendChild(opt);
+                });
+            }
+
+            // 2. Regionais
+            const regionalSelect = document.getElementById('ditran-vist-regional');
+            if (regionalSelect) {
+                regionalSelect.innerHTML = '<option value="">Todas as Regionais</option>';
+                const regionais = new Set();
+                rawData.forEach(p => {
+                    const r = p.nome_regional || p.raw?.cat_bairros?.cat_regionais?.nome_regional;
+                    if (r && r.trim() && r !== '—') regionais.add(r.trim());
+                });
+                Array.from(regionais).sort().forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r;
+                    const rDisplay = String(r).toLowerCase().startsWith('regional') ? r : `Regional ${r}`;
+                    opt.textContent = rDisplay;
+                    regionalSelect.appendChild(opt);
+                });
+            }
+
+            // 3. Bairros (inicialmente todos)
+            populateDitranVistBairros('');
+        }
+
+        function populateDitranVistBairros(selectedRegional) {
+            const bairroSelect = document.getElementById('ditran-vist-bairro');
+            if (!bairroSelect) return;
+            bairroSelect.innerHTML = '<option value="">Todos os Bairros</option>';
+            const bairros = new Set();
+
             rawData.forEach(p => {
-                const t = p.tipo_solicitacao || p.raw?.tipo_solicitacao || p.raw?.tipos_solicitacao?.nome_tipo;
-                if (t && t.trim()) types.add(t.trim());
+                const reg = p.nome_regional || p.raw?.cat_bairros?.cat_regionais?.nome_regional || '';
+                const b = p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '';
+                if (!b || b.trim() === '' || b === 'Sem Bairro' || b === '—') return;
+
+                if (!selectedRegional || reg === selectedRegional) {
+                    bairros.add(b.trim());
+                }
             });
-            Array.from(types).sort().forEach(t => {
+
+            Array.from(bairros).sort().forEach(b => {
                 const opt = document.createElement('option');
-                opt.value = t;
-                opt.textContent = t;
-                typeSelect.appendChild(opt);
+                opt.value = b;
+                opt.textContent = b;
+                bairroSelect.appendChild(opt);
             });
+        }
+
+        function onDitranVistRegionalChange() {
+            const regional = document.getElementById('ditran-vist-regional')?.value || '';
+            populateDitranVistBairros(regional);
+            const bairroSelect = document.getElementById('ditran-vist-bairro');
+            if (bairroSelect) bairroSelect.value = '';
+            renderDitranVistAvailable();
         }
 
         function selectVistTeam(teamName) {
@@ -2887,6 +2948,8 @@
             tbody.innerHTML = '';
 
             const search = (document.getElementById('ditran-vist-search')?.value || '').toLowerCase().trim();
+            const regionalFilter = document.getElementById('ditran-vist-regional')?.value || '';
+            const bairroFilter = document.getElementById('ditran-vist-bairro')?.value || '';
             const typeFilter = document.getElementById('ditran-vist-type')?.value || '';
             const priorityFilter = document.getElementById('ditran-vist-priority')?.value || 'all';
 
@@ -2903,10 +2966,20 @@
                 const prot = (p.protocolo_oficial || p.raw?.protocolo_oficial || '').toLowerCase();
                 const rua = (p.nome_rua || p.raw?.ruas_fortaleza?.nome || p.endereco || '').toLowerCase();
                 const bairro = (p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '').toLowerCase();
+                const rawBairro = (p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '');
+                const reg = (p.nome_regional || p.raw?.cat_bairros?.cat_regionais?.nome_regional || '');
                 const solicitante = (p.solicitante_oficial || p.raw?.solicitante_oficial || '').toLowerCase();
                 const t = (p.tipo_solicitacao || p.raw?.tipo_solicitacao || p.raw?.tipos_solicitacao?.nome_tipo || '').trim();
 
                 if (search && !prot.includes(search) && !rua.includes(search) && !bairro.includes(search) && !solicitante.includes(search)) {
+                    return false;
+                }
+
+                if (regionalFilter && reg !== regionalFilter) {
+                    return false;
+                }
+
+                if (bairroFilter && rawBairro !== bairroFilter) {
                     return false;
                 }
 
