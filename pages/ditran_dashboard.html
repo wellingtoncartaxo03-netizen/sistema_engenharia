@@ -930,6 +930,61 @@
             border-color: rgba(239,68,68,0.4);
             color: #ef4444;
         }
+
+        /* --- Visualização de Vistoria DITRAN (Tela Cheia) --- */
+        #btn-ditran-vistoria.active {
+            background: var(--amc-primary) !important;
+            color: #000 !important;
+            box-shadow: 0 0 15px rgba(248, 183, 0, 0.35);
+        }
+        .ditran-team-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 14px;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .ditran-team-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(248, 183, 0, 0.3);
+        }
+        .ditran-team-card.selected {
+            background: rgba(248, 183, 0, 0.06);
+            border-color: var(--amc-primary);
+            box-shadow: 0 0 12px rgba(248, 183, 0, 0.25);
+        }
+        .ditran-mission-item {
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .btn-ditran-action {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            transition: all 0.2s;
+        }
+        .btn-ditran-action:hover {
+            background: rgba(248, 183, 0, 0.2);
+            border-color: var(--amc-primary);
+            color: var(--amc-primary);
+        }
     </style>
 </head>
 <body>
@@ -1035,10 +1090,82 @@
                 <button class="btn-amc" id="btn-ditran-relatorio" onclick="openReportModalDITRAN()" style="height: 38px; border-radius: 12px; background: rgba(248, 183, 0, 0.15); border: 1px solid rgba(248, 183, 0, 0.3); color: #f8b700; display: inline-flex; align-items: center; gap: 8px; font-family: inherit; font-weight: 600; cursor: pointer;">
                     <i class="fa fa-file-invoice"></i> Relatório
                 </button>
+                <button class="btn-amc" id="btn-ditran-vistoria" onclick="toggleDitranVistoriaView()" style="height: 38px; border-radius: 12px; background: rgba(248, 183, 0, 0.15); border: 1px solid rgba(248, 183, 0, 0.3); color: #f8b700; display: inline-flex; align-items: center; gap: 8px; font-family: inherit; font-weight: 600; cursor: pointer;">
+                    <i class="fa fa-clipboard-list"></i> Vistoria
+                </button>
                 <div class="header-status glass-dark" id="role-badge">
                     <i class="fa fa-info-circle"></i>
                     <span>Carregando perfil...</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Painel de Vistoria DITRAN (Tela Cheia) -->
+        <div id="ditran-vistoria-view" style="display: none; flex-direction: column; gap: 15px; margin-bottom: 1.5rem;">
+            <!-- Linha superior de controles da Vistoria -->
+            <div class="glass-dark" style="display: flex; gap: 15px; align-items: center; justify-content: space-between; padding: 12px 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                <div id="ditran-vist-selected-team-info" style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85); display: flex; align-items: center; gap: 8px;">
+                    <i class="fa fa-users" style="color: var(--amc-primary);"></i> Equipe Ativa: <strong style="color:var(--amc-primary);">Equipe 1</strong> (Vistoria DITRAN)
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="btn-amc btn-primary-amc" onclick="imprimirRoteiroVistoriaDitran()" style="height: 36px; padding: 0 16px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        <i class="fa fa-print"></i> Imprimir Roteiro
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grid de Duas Colunas -->
+            <div style="display: grid; grid-template-columns: 35% 1fr; gap: 20px; min-height: 500px; align-items: stretch;">
+                
+                <!-- Coluna Esquerda: Equipes de Vistoria -->
+                <div class="glass" style="background: rgba(248, 183, 0, 0.02); border: 1px solid rgba(248, 183, 0, 0.1); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 15px;">
+                    <h3 style="font-family:'Oswald',sans-serif; font-size:1.2rem; color: var(--amc-primary); border-bottom: 1px solid rgba(248, 183, 0, 0.15); padding-bottom: 8px; margin: 0; display:flex; align-items:center; gap:8px;">
+                        <i class="fa fa-users-gear"></i> Equipes de Vistoria
+                    </h3>
+                    <div id="ditran-vist-teams-list" style="display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: 650px;">
+                        <!-- Injetado dinamicamente via JS -->
+                    </div>
+                </div>
+
+                <!-- Coluna Direita: Processos Disponíveis -->
+                <div class="glass" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 8px;">
+                        <h3 style="font-family:'Oswald',sans-serif; font-size:1.2rem; color: #fff; margin: 0; display:flex; align-items:center; gap:8px;">
+                            <i class="fa fa-folder-open"></i> Processos Disponíveis
+                        </h3>
+                        <span id="ditran-vist-avail-count" style="font-size: 11px; color: var(--amc-text-muted);">0 disponíveis</span>
+                    </div>
+
+                    <!-- Filtros específicos para Processos Disponíveis -->
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <input type="text" id="ditran-vist-search" class="filter-input" placeholder="Buscar por protocolo, rua, bairro, solicitante..." oninput="renderDitranVistAvailable()" style="flex: 1; min-width: 200px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                        <select id="ditran-vist-type" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 170px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                            <option value="">Todos os tipos</option>
+                        </select>
+                        <select id="ditran-vist-priority" class="filter-input" onchange="renderDitranVistAvailable()" style="width: 170px; height: 36px; padding: 6px 12px; font-size: 12px;">
+                            <option value="all">Todas as prioridades</option>
+                            <option value="priority">Apenas Prioritários</option>
+                            <option value="urgent">Urgentes</option>
+                        </select>
+                    </div>
+
+                    <div style="overflow-y: auto; max-height: 550px;">
+                        <table id="ditran-vist-available-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+                                    <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 700; width: 60px;">Ação</th>
+                                    <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 700; width: 140px;">Processo</th>
+                                    <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 700;">Local / Bairro</th>
+                                    <th style="padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; color: var(--amc-text-muted); font-weight: 700; width: 160px;">Tipo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ditran-vist-available-tbody">
+                                <!-- Injetado dinamicamente via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -2628,6 +2755,357 @@
             showToast('Removido', 'Arquivo desanexado. Salve o despacho para confirmar.', 'info');
         }
 
+        // ─── LÓGICA DE VISTORIA DITRAN (TELA CHEIA) ───
+        let isVistoriaMode = false;
+        let selectedVistTeam = 'Equipe 1';
+        let ditranVistAllocations = {
+            'Equipe 1': [],
+            'Equipe 2': [],
+            'Equipe 3': []
+        };
+
+        function toggleDitranVistoriaView() {
+            isVistoriaMode = !isVistoriaMode;
+            const btn = document.getElementById('btn-ditran-vistoria');
+            const kpiGrid = document.querySelector('.kpi-grid');
+            const filterBar = document.querySelector('.filter-bar');
+            const advFilters = document.getElementById('advanced-filters-panel');
+            const tableContainer = document.querySelector('.table-container');
+            const vistoriaView = document.getElementById('ditran-vistoria-view');
+
+            if (isVistoriaMode) {
+                btn.innerHTML = '<i class="fa fa-table"></i> Visualizar Tabela';
+                btn.classList.add('active');
+                if (kpiGrid) kpiGrid.style.display = 'none';
+                if (filterBar) filterBar.style.display = 'none';
+                if (advFilters) advFilters.style.display = 'none';
+                if (tableContainer) tableContainer.style.display = 'none';
+                if (vistoriaView) vistoriaView.style.display = 'flex';
+
+                initDitranVistoriaFilters();
+                renderDitranVistoriaView();
+            } else {
+                btn.innerHTML = '<i class="fa fa-clipboard-list"></i> Vistoria';
+                btn.classList.remove('active');
+                if (kpiGrid) kpiGrid.style.display = 'grid';
+                if (filterBar) filterBar.style.display = 'flex';
+                if (tableContainer) tableContainer.style.display = 'block';
+                if (vistoriaView) vistoriaView.style.display = 'none';
+
+                filterData();
+            }
+        }
+
+        function initDitranVistoriaFilters() {
+            const typeSelect = document.getElementById('ditran-vist-type');
+            if (!typeSelect) return;
+            typeSelect.innerHTML = '<option value="">Todos os tipos</option>';
+            const types = new Set();
+            rawData.forEach(p => {
+                const t = p.tipo_solicitacao || p.raw?.tipo_solicitacao || p.raw?.tipos_solicitacao?.nome_tipo;
+                if (t && t.trim()) types.add(t.trim());
+            });
+            Array.from(types).sort().forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                typeSelect.appendChild(opt);
+            });
+        }
+
+        function selectVistTeam(teamName) {
+            selectedVistTeam = teamName;
+            const infoDiv = document.getElementById('ditran-vist-selected-team-info');
+            if (infoDiv) {
+                infoDiv.innerHTML = `<i class="fa fa-users" style="color: var(--amc-primary);"></i> Equipe Ativa: <strong style="color:var(--amc-primary);">${teamName}</strong> (Vistoria DITRAN)`;
+            }
+            renderDitranVistTeams();
+        }
+
+        function renderDitranVistoriaView() {
+            renderDitranVistTeams();
+            renderDitranVistAvailable();
+        }
+
+        function renderDitranVistTeams() {
+            const container = document.getElementById('ditran-vist-teams-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            Object.keys(ditranVistAllocations).forEach(teamName => {
+                const missions = ditranVistAllocations[teamName] || [];
+                const isSelected = (teamName === selectedVistTeam);
+
+                const card = document.createElement('div');
+                card.className = `ditran-team-card ${isSelected ? 'selected' : ''}`;
+                card.onclick = () => selectVistTeam(teamName);
+
+                let missionsHtml = '';
+                if (missions.length > 0) {
+                    missions.forEach(m => {
+                        const prot = m.protocolo_oficial || m.raw?.protocolo_oficial || '—';
+                        const rua = m.nome_rua || m.raw?.ruas_fortaleza?.nome || m.endereco || '';
+                        const bairro = m.nome_bairro || m.raw?.cat_bairros?.nome_bairro || '';
+                        const local = rua || '—';
+
+                        missionsHtml += `
+                            <div class="ditran-mission-item" onclick="event.stopPropagation()">
+                                <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${prot} — ${local} (${bairro})">
+                                    <b style="color:#fff;">${prot}</b> <span style="color:var(--amc-text-muted);">— ${local}</span>
+                                </div>
+                                <button type="button" class="btn-ditran-action" onclick="removeProcessFromVistTeam('${teamName}', '${m.id}')" title="Desalocar Processo">
+                                    <i class="fa fa-arrow-right-long"></i>
+                                </button>
+                            </div>
+                        `;
+                    });
+                } else {
+                    missionsHtml = `<div style="font-size:11px; color:var(--amc-text-muted); text-align:center; padding:8px 0;">Nenhum processo alocado</div>`;
+                }
+
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-weight:700; font-size:14px; color:${isSelected ? 'var(--amc-primary)' : '#fff'}; display:flex; align-items:center; gap:8px;">
+                            <i class="fa fa-users"></i> ${teamName}
+                        </span>
+                        <span class="badge-generic" style="font-size:10px; background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:6px; color:#fff;">${missions.length}</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--amc-text-muted); margin-bottom:8px;">Vistoria de Campo DITRAN</div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        ${missionsHtml}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function renderDitranVistAvailable() {
+            const tbody = document.getElementById('ditran-vist-available-tbody');
+            const countSpan = document.getElementById('ditran-vist-avail-count');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const search = (document.getElementById('ditran-vist-search')?.value || '').toLowerCase().trim();
+            const typeFilter = document.getElementById('ditran-vist-type')?.value || '';
+            const priorityFilter = document.getElementById('ditran-vist-priority')?.value || 'all';
+
+            // Conjunto de IDs já alocados
+            const allocatedIds = new Set();
+            Object.values(ditranVistAllocations).forEach(list => {
+                list.forEach(p => allocatedIds.add(String(p.id)));
+            });
+
+            // Filtra disponíveis
+            const available = rawData.filter(p => {
+                if (allocatedIds.has(String(p.id))) return false;
+
+                const prot = (p.protocolo_oficial || p.raw?.protocolo_oficial || '').toLowerCase();
+                const rua = (p.nome_rua || p.raw?.ruas_fortaleza?.nome || p.endereco || '').toLowerCase();
+                const bairro = (p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '').toLowerCase();
+                const solicitante = (p.solicitante_oficial || p.raw?.solicitante_oficial || '').toLowerCase();
+                const t = (p.tipo_solicitacao || p.raw?.tipo_solicitacao || p.raw?.tipos_solicitacao?.nome_tipo || '').trim();
+
+                if (search && !prot.includes(search) && !rua.includes(search) && !bairro.includes(search) && !solicitante.includes(search)) {
+                    return false;
+                }
+
+                if (typeFilter && t !== typeFilter) {
+                    return false;
+                }
+
+                if (priorityFilter === 'priority' && p.prioridade_diretoria !== true) return false;
+                if (priorityFilter === 'urgent' && p.urgente !== true) return false;
+
+                return true;
+            });
+
+            if (countSpan) countSpan.innerText = `${available.length} disponíveis`;
+
+            if (available.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align:center; color:var(--amc-text-muted); padding:3rem 0;">
+                            Nenhum processo disponível para os filtros selecionados.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            available.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
+
+                const prot = p.protocolo_oficial || p.raw?.protocolo_oficial || '—';
+                const rua = p.nome_rua || p.raw?.ruas_fortaleza?.nome || p.endereco || '—';
+                const bairro = p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '';
+                const tipo = p.tipo_solicitacao || p.raw?.tipo_solicitacao || p.raw?.tipos_solicitacao?.nome_tipo || '—';
+
+                let priorDisplay = '';
+                if (p.urgente === true) {
+                    priorDisplay = `<i class="fa fa-triangle-exclamation" style="color:#ef4444; margin-right: 4px;" title="Urgente"></i>`;
+                } else if (p.prioridade_diretoria === true) {
+                    priorDisplay = `<i class="fa fa-triangle-exclamation" style="color:var(--amc-primary); margin-right: 4px;" title="Prioritário"></i>`;
+                }
+
+                tr.innerHTML = `
+                    <td style="padding: 10px 8px;">
+                        <button type="button" class="btn-ditran-action" onclick="assignProcessToVistTeam('${p.id}')" title="Alocar para ${selectedVistTeam}">
+                            <i class="fa fa-arrow-left-long"></i>
+                        </button>
+                    </td>
+                    <td style="padding: 10px 8px; font-weight:700; color:#fff;">
+                        ${priorDisplay}${prot}
+                    </td>
+                    <td style="padding: 10px 8px;">
+                        ${rua} <br><small style="color:var(--amc-text-muted); font-size:11px;">${bairro}</small>
+                    </td>
+                    <td style="padding: 10px 8px;">
+                        <span class="badge-generic" style="font-size:10px; padding:2px 6px; border:none; background:rgba(255,255,255,0.06); color:#fff;">${tipo}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function assignProcessToVistTeam(processId) {
+            if (!selectedVistTeam) {
+                showToast('Aviso', 'Selecione uma equipe de vistoria à esquerda.', 'error');
+                return;
+            }
+            const process = rawData.find(p => String(p.id) === String(processId));
+            if (!process) return;
+
+            if (!ditranVistAllocations[selectedVistTeam]) {
+                ditranVistAllocations[selectedVistTeam] = [];
+            }
+
+            const exists = ditranVistAllocations[selectedVistTeam].some(p => String(p.id) === String(processId));
+            if (!exists) {
+                ditranVistAllocations[selectedVistTeam].push(process);
+            }
+
+            renderDitranVistoriaView();
+        }
+
+        function removeProcessFromVistTeam(teamName, processId) {
+            if (!ditranVistAllocations[teamName]) return;
+            ditranVistAllocations[teamName] = ditranVistAllocations[teamName].filter(p => String(p.id) !== String(processId));
+            renderDitranVistoriaView();
+        }
+
+        function imprimirRoteiroVistoriaDitran() {
+            let totalAllocated = 0;
+            Object.values(ditranVistAllocations).forEach(list => {
+                totalAllocated += list.length;
+            });
+
+            if (totalAllocated === 0) {
+                showToast('Aviso', 'Selecione ao menos um processo para alguma equipe antes de imprimir o roteiro.', 'error');
+                return;
+            }
+
+            let tablesHtml = '';
+            Object.keys(ditranVistAllocations).forEach(teamName => {
+                const missions = ditranVistAllocations[teamName];
+                if (missions.length === 0) return;
+
+                tablesHtml += `
+                    <div class="team-section" style="margin-top: 1.5rem; margin-bottom: 2rem; page-break-inside: avoid;">
+                        <h4 style="color: #f8b700; border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-bottom: 10px; font-weight: 700; font-size: 13px; text-transform: uppercase;">
+                            <i class="fa fa-users" style="margin-right:6px;"></i> Vistoria DITRAN — ${teamName} (Total: ${missions.length})
+                        </h4>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; margin-bottom: 1rem;">
+                            <thead>
+                                <tr style="background: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
+                                    <th style="padding: 8px 10px; width: 130px;">Protocolo</th>
+                                    <th style="padding: 8px 10px;">Local / Endereço</th>
+                                    <th style="padding: 8px 10px; width: 160px;">Bairro / Regional</th>
+                                    <th style="padding: 8px 10px; width: 140px;">Tipo de Solicitação</th>
+                                    <th style="padding: 8px 10px; width: 120px;">Assinatura / Visto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                missions.forEach(p => {
+                    const prot = p.protocolo_oficial || p.raw?.protocolo_oficial || '—';
+                    const rua = p.nome_rua || p.raw?.ruas_fortaleza?.nome || p.endereco || '—';
+                    const bairro = p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '—';
+                    const reg = p.nome_regional || p.raw?.cat_bairros?.cat_regionais?.nome_regional || '—';
+                    const regDisplay = String(reg).toLowerCase().startsWith('regional') ? reg : `Regional ${reg}`;
+                    const tipo = p.tipo_solicitacao || p.raw?.tipo_solicitacao || p.raw?.tipos_solicitacao?.nome_tipo || '—';
+
+                    tablesHtml += `
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 8px 10px; font-weight: 700;">${prot}</td>
+                            <td style="padding: 8px 10px;">${rua}</td>
+                            <td style="padding: 8px 10px;">${bairro} / ${regDisplay}</td>
+                            <td style="padding: 8px 10px;">${tipo}</td>
+                            <td style="padding: 8px 10px; border-bottom: 1px dotted #ccc;"></td>
+                        </tr>
+                    `;
+                });
+
+                tablesHtml += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            });
+
+            const printWin = window.open('', '_blank');
+            if (!printWin) {
+                alert('Pop-up bloqueado. Permita os pop-ups para imprimir o relatório.');
+                return;
+            }
+
+            const dataEmissao = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+
+            printWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Roteiro de Vistoria de Campo — DITRAN</title>
+                    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; color: #1f2937; }
+                        .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 10px; margin-bottom: 20px; }
+                        .header h2 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.05em; }
+                        .header p { margin: 4px 0 0; font-size: 12px; color: #6b7280; }
+                        .meta-info { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; }
+                        @media print {
+                            body { margin: 0; }
+                            .no-print { display: none !important; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h2>Autarquia Municipal de Trânsito e Cidadania — AMC</h2>
+                        <p>DITRAN — Roteiro de Vistoria de Campo</p>
+                    </div>
+                    <div class="meta-info">
+                        <div><strong>Data de Emissão:</strong> ${dataEmissao}</div>
+                        <div><strong>Total de Processos Programados:</strong> ${totalAllocated}</div>
+                    </div>
+                    ${tablesHtml}
+                    <div style="margin-top: 40px; text-align: center; font-size: 11px; color: #9ca3af; border-top: 1px solid #eee; padding-top: 10px;">
+                        Sistema de Engenharia AMC — Roteiro de Vistoria Gerado Automaticamente
+                    </div>
+                    ${'<' + 'script' + '>'}
+                        window.onload = function() {
+                            window.print();
+                        };
+                    ${'<' + '/script' + '>'}
+                </body>
+                </html>
+            `);
+            printWin.document.close();
+        }
+
         // ─── DITRAN Report Logic — via reports.js (shared) ───
         const ditranReportConfig = {
             title: 'Diretoria (DITRAN)',
@@ -2655,7 +3133,6 @@
             },
             hasOS: false,
             hasCriteriaReport: true,
-            hasVistoriaReport: true,
             valueResolver: (p) => {
                 // Se for obra e tiver valor medido na NCO, usa ele
                 const nco = p.raw?.execucao_nco?.[0] || p.raw?.execucao_nco;

@@ -144,96 +144,6 @@
                 border-bottom-color: var(--rep-color, #a78bfa) !important;
                 background: rgba(255,255,255,0.03) !important;
             }
-
-            /* Cards de equipe de vistoria */
-            .rep-team-card {
-                background: rgba(255,255,255,0.02);
-                border: 1px solid rgba(255,255,255,0.06);
-                border-radius: 10px;
-                padding: 12px;
-                cursor: pointer;
-                transition: all 0.25s ease;
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-            }
-            .rep-team-card:hover {
-                background: rgba(255,255,255,0.05);
-                border-color: rgba(255,255,255,0.15);
-            }
-            .rep-team-card.selected {
-                border-color: var(--rep-color, #a78bfa);
-                background: color-mix(in srgb, var(--rep-color) 8%, transparent);
-                box-shadow: 0 0 10px color-mix(in srgb, var(--rep-color) 15%, transparent);
-            }
-            .rep-team-card-title {
-                font-family: 'Oswald', sans-serif;
-                font-weight: 700;
-                font-size: 13px;
-                color: #fff;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-            }
-            .rep-team-card-sub {
-                font-size: 10px;
-                color: #9ca3af;
-                text-transform: uppercase;
-                letter-spacing: 0.03em;
-            }
-            .rep-team-card-missions {
-                margin-top: 8px;
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-            }
-            .rep-team-mission-item {
-                font-size: 11px;
-                background: rgba(255,255,255,0.03);
-                border: 1px solid rgba(255,255,255,0.05);
-                border-radius: 6px;
-                padding: 5px 8px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                color: rgba(255,255,255,0.9);
-                gap: 6px;
-            }
-            .rep-team-mission-item:hover {
-                background: rgba(255,255,255,0.06);
-            }
-            .rep-team-mission-item button {
-                background: transparent;
-                border: none;
-                color: #ef4444;
-                cursor: pointer;
-                padding: 2px 4px;
-                font-size: 11px;
-                border-radius: 4px;
-                transition: background 0.2s;
-            }
-            .rep-team-mission-item button:hover {
-                background: rgba(239,68,68,0.15);
-                color: #f87171;
-            }
-            
-            /* Tabela de disponíveis */
-            .rep-table-available th {
-                padding: 8px 10px;
-                font-size: 9px;
-                text-transform: uppercase;
-                color: #9ca3af;
-                font-weight: 700;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
-            }
-            .rep-table-available td {
-                padding: 8px 10px;
-                border-bottom: 1px solid rgba(255,255,255,0.04);
-                vertical-align: middle;
-            }
-            .rep-table-available tr:hover {
-                background: rgba(255,255,255,0.01);
-            }
         `;
         document.head.appendChild(style);
     }
@@ -313,65 +223,6 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Container de Seleção de Vistoria -->
-                        <div id="rep-vistoria-container" style="display:none; flex-direction:column; gap:16px; margin-bottom:16px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
-                            <!-- Barra de Filtros Interna -->
-                            <div class="rep-filter-grid" id="rep-vist-filters" style="margin-bottom: 4px;">
-                                <div>
-                                    <label class="form-label">Buscar Processos</label>
-                                    <input type="text" id="rep-vist-search" class="form-input" placeholder="Buscar por protocolo, endereço..." oninput="window._repUpdateVistoriaView()">
-                                </div>
-                                <div>
-                                    <label class="form-label">Tipo de Solicitação</label>
-                                    <select id="rep-vist-type" class="form-input" onchange="window._repUpdateVistoriaView()">
-                                        <option value="">Todos os tipos</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="form-label">Prioridade/Urgência</label>
-                                    <select id="rep-vist-priority" class="form-input" onchange="window._repUpdateVistoriaView()">
-                                        <option value="all">Todos</option>
-                                        <option value="priority">Apenas Prioritários</option>
-                                        <option value="urgent">Apenas Urgentes</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <!-- Grid de Duas Colunas (Equipes x Disponíveis) -->
-                            <div style="display: grid; grid-template-columns: 35% 1fr; gap: 20px; min-height: 380px;">
-                                <!-- Coluna Esquerda: Equipes de Vistoria -->
-                                <div class="glass-dark" style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 12px;">
-                                    <h5 style="font-family:'Oswald',sans-serif; font-size:1.1rem; color:var(--rep-color); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin: 0; display:flex; align-items:center; gap:8px;">
-                                        <i class="fa fa-users-gear"></i> Equipes de Vistoria
-                                    </h5>
-                                    <div id="rep-vist-teams-list" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 320px;">
-                                        <!-- Injetado via JS -->
-                                    </div>
-                                </div>
-                                
-                                <!-- Coluna Direita: Processos Disponíveis -->
-                                <div class="glass-dark" style="background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 12px;">
-                                    <h5 style="font-family:'Oswald',sans-serif; font-size:1.1rem; color:#fff; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; margin: 0; display:flex; align-items:center; gap:8px;">
-                                        <i class="fa fa-folder-open"></i> Processos Disponíveis
-                                    </h5>
-                                    <div style="overflow-y: auto; max-height: 320px;">
-                                        <table class="rep-table-available" style="width: 100%; border-collapse: collapse; font-size: 12px; color: #fff;">
-                                            <thead>
-                                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left;">
-                                                    <th style="padding: 6px; color: #9ca3af; font-size: 10px; text-transform: uppercase; width: 60px;">Ação</th>
-                                                    <th style="padding: 6px; color: #9ca3af; font-size: 10px; text-transform: uppercase; width: 120px;">Processo</th>
-                                                    <th style="padding: 6px; color: #9ca3af; font-size: 10px; text-transform: uppercase;">Local</th>
-                                                    <th style="padding: 6px; color: #9ca3af; font-size: 10px; text-transform: uppercase;">Tipo</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="rep-vist-available-tbody">
-                                                <!-- Injetado via JS -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- Botões de Ação -->
                         <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:4px;">
@@ -441,13 +292,6 @@
             </div>
             `;
         }
-        if (config.hasVistoriaReport) {
-            tabsHtml += `
-            <div class="empresa-tab-btn" id="tab-rep-vistoria" onclick="window._repSwitchTab('vistoria')" style="cursor:pointer;">
-                <i class="fa fa-route" style="margin-right:6px;"></i> Seleção de Vistoria
-            </div>
-            `;
-        }
         sidebar.innerHTML = tabsHtml;
 
         // Inicializa a data padrão
@@ -485,37 +329,29 @@
         const tabExec = document.getElementById('tab-rep-execucao');
         const tabOS   = document.getElementById('tab-rep-os');
         const tabCrit = document.getElementById('tab-rep-criterio');
-        const tabVist = document.getElementById('tab-rep-vistoria');
         if (tabExec) tabExec.classList.toggle('active', tab === 'execucao');
         if (tabOS)   tabOS.classList.toggle('active', tab === 'os');
         if (tabCrit) tabCrit.classList.toggle('active', tab === 'criterio');
-        if (tabVist) tabVist.classList.toggle('active', tab === 'vistoria');
 
         const isCrit = tab === 'criterio';
-        const isVist = tab === 'vistoria';
 
         // Alterna entre os containers de filtros
-        document.getElementById('rep-filter-grid').style.display = isVist ? 'none' : 'grid';
-        document.getElementById('rep-vistoria-container').style.display = isVist ? 'flex' : 'none';
+        document.getElementById('rep-filter-grid').style.display = 'grid';
 
-        if (!isVist) {
-            document.getElementById('rep-period-group').style.display      = isCrit ? 'none' : 'block';
-            document.getElementById('rep-date-single-group').style.display  = isCrit ? 'none' : (document.getElementById('rep-period-type').value === 'day' ? 'block' : 'none');
-            document.getElementById('rep-date-start-group').style.display   = isCrit ? 'none' : (document.getElementById('rep-period-type').value === 'range' ? 'block' : 'none');
-            document.getElementById('rep-date-end-group').style.display     = isCrit ? 'none' : (document.getElementById('rep-period-type').value === 'range' ? 'block' : 'none');
-            
-            document.getElementById('rep-status-group').style.display       = (isCrit || tab === 'os') ? 'none' : 'block';
-            document.getElementById('rep-team-group').style.display         = isCrit ? 'none' : 'block';
-            document.getElementById('rep-format-group').style.display       = (isCrit || tab === 'os') ? 'none' : 'block';
+        document.getElementById('rep-period-group').style.display      = isCrit ? 'none' : 'block';
+        document.getElementById('rep-date-single-group').style.display  = isCrit ? 'none' : (document.getElementById('rep-period-type').value === 'day' ? 'block' : 'none');
+        document.getElementById('rep-date-start-group').style.display   = isCrit ? 'none' : (document.getElementById('rep-period-type').value === 'range' ? 'block' : 'none');
+        document.getElementById('rep-date-end-group').style.display     = isCrit ? 'none' : (document.getElementById('rep-period-type').value === 'range' ? 'block' : 'none');
+        
+        document.getElementById('rep-status-group').style.display       = (isCrit || tab === 'os') ? 'none' : 'block';
+        document.getElementById('rep-team-group').style.display         = isCrit ? 'none' : 'block';
+        document.getElementById('rep-format-group').style.display       = (isCrit || tab === 'os') ? 'none' : 'block';
 
-            const critGroup = document.getElementById('rep-criteria-group');
-            critGroup.style.display = isCrit ? 'flex' : 'none';
+        const critGroup = document.getElementById('rep-criteria-group');
+        critGroup.style.display = isCrit ? 'flex' : 'none';
 
-            if (isCrit) {
-                window._repOnCriteriaTypeChange();
-            }
-        } else {
-            window._repInitVistoria();
+        if (isCrit) {
+            window._repOnCriteriaTypeChange();
         }
 
         _resetPreview();
@@ -558,238 +394,6 @@
         }
     };
 
-    // ── Estado da Vistoria DITRAN ────────────────────────────────────────────
-    let _selectedVistTeam = 'Equipe 1';
-    let _vistoriaAllocations = {
-        'Equipe 1': [],
-        'Equipe 2': [],
-        'Equipe 3': []
-    };
-
-    window._repInitVistoria = function () {
-        if (!_config) return;
-        
-        // Reset do estado
-        _selectedVistTeam = 'Equipe 1';
-        _vistoriaAllocations = {
-            'Equipe 1': [],
-            'Equipe 2': [],
-            'Equipe 3': []
-        };
-
-        // Reset filtros da aba de vistoria
-        const searchInput = document.getElementById('rep-vist-search');
-        if (searchInput) searchInput.value = '';
-        const prioritySelect = document.getElementById('rep-vist-priority');
-        if (prioritySelect) prioritySelect.value = 'all';
-
-        // Preenche select de Tipos de Solicitação com base nos dados reais
-        const typeSelect = document.getElementById('rep-vist-type');
-        if (typeSelect) {
-            typeSelect.innerHTML = '<option value="">Todos os tipos</option>';
-            const allData = _config.getData() || [];
-            const uniqueTypes = new Set();
-            allData.forEach(p => {
-                const t = p.tipo_solicitacao || p.raw?.tipo_solicitacao;
-                if (t) uniqueTypes.add(t.trim());
-            });
-            Array.from(uniqueTypes).sort().forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t;
-                opt.textContent = t;
-                typeSelect.appendChild(opt);
-            });
-        }
-
-        // Renderiza
-        window._repUpdateVistoriaView();
-    };
-
-    window._repUpdateVistoriaView = function () {
-        if (!_config) return;
-        
-        const allData = _config.getData() || [];
-        
-        // --- 1. Renderiza Equipes (Esquerda) ---
-        const teamsList = document.getElementById('rep-vist-teams-list');
-        if (teamsList) {
-            teamsList.innerHTML = '';
-            
-            Object.keys(_vistoriaAllocations).forEach(teamName => {
-                const missions = _vistoriaAllocations[teamName];
-                const card = document.createElement('div');
-                card.className = `rep-team-card ${teamName === _selectedVistTeam ? 'selected' : ''}`;
-                card.setAttribute('data-team', teamName);
-                card.onclick = () => {
-                    _selectedVistTeam = teamName;
-                    window._repUpdateVistoriaView();
-                };
-                
-                let missionsHtml = '';
-                if (missions.length > 0) {
-                    missions.forEach(m => {
-                        const prot = m.protocolo_oficial || m.raw?.protocolo_oficial || '—';
-                        const rua = m.nome_rua || m.raw?.ruas_fortaleza?.nome || '';
-                        const bairro = m.nome_bairro || m.raw?.cat_bairros?.nome_bairro || '';
-                        const local = m.endereco || m.raw?.endereco || rua || '—';
-                        
-                        missionsHtml += `
-                            <div class="rep-team-mission-item" onclick="event.stopPropagation()">
-                                <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${window._escHtml(prot)} — ${window._escHtml(local)} (${window._escHtml(bairro)})">
-                                    <b>${window._escHtml(prot)}</b> — ${window._escHtml(local)}
-                                </div>
-                                <button type="button" onclick="window._repRemoveFromVistTeam('${teamName}', '${m.id}')" title="Desalocar Processo">
-                                    <i class="fa fa-arrow-right-long"></i>
-                                </button>
-                            </div>
-                        `;
-                    });
-                } else {
-                    missionsHtml = `<div style="font-size:11px; color:#9ca3af; text-align:center; padding:6px 0;">Nenhum processo alocado</div>`;
-                }
-                
-                card.innerHTML = `
-                    <div class="rep-team-card-title">
-                        <span><i class="fa fa-users"></i> ${teamName}</span>
-                        <span class="badge-generic" style="font-size:10px; background:rgba(255,255,255,0.06); padding:2px 6px; border:none; color:#fff;">${missions.length}</span>
-                    </div>
-                    <div class="rep-team-card-sub">Vistoria DITRAN</div>
-                    <div class="rep-team-card-missions">
-                        ${missionsHtml}
-                    </div>
-                `;
-                teamsList.appendChild(card);
-            });
-        }
-        
-        // --- 2. Renderiza Disponíveis (Direita) ---
-        const tbody = document.getElementById('rep-vist-available-tbody');
-        if (tbody) {
-            tbody.innerHTML = '';
-            
-            // Filtros ativos
-            const search = (document.getElementById('rep-vist-search')?.value || '').toLowerCase().trim();
-            const typeFilter = document.getElementById('rep-vist-type')?.value || '';
-            const priorityFilter = document.getElementById('rep-vist-priority')?.value || 'all';
-            
-            // Obter conjunto de IDs já alocados em qualquer equipe
-            const allocatedIds = new Set();
-            Object.values(_vistoriaAllocations).forEach(list => {
-                list.forEach(p => allocatedIds.add(String(p.id)));
-            });
-            
-            // Filtrar processos disponíveis
-            const available = allData.filter(p => {
-                // Exclui os já alocados
-                if (allocatedIds.has(String(p.id))) return false;
-                
-                const prot = (p.protocolo_oficial || p.raw?.protocolo_oficial || '').toLowerCase();
-                const rua = (p.nome_rua || p.raw?.ruas_fortaleza?.nome || '').toLowerCase();
-                const bairro = (p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '').toLowerCase();
-                const solicitante = (p.solicitante_oficial || p.raw?.solicitante_oficial || '').toLowerCase();
-                const local = (p.endereco || p.raw?.endereco || '').toLowerCase();
-                
-                // 1. Busca por texto
-                if (search && !prot.includes(search) && !rua.includes(search) && !bairro.includes(search) && !solicitante.includes(search) && !local.includes(search)) {
-                    return false;
-                }
-                
-                // 2. Tipo de Solicitação
-                const t = p.tipo_solicitacao || p.raw?.tipo_solicitacao || '';
-                if (typeFilter && t.trim() !== typeFilter) {
-                    return false;
-                }
-                
-                // 3. Prioridade / Urgência
-                if (priorityFilter === 'priority') {
-                    if (p.prioridade_diretoria !== true) return false;
-                } else if (priorityFilter === 'urgent') {
-                    if (p.urgente !== true) return false;
-                }
-                
-                return true;
-            });
-            
-            // Ordenar por protocolo ascendente
-            available.sort((a, b) => {
-                const protA = a.protocolo_oficial || a.raw?.protocolo_oficial || '';
-                const protB = b.protocolo_oficial || b.raw?.protocolo_oficial || '';
-                return protA.localeCompare(protB);
-            });
-            
-            if (available.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="4" style="text-align:center; color:#9ca3af; padding:2rem 0;">
-                            Nenhum processo disponível.
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            available.forEach(p => {
-                const tr = document.createElement('tr');
-                
-                const prot = p.protocolo_oficial || p.raw?.protocolo_oficial || '—';
-                const rua = p.nome_rua || p.raw?.ruas_fortaleza?.nome || '';
-                const bairro = p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '';
-                const local = p.endereco || p.raw?.endereco || rua || '—';
-                const tipo = p.tipo_solicitacao || p.raw?.tipo_solicitacao || '—';
-                
-                // Badge de prioridade
-                let priorDisplay = '';
-                if (p.urgente === true) {
-                    priorDisplay = `<i class="fa fa-triangle-exclamation" style="color:#ef4444; margin-right: 4px;" title="Urgente"></i>`;
-                } else if (p.prioridade_diretoria === true) {
-                    priorDisplay = `<i class="fa fa-triangle-exclamation" style="color:var(--rep-color); margin-right: 4px;" title="Prioritário"></i>`;
-                }
-                
-                tr.innerHTML = `
-                    <td>
-                        <button type="button" class="badge-generic-btn" style="background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.15);" onclick="window._repAssignToVistTeam('${p.id}')" title="Alocar para a equipe selecionada">
-                            <i class="fa fa-arrow-left-long"></i> Alocar
-                        </button>
-                    </td>
-                    <td style="font-weight:700; color:#fff;">${priorDisplay}${window._escHtml(prot)}</td>
-                    <td>${window._escHtml(local)} <br><small style="color:#9ca3af;">${window._escHtml(bairro)}</small></td>
-                    <td><span class="badge-generic" style="font-size:10px; padding:2px 6px; border:none; text-transform:none; background:rgba(255,255,255,0.06); color:#fff;">${window._escHtml(tipo)}</span></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-    };
-
-    window._repAssignToVistTeam = function (processId) {
-        if (!_selectedVistTeam) {
-            _showToast('Aviso', 'Selecione uma equipe de vistoria na coluna da esquerda.', 'error');
-            return;
-        }
-        const allData = _config.getData() || [];
-        const process = allData.find(p => String(p.id) === String(processId));
-        if (!process) return;
-
-        // Adiciona à equipe
-        if (!_vistoriaAllocations[_selectedVistTeam]) {
-            _vistoriaAllocations[_selectedVistTeam] = [];
-        }
-        
-        // Evita duplicados
-        const exists = _vistoriaAllocations[_selectedVistTeam].some(p => String(p.id) === String(processId));
-        if (!exists) {
-            _vistoriaAllocations[_selectedVistTeam].push(process);
-        }
-
-        window._repUpdateVistoriaView();
-    };
-
-    window._repRemoveFromVistTeam = function (teamName, processId) {
-        if (!_vistoriaAllocations[teamName]) return;
-        _vistoriaAllocations[teamName] = _vistoriaAllocations[teamName].filter(p => String(p.id) !== String(processId));
-        window._repUpdateVistoriaView();
-    };
-
-
     function _resetPreview() {
         document.getElementById('rep-paper-preview').style.display = 'none';
         document.getElementById('rep-empty-area').style.display    = 'none';
@@ -803,29 +407,13 @@
         if (!_config) return;
 
         const isCrit = _currentTab === 'criterio';
-        const isVist = _currentTab === 'vistoria';
 
         // ── Filtro ──
         let filtered = [];
         let periodText = '';
         let actualFormat = 'resumido';
 
-        if (isVist) {
-            // Agrupa todos os processos alocados de todas as equipes
-            filtered = [];
-            Object.values(_vistoriaAllocations).forEach(list => {
-                list.forEach(p => {
-                    filtered.push(p);
-                });
-            });
-
-            if (filtered.length === 0) {
-                _showToast('Aviso', 'Selecione ao menos um local de vistoria para alguma equipe antes de prosseguir.', 'error');
-                return;
-            }
-
-            periodText = `Roteiro de Vistoria de Campo`;
-        } else if (isCrit) {
+        if (isCrit) {
             const type = document.getElementById('rep-criteria-type').value;
             const val = document.getElementById('rep-criteria-value').value;
             const allData = _config.getData() || [];
@@ -971,9 +559,7 @@
         // ── Título da Folha ──
         const isOS = _currentTab === 'os';
         let paperTitle = '';
-        if (isVist) {
-            paperTitle = `AMC — Roteiro de Vistoria — ${_config.title}`;
-        } else if (isCrit) {
+        if (isCrit) {
             paperTitle = `AMC — Relatório por Critério — ${_config.title}`;
         } else {
             paperTitle = isOS ? `AMC — Ordem de Serviço — ${_config.title}` : `AMC — ${_config.title}`;
@@ -985,56 +571,7 @@
         // ── Renderização da Tabela ──
         let resultsHtml = '';
 
-        if (isVist) {
-            resultsHtml = '';
-            
-            Object.keys(_vistoriaAllocations).forEach(teamName => {
-                const missions = _vistoriaAllocations[teamName];
-                if (missions.length === 0) return; // Omite equipes vazias
-                
-                resultsHtml += `
-                    <div class="rep-team-section" style="margin-top:1.5rem; margin-bottom:2rem; page-break-inside: avoid;">
-                        <h5 style="color:var(--rep-color, #f8b700); border-bottom:1px solid #ddd; padding-bottom:6px; margin-bottom:10px; font-weight:700; font-size:13px; text-transform:uppercase; font-family:inherit;">
-                            <i class="fa fa-users" style="margin-right:6px;"></i> Vistoria DITRAN — ${teamName} (Total: ${missions.length})
-                        </h5>
-                        <table class="rep-results-table">
-                            <thead><tr>
-                                <th style="width: 120px;">Protocolo</th><th>Local / Endereço</th><th>Bairro / Regional</th><th>Elementos a Executar</th>
-                            </tr></thead>
-                            <tbody>
-                `;
-                
-                // Ordena os processos da equipe por protocolo
-                const sortedMissions = [...missions].sort((a, b) => {
-                    const protA = a.protocolo_oficial || a.raw?.protocolo_oficial || '';
-                    const protB = b.protocolo_oficial || b.raw?.protocolo_oficial || '';
-                    return protA.localeCompare(protB);
-                });
-
-                sortedMissions.forEach(p => {
-                    const prot = p.protocolo_oficial || p.raw?.protocolo_oficial || '—';
-                    const rua = p.nome_rua || p.raw?.ruas_fortaleza?.nome || '';
-                    const bairro = p.nome_bairro || p.raw?.cat_bairros?.nome_bairro || '—';
-                    const local = p.endereco || p.raw?.endereco || rua || '—';
-                    const regional = p.nome_regional || p.raw?.cat_bairros?.cat_regionais?.nome_regional || '—';
-
-                    const nuc = _getNucleoData(p);
-                    const details = (_config.detailsBuilder && nuc) ? _config.detailsBuilder(nuc) : [];
-                    const detailStr = details.join(' | ') || 'Sem especificações';
-
-                    const regDisplay = String(regional).toLowerCase().startsWith('regional') ? regional : `Regional ${regional}`;
-
-                    resultsHtml += `<tr>
-                        <td style="font-weight:700;">${_escHtml(prot)}</td>
-                        <td>${_escHtml(local)}</td>
-                        <td>${_escHtml(bairro)} / ${_escHtml(regDisplay)}</td>
-                        <td style="font-size:11px; color:#555;">${_escHtml(detailStr)}</td>
-                    </tr>`;
-                });
-                
-                resultsHtml += '</tbody></table></div>';
-            });
-        } else if (isCrit) {
+        if (isCrit) {
             const groups = {};
             filtered.forEach(p => {
                 const status = p.status_geral || p.raw?.status_geral || 'Sem Status';
@@ -1217,14 +754,10 @@
 
         const isOS       = _currentTab === 'os';
         const isCrit     = _currentTab === 'criterio';
-        const isVist     = _currentTab === 'vistoria';
         let titleStr     = '';
         let periodText   = '';
 
-        if (isVist) {
-            titleStr = `Roteiro de Vistoria — ${_config.title}`;
-            periodText = `Roteiro de Vistoria de Campo`;
-        } else if (isCrit) {
+        if (isCrit) {
             titleStr = `Relatório por Critério — ${_config.title}`;
             const type = document.getElementById('rep-criteria-type').value;
             const val = document.getElementById('rep-criteria-value').value;
